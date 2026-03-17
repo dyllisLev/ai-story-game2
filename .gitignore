@@ -1,1 +1,5 @@
 .superpowers/
+.DS_Store
+.claude/
+story-game-settings.json
+test

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Story Game</title>
+  <title>AI Story Game - Play</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.css" crossorigin="anonymous">
   <style>
     :root {
@@ -26,85 +26,87 @@
       color: var(--text);
       height: 100vh;
       overflow: hidden;
-    }
-
-    .container {
-      display: flex;
-      height: 100vh;
-      gap: 1px;
-      background: var(--border);
-    }
-
-    .panel {
-      background: var(--bg-panel);
-      padding: 16px;
-      overflow-y: auto;
       display: flex;
       flex-direction: column;
     }
 
-    .panel-settings { flex: 1; min-width: 280px; }
-    .panel-prompt { flex: 1; min-width: 280px; }
-    .panel-game { flex: 1.2; min-width: 320px; }
-
-    .panel-title {
-      color: var(--accent);
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 16px;
-      padding-bottom: 8px;
+    /* --- Top Bar --- */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: var(--bg-panel);
       border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
 
-    .form-group { margin-bottom: 12px; }
-
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
+    .top-bar .logo {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 14px;
+      white-space: nowrap;
+      margin-right: 4px;
     }
 
-    input[type="text"],
-    input[type="password"],
-    textarea,
-    select {
-      width: 100%;
+    .top-bar input[type="password"],
+    .top-bar select {
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 8px 10px;
+      padding: 7px 10px;
       color: var(--text);
       font-size: 13px;
       font-family: inherit;
-      resize: vertical;
     }
 
-    input:focus, textarea:focus, select:focus {
+    .top-bar input[type="password"] { width: 240px; }
+    .top-bar select { min-width: 180px; cursor: pointer; }
+    .top-bar select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .top-bar input:focus, .top-bar select:focus {
       outline: none;
       border-color: var(--accent);
     }
 
-    select { cursor: pointer; }
-    select:disabled { opacity: 0.5; cursor: not-allowed; }
+    .top-bar .spacer { flex: 1; }
+
+    .top-bar .settings-name {
+      font-size: 12px;
+      color: var(--text-muted);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .token-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .token-bar #costInfo { color: #2ea043; }
 
     .btn {
-      padding: 10px 16px;
+      padding: 7px 14px;
       border: none;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
+      white-space: nowrap;
     }
 
     .btn-primary {
       background: var(--accent);
       color: white;
-      width: 100%;
-      margin-top: 8px;
     }
-
     .btn-primary:hover { background: var(--accent-hover); }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -112,50 +114,250 @@
       background: var(--bg-input);
       color: var(--text-muted);
       border: 1px solid var(--border);
-      flex: 1;
     }
-
     .btn-secondary:hover { color: var(--text); border-color: var(--text-muted); }
 
-    .btn-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .prompt-preview {
-      flex: 1;
-      background: var(--bg-input);
-      border-radius: 6px;
-      padding: 12px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 12px;
-      line-height: 1.8;
+    .btn-icon {
+      background: none;
+      border: 1px solid var(--border);
       color: var(--text-muted);
-      white-space: pre-wrap;
-      overflow-y: auto;
+      padding: 7px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-icon:hover { color: var(--text); border-color: var(--text-muted); }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      accent-color: var(--accent);
+      cursor: pointer;
     }
 
-    .prompt-section { color: var(--cyan); }
-    .prompt-system { color: var(--accent); }
+    .cache-status {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .cache-status.active { color: #2ea043; }
 
-    .token-bar {
+    /* --- Main Content --- */
+    .main-content {
+      flex: 1;
       display: flex;
-      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    /* --- Game Area --- */
+    .game-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 24px;
+      overflow: hidden;
+    }
+
+    /* --- Right Side Panel --- */
+    .side-panel {
+      width: 280px;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border);
+      flex-shrink: 0;
+      overflow-y: auto;
+      transition: margin-right 0.25s ease;
+    }
+
+    .side-panel.collapsed {
+      margin-right: -280px;
+    }
+
+    .side-panel-header {
+      display: flex;
       align-items: center;
-      padding: 6px 10px;
-      margin-bottom: 8px;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .side-panel-header span {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .side-panel-header button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .side-panel-header button:hover { color: var(--text); }
+
+    .side-panel-section {
+      padding: 16px;
+    }
+
+    .side-panel-section-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .side-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text);
+      transition: background 0.15s;
+    }
+    .side-menu-item:hover { background: var(--bg-input); }
+
+    .side-menu-item .menu-icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .side-menu-item .menu-label { flex: 1; }
+
+    .side-menu-item .menu-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .side-menu-item .menu-badge.set {
+      background: rgba(233, 69, 96, 0.15);
+      color: var(--accent);
+    }
+    .side-menu-item .menu-badge.empty {
+      background: var(--bg-input);
+      color: var(--text-muted);
+    }
+
+    .side-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 8px 16px;
+    }
+
+    /* --- Modal --- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 520px;
+      max-width: 90vw;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 20px;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-body label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .modal-body .desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .modal-body input[type="text"],
+    .modal-body textarea {
+      width: 100%;
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: 6px;
-      font-size: 11px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      color: var(--text-muted);
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .modal-body input:focus,
+    .modal-body textarea:focus {
+      outline: none;
+      border-color: var(--accent);
     }
 
-    .token-bar #costInfo {
-      color: #2ea043;
+    .modal-body textarea { min-height: 200px; }
+
+    .modal-body .field-group { margin-bottom: 16px; }
+    .modal-body .field-group:last-child { margin-bottom: 0; }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
     }
+
+    .modal-footer .btn { padding: 8px 20px; font-size: 13px; }
 
     .game-output {
       flex: 1;
@@ -168,7 +370,12 @@
     .game-placeholder {
       color: var(--text-muted);
       text-align: center;
-      margin-top: 40%;
+      margin-top: 30vh;
+    }
+
+    .game-placeholder .hint {
+      font-size: 12px;
+      margin-top: 8px;
     }
 
     .game-text {
@@ -211,16 +418,12 @@
       line-height: 1.6;
     }
 
-    .game-text pre code {
-      background: none;
-      padding: 0;
-    }
+    .game-text pre code { background: none; padding: 0; }
 
     .game-text ul, .game-text ol {
       margin: 6px 0;
       padding-left: 20px;
     }
-
     .game-text li { margin: 2px 0; }
 
     .game-text hr {
@@ -229,10 +432,7 @@
       margin: 12px 0;
     }
 
-    .game-text p {
-      margin: 0 0 0.5em;
-    }
-
+    .game-text p { margin: 0 0 0.5em; }
     .game-text p:last-child { margin-bottom: 0; }
 
     .game-text blockquote {
@@ -259,13 +459,13 @@
       background: var(--bg-input);
       color: var(--cyan);
     }
+
     .game-text.user-action {
       color: var(--cyan);
       padding-left: 12px;
       border-left: 2px solid var(--cyan);
     }
 
-    /* KaTeX overrides for dark theme */
     .game-text .katex { font-size: 1.1em; }
     .game-text .katex-display { margin: 8px 0; }
 
@@ -275,13 +475,28 @@
       padding-top: 12px;
       border-top: 1px solid var(--border);
       margin-top: 12px;
+      flex-shrink: 0;
     }
 
-    .game-input-area input { flex: 1; }
+    .game-input-area input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .game-input-area input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
 
     .game-input-area .btn {
-      width: auto;
-      margin-top: 0;
+      padding: 10px 20px;
+      font-size: 13px;
     }
 
     .loading::after {
@@ -297,121 +512,130 @@
       0%, 100% { opacity: 0.4; }
       50% { opacity: 1; }
     }
-
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .checkbox-group label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      color: var(--text);
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      width: auto;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    .cache-status {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .cache-status.active {
-      color: #2ea043;
-    }
   </style>
 </head>
 <body>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <div class="container">
-    <!-- Panel 1: Settings -->
-    <div class="panel panel-settings" id="panelSettings">
-      <h2 class="panel-title">① 설정</h2>
-      <div class="form-group">
-        <label for="presetTitle">제목</label>
-        <input type="text" id="presetTitle" placeholder="프리셋 제목 (예: 무협 강호 모험)">
-      </div>
-      <div class="form-group">
-        <label for="apiKey">API Key</label>
-        <input type="password" id="apiKey" placeholder="Gemini API Key 입력">
-      </div>
-      <div class="form-group">
-        <label for="modelSelect">모델 선택</label>
-        <select id="modelSelect" disabled>
-          <option value="">API Key를 입력하세요</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="systemRules">시스템 규칙</label>
-        <textarea id="systemRules" rows="4" placeholder="AI 출력 규칙, 금지사항, 대사 형식 등..."></textarea>
-      </div>
-      <div class="form-group">
-        <label for="worldSetting">세계관</label>
-        <textarea id="worldSetting" rows="4" placeholder="게임의 세계관을 설명하세요..."></textarea>
-      </div>
-      <div class="form-group">
-        <label for="story">스토리</label>
-        <textarea id="story" rows="4" placeholder="메인 스토리/줄거리..."></textarea>
-      </div>
-      <div class="form-group">
-        <label for="characters">등장인물</label>
-        <textarea id="characters" rows="4" placeholder="주요 NPC 정보 (이름, 성격, 역할 등)..."></textarea>
-      </div>
-      <div class="form-group">
-        <label for="characterName">주인공 이름</label>
-        <input type="text" id="characterName" placeholder="캐릭터 이름">
-      </div>
-      <div class="form-group">
-        <label for="characterSetting">주인공 설정</label>
-        <textarea id="characterSetting" rows="3" placeholder="캐릭터 배경/성격/능력..."></textarea>
-      </div>
-      <div class="form-group">
-        <label for="userNote">유저노트</label>
-        <textarea id="userNote" rows="3" placeholder="참고 메모 (분위기, 선호 장르 등)..."></textarea>
-      </div>
-      <div class="form-group checkbox-group">
-        <label><input type="checkbox" id="useLatex" checked> LaTeX 연출 활성화</label>
-      </div>
-      <div class="form-group checkbox-group">
-        <label><input type="checkbox" id="useCache"> 프롬프트 캐시 사용</label>
-        <span class="cache-status" id="cacheStatus"></span>
-      </div>
-      <button id="btnStart" class="btn btn-primary">게임 시작</button>
-      <div class="btn-row">
-        <button id="btnSave" class="btn btn-secondary">저장</button>
-        <button id="btnLoad" class="btn btn-secondary">불러오기</button>
-        <input type="file" id="fileInput" accept=".json" hidden>
-      </div>
-    </div>
 
-    <!-- Panel 2: Prompt Preview -->
-    <div class="panel panel-prompt" id="panelPrompt">
-      <h2 class="panel-title">② 프롬프트 미리보기</h2>
-      <div class="prompt-preview" id="promptPreview"></div>
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <span class="logo">AI Story Game</span>
+    <input type="password" id="apiKey" placeholder="Gemini API Key">
+    <select id="modelSelect" disabled>
+      <option value="">API Key를 입력하세요</option>
+    </select>
+    <div class="checkbox-group">
+      <input type="checkbox" id="useLatex" checked>
+      <label for="useLatex">LaTeX</label>
     </div>
+    <div class="checkbox-group">
+      <input type="checkbox" id="useCache">
+      <label for="useCache">캐시</label>
+      <span class="cache-status" id="cacheStatus"></span>
+    </div>
+    <button id="btnLoadSettings" class="btn-icon" title="설정 파일 불러오기">📂</button>
+    <input type="file" id="fileInput" accept=".json" hidden>
+    <span class="settings-name" id="settingsName"></span>
+    <div class="spacer"></div>
+    <div class="token-bar">
+      <span id="tokenInfo">토큰: 0</span>
+      <span id="costInfo">$0.000000</span>
+    </div>
+    <button id="btnStart" class="btn btn-primary">게임 시작</button>
+    <a href="index.html" class="btn btn-secondary" title="설정 페이지로 이동">설정</a>
+    <button id="btnTogglePanel" class="btn-icon" title="플레이 설정">&#9776;</button>
+  </div>
 
-    <!-- Panel 3: Game -->
-    <div class="panel panel-game" id="panelGame">
-      <h2 class="panel-title">③ 게임</h2>
-      <div class="token-bar" id="tokenBar">
-        <span id="tokenInfo">토큰: 0</span>
-        <span id="costInfo">$0.000000</span>
-      </div>
+  <div class="main-content">
+    <!-- Game Area -->
+    <div class="game-area">
       <div class="game-output" id="gameOutput">
-        <p class="game-placeholder">게임을 시작하려면 설정을 입력하고 "게임 시작" 버튼을 누르세요.</p>
+        <p class="game-placeholder">
+          게임을 시작하려면 API Key를 입력하고 "게임 시작" 버튼을 누르세요.
+          <span class="hint">📂 버튼으로 설정 파일을 불러오거나, 설정 페이지에서 저장한 설정이 자동으로 적용됩니다.</span>
+        </p>
       </div>
       <div class="game-input-area">
         <input type="text" id="gameInput" placeholder="행동을 입력하세요..." disabled>
         <button id="btnSend" class="btn btn-primary" disabled>전송</button>
+      </div>
+    </div>
+
+    <!-- Right Side Panel -->
+    <div class="side-panel collapsed" id="sidePanel">
+      <div class="side-panel-header">
+        <span>플레이 설정</span>
+        <button id="btnClosePanel">&times;</button>
+      </div>
+      <div class="side-panel-section">
+        <div class="side-panel-section-title">캐릭터</div>
+        <div class="side-menu-item" id="menuCharacter">
+          <span class="menu-icon">&#128100;</span>
+          <span class="menu-label">주인공 프로필</span>
+          <span class="menu-badge empty" id="badgeCharacter">미설정</span>
+        </div>
+        <div class="side-menu-item" id="menuUserNote">
+          <span class="menu-icon">&#128221;</span>
+          <span class="menu-label">유저 노트</span>
+          <span class="menu-badge empty" id="badgeUserNote">미설정</span>
+        </div>
+      </div>
+      <div class="side-divider"></div>
+      <div class="side-panel-section">
+        <div class="side-panel-section-title">폰트 크기</div>
+        <div style="display:flex;align-items:center;gap:12px;padding:4px 12px;">
+          <button class="btn-icon" id="btnFontDec" style="width:32px;height:32px;border-radius:50%;font-size:16px;">-</button>
+          <span id="fontSizeDisplay" style="font-size:15px;font-weight:600;min-width:24px;text-align:center;">14</span>
+          <button class="btn-icon" id="btnFontInc" style="width:32px;height:32px;border-radius:50%;font-size:16px;">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Character Profile -->
+  <div class="modal-overlay" id="modalCharacter">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>주인공 프로필 편집</h3>
+        <button class="modal-close" data-close="modalCharacter">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label for="modalCharName">주인공 이름</label>
+          <p class="desc">이 세션에서 사용할 캐릭터 이름입니다.</p>
+          <input type="text" id="modalCharName" placeholder="캐릭터 이름 입력">
+        </div>
+        <div class="field-group">
+          <label for="modalCharSetting">주인공 설정</label>
+          <p class="desc">캐릭터 배경, 성격, 능력 등을 자유롭게 작성하세요.</p>
+          <textarea id="modalCharSetting" placeholder="캐릭터 배경/성격/능력..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="modalCharacter">취소</button>
+        <button class="btn btn-primary" id="btnSaveCharacter">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: User Note -->
+  <div class="modal-overlay" id="modalUserNote">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>유저 노트 편집</h3>
+        <button class="modal-close" data-close="modalUserNote">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label for="modalUserNote_text">유저 노트</label>
+          <p class="desc">AI에게 전달할 참고 메모 (분위기, 선호 장르, 출력 규칙 등)</p>
+          <textarea id="modalUserNote_text" placeholder="사용자에 대한 메모를 입력하세요..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="modalUserNote">취소</button>
+        <button class="btn btn-primary" id="btnSaveUserNote">저장</button>
       </div>
     </div>
   </div>
@@ -421,46 +645,48 @@
     const $ = id => document.getElementById(id);
 
     const els = {
-      presetTitle: $('presetTitle'),
       apiKey: $('apiKey'),
       modelSelect: $('modelSelect'),
-      worldSetting: $('worldSetting'),
-      story: $('story'),
-      characterName: $('characterName'),
-      characterSetting: $('characterSetting'),
-      characters: $('characters'),
-      userNote: $('userNote'),
-      systemRules: $('systemRules'),
-      promptPreview: $('promptPreview'),
       gameOutput: $('gameOutput'),
       gameInput: $('gameInput'),
       btnStart: $('btnStart'),
       btnSend: $('btnSend'),
-      btnSave: $('btnSave'),
-      btnLoad: $('btnLoad'),
+      btnLoadSettings: $('btnLoadSettings'),
       fileInput: $('fileInput'),
       useLatex: $('useLatex'),
       useCache: $('useCache'),
       cacheStatus: $('cacheStatus'),
       tokenInfo: $('tokenInfo'),
       costInfo: $('costInfo'),
+      settingsName: $('settingsName'),
+      sidePanel: $('sidePanel'),
+      badgeCharacter: $('badgeCharacter'),
+      badgeUserNote: $('badgeUserNote'),
+      fontSizeDisplay: $('fontSizeDisplay'),
+    };
+
+    // --- Settings Data (loaded from file or localStorage) ---
+    let settingsData = {
+      title: '',
+      worldSetting: '',
+      story: '',
+      characterName: '',
+      characterSetting: '',
+      characters: '',
+      userNote: '',
+      systemRules: '',
     };
 
     // --- Token & Cost Tracking ---
     const MODEL_PRICING = {
-      // per 1M tokens [input, output] — https://ai.google.dev/gemini-api/docs/pricing
-      // Gemini 3.x
       'gemini-3.1-pro':        [2.00, 12.00],
       'gemini-3.1-flash-lite': [0.25, 1.50],
       'gemini-3-flash':        [0.50, 3.00],
-      // Gemini 2.5
       'gemini-2.5-pro':        [1.25, 10.00],
       'gemini-2.5-flash-lite': [0.10, 0.40],
       'gemini-2.5-flash':      [0.30, 2.50],
-      // Gemini 2.0
       'gemini-2.0-flash-lite': [0.075, 0.30],
       'gemini-2.0-flash':      [0.10, 0.40],
-      // Legacy
       'gemini-1.5-pro':        [1.25, 5.00],
       'gemini-1.5-flash-8b':   [0.0375, 0.15],
       'gemini-1.5-flash':      [0.075, 0.30],
@@ -471,7 +697,6 @@
     let totalCost = 0;
 
     function getModelPricing(modelId) {
-      // Match model ID to pricing (e.g. "gemini-2.5-flash-preview-05-20" → "gemini-2.5-flash")
       for (const key of Object.keys(MODEL_PRICING)) {
         if (modelId.startsWith(key)) return MODEL_PRICING[key];
       }
@@ -486,7 +711,6 @@
       totalInputTokens += promptTokens;
       totalOutputTokens += candidateTokens;
 
-      // Calculate cost
       const modelId = els.modelSelect.value;
       const pricing = getModelPricing(modelId);
       if (pricing) {
@@ -511,13 +735,13 @@
 
     // --- Prompt Builder ---
     function buildPrompt() {
-      const w = els.worldSetting.value.trim();
-      const s = els.story.value.trim();
-      const cn = els.characterName.value.trim();
-      const cs = els.characterSetting.value.trim();
-      const ch = els.characters.value.trim();
-      const un = els.userNote.value.trim();
-      const sr = els.systemRules.value.trim();
+      const w = settingsData.worldSetting || '';
+      const s = settingsData.story || '';
+      const cn = settingsData.characterName || '';
+      const cs = settingsData.characterSetting || '';
+      const ch = settingsData.characters || '';
+      const un = settingsData.userNote || '';
+      const sr = settingsData.systemRules || '';
 
       let prompt = `당신은 인터랙티브 소설 게임의 AI 스토리텔러입니다.
 아래 설정을 기반으로 몰입감 있는 소설을 진행하세요.
@@ -536,7 +760,6 @@
       }
       if (un) prompt += `\n\n[유저노트]\n${un}`;
 
-      // LaTeX 연출 지시
       if (els.useLatex.checked) {
         prompt += `\n\n[LaTeX 연출 규칙]
 대사와 효과음에 LaTeX 수식 문법을 사용하여 시각적으로 연출하세요.
@@ -575,183 +798,50 @@
 - 대사에만 LaTeX를 적용하세요. 남용하지 마세요.`;
       }
 
-      // {{user}}를 주인공 이름으로 치환
       if (cn) prompt = prompt.replaceAll('{{user}}', cn);
 
       return prompt;
     }
 
-    function escapeHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    function updatePromptPreview() {
-      const prompt = buildPrompt();
-      const escaped = escapeHtml(prompt);
-      const sectionMatch = escaped.match(/\[(시스템 규칙|세계관|스토리|주인공|유저노트|LaTeX 연출 규칙)\]/);
-      const firstSectionIdx = sectionMatch ? sectionMatch.index : -1;
-      let html;
-      if (firstSectionIdx > 0) {
-        const preamble = escaped.substring(0, firstSectionIdx);
-        const rest = escaped.substring(firstSectionIdx);
-        html = `<span class="prompt-system">${preamble.trim()}</span>\n\n` +
-          rest.replace(/\[(시스템 규칙)\]/g, '<span class="prompt-system">[$1]</span>')
-               .replace(/\[(세계관|스토리|등장인물|주인공|유저노트|LaTeX 연출 규칙)\]/g, '<span class="prompt-section">[$1]</span>');
-      } else {
-        html = `<span class="prompt-system">${escaped}</span>`;
-      }
-      els.promptPreview.innerHTML = html;
-    }
-
-    const inputFields = ['presetTitle', 'systemRules', 'worldSetting', 'story', 'characters', 'characterName', 'characterSetting', 'userNote'];
-    inputFields.forEach(id => {
-      els[id].addEventListener('input', updatePromptPreview);
-    });
-
-    updatePromptPreview();
-
-    // --- localStorage ---
+    // --- Settings Load ---
     const STORAGE_KEY = 'ai-story-game-settings';
 
-    function getSettingsData() {
-      return {
-        title: els.presetTitle.value,
-        apiKey: els.apiKey.value,
-        model: els.modelSelect.value,
-        worldSetting: els.worldSetting.value,
-        story: els.story.value,
-        characterName: els.characterName.value,
-        characterSetting: els.characterSetting.value,
-        characters: els.characters.value,
-        userNote: els.userNote.value,
-        systemRules: els.systemRules.value,
-        useLatex: els.useLatex.checked,
-        useCache: els.useCache.checked,
-      };
-    }
-
-    function applySettingsData(data) {
-      if ('title' in data) els.presetTitle.value = data.title || '';
-      if ('apiKey' in data) els.apiKey.value = data.apiKey || '';
-      if ('model' in data) els.modelSelect.value = data.model || '';
-      if ('characters' in data) els.characters.value = data.characters || '';
-      if ('systemRules' in data) els.systemRules.value = data.systemRules || '';
+    function applySettings(data, source) {
+      if (data.apiKey) els.apiKey.value = data.apiKey;
       if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
       if ('useCache' in data) els.useCache.checked = !!data.useCache;
-      if ('worldSetting' in data) els.worldSetting.value = data.worldSetting || '';
-      if ('story' in data) els.story.value = data.story || '';
-      if ('characterName' in data) els.characterName.value = data.characterName || '';
-      if ('characterSetting' in data) els.characterSetting.value = data.characterSetting || '';
-      if ('userNote' in data) els.userNote.value = data.userNote || '';
-      updatePromptPreview();
-    }
 
-    function saveToLocalStorage() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(getSettingsData()));
+      settingsData.title = data.title || '';
+      settingsData.worldSetting = data.worldSetting || '';
+      settingsData.story = data.story || '';
+      settingsData.characterName = data.characterName || '';
+      settingsData.characterSetting = data.characterSetting || '';
+      settingsData.characters = data.characters || '';
+      settingsData.userNote = data.userNote || '';
+      settingsData.systemRules = data.systemRules || '';
+
+      // Update displayed preset name
+      if (source === 'file') {
+        // file name is set by the caller
+      } else if (settingsData.title) {
+        els.settingsName.textContent = settingsData.title;
+      }
+
+      // Restore model after models are fetched
+      if (data.model) settingsData._pendingModel = data.model;
+
+      // Update badges if already initialized
+      if (typeof updateBadges === 'function') updateBadges();
     }
 
     function loadFromLocalStorage() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        try { applySettingsData(JSON.parse(saved)); } catch (e) {}
+        try { applySettings(JSON.parse(saved), 'localStorage'); } catch (e) {}
       }
     }
 
-    // Auto-save on any input change
-    [...inputFields, 'apiKey'].forEach(id => {
-      els[id].addEventListener('input', saveToLocalStorage);
-    });
-    els.modelSelect.addEventListener('change', saveToLocalStorage);
-
-    // --- JSON Export/Import ---
-    let currentFileHandle = null;
-
-    els.btnSave.addEventListener('click', async () => {
-      const json = JSON.stringify(getSettingsData(), null, 2);
-
-      // 이미 불러온 파일이 있으면 덮어쓰기
-      if (currentFileHandle) {
-        try {
-          const writable = await currentFileHandle.createWritable();
-          await writable.write(json);
-          await writable.close();
-          return;
-        } catch (e) {
-          // 권한 거부 등 실패 시 새 파일로 저장
-          currentFileHandle = null;
-        }
-      }
-
-      // File System Access API 지원 시 새 파일 저장
-      if (window.showSaveFilePicker) {
-        try {
-          currentFileHandle = await window.showSaveFilePicker({
-            suggestedName: 'story-game-settings.json',
-            types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
-          });
-          const writable = await currentFileHandle.createWritable();
-          await writable.write(json);
-          await writable.close();
-          return;
-        } catch (e) {
-          if (e.name === 'AbortError') return;
-        }
-      }
-
-      // 폴백: 다운로드
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'story-game-settings.json';
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    els.btnLoad.addEventListener('click', async () => {
-      // File System Access API 지원 시 파일 핸들 저장
-      if (window.showOpenFilePicker) {
-        try {
-          const [handle] = await window.showOpenFilePicker({
-            types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
-          });
-          currentFileHandle = handle;
-          const file = await handle.getFile();
-          const text = await file.text();
-          const data = JSON.parse(text);
-          applySettingsData(data);
-          saveToLocalStorage();
-          if (data.apiKey && typeof fetchModels === 'function') fetchModels(data.apiKey);
-          return;
-        } catch (e) {
-          if (e.name === 'AbortError') return;
-        }
-      }
-
-      // 폴백: 기존 file input
-      els.fileInput.click();
-    });
-
-    els.fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      currentFileHandle = null;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          const data = JSON.parse(ev.target.result);
-          applySettingsData(data);
-          saveToLocalStorage();
-          if (data.apiKey && typeof fetchModels === 'function') fetchModels(data.apiKey);
-        } catch (err) {
-          alert('잘못된 JSON 파일입니다.');
-        }
-      };
-      reader.readAsText(file);
-      e.target.value = '';
-    });
-
-    // --- Gemini API ---
+    // --- Gemini API: Fetch Models ---
     const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
     async function fetchModels(apiKey) {
@@ -772,13 +862,10 @@
           : '<option value="">사용 가능한 모델이 없습니다</option>';
         els.modelSelect.disabled = models.length === 0;
 
-        // Restore saved model selection
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const { model } = JSON.parse(saved);
-          if (model && models.some(m => m.id === model)) {
-            els.modelSelect.value = model;
-          }
+        // Restore pending model
+        const pendingModel = settingsData._pendingModel;
+        if (pendingModel && models.some(m => m.id === pendingModel)) {
+          els.modelSelect.value = pendingModel;
         }
       } catch (err) {
         els.modelSelect.innerHTML = `<option value="">오류: ${err.message}</option>`;
@@ -786,16 +873,52 @@
       }
     }
 
-    // Debounced API key input → fetch models
     let apiKeyTimer = null;
     els.apiKey.addEventListener('input', () => {
       clearTimeout(apiKeyTimer);
       apiKeyTimer = setTimeout(() => fetchModels(els.apiKey.value.trim()), 800);
     });
 
-    // Load saved settings on page load
-    loadFromLocalStorage();
-    if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
+    // --- Load Settings File ---
+    els.btnLoadSettings.addEventListener('click', async () => {
+      if (window.showOpenFilePicker) {
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'], 'text/plain': ['.json'] } }],
+          });
+          const file = await handle.getFile();
+          const text = await file.text();
+          const data = JSON.parse(text);
+          applySettings(data, 'file');
+          els.settingsName.textContent = data.title || file.name;
+          if (data.apiKey) fetchModels(data.apiKey);
+          else if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
+          return;
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+        }
+      }
+      els.fileInput.click();
+    });
+
+    els.fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          applySettings(data, 'file');
+          els.settingsName.textContent = data.title || file.name;
+          if (data.apiKey) fetchModels(data.apiKey);
+          else if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
+        } catch (err) {
+          alert('잘못된 JSON 파일입니다.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
 
     // --- Cache ---
     let cachedContentName = null;
@@ -811,9 +934,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: `models/${model}`,
-            systemInstruction: {
-              parts: [{ text: prompt }],
-            },
+            systemInstruction: { parts: [{ text: prompt }] },
             ttl: '3600s',
           }),
         });
@@ -829,7 +950,7 @@
         els.cacheStatus.className = 'cache-status active';
         return true;
       } catch (err) {
-        els.cacheStatus.textContent = `캐시 실패: ${err.message}`;
+        els.cacheStatus.textContent = `실패`;
         els.cacheStatus.className = 'cache-status';
         cachedContentName = null;
         return false;
@@ -842,32 +963,17 @@
       els.cacheStatus.className = 'cache-status';
     }
 
-    els.useLatex.addEventListener('change', () => {
-      saveToLocalStorage();
-      updatePromptPreview();
-    });
-
-    els.useCache.addEventListener('change', () => {
-      if (!els.useCache.checked) clearCache();
-      saveToLocalStorage();
-    });
-
     // --- Game State ---
     let conversationHistory = [];
     let isGenerating = false;
 
-    // --- Markdown Parser (marked.js) ---
-    marked.setOptions({
-      breaks: true,   // \n → <br>
-      gfm: true,      // GitHub Flavored Markdown (tables, etc.)
-    });
+    // --- Markdown Parser ---
+    marked.setOptions({ breaks: true, gfm: true });
 
     function renderMarkdown(text) {
-      // 1) Extract LaTeX BEFORE marked.js (prevents &quot; and other HTML entity corruption)
       const placeholders = [];
       let processed = text;
 
-      // Block LaTeX: $$...$$
       processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
         const id = `%%LATEX_${placeholders.length}%%`;
         try {
@@ -876,7 +982,6 @@
         return id;
       });
 
-      // Inline LaTeX: $...$
       processed = processed.replace(/\$([^\$\n]+?)\$/g, (_, tex) => {
         const id = `%%LATEX_${placeholders.length}%%`;
         try {
@@ -885,12 +990,8 @@
         return id;
       });
 
-      // 2) Run marked.js on LaTeX-free text
       let html = marked.parse(processed);
-
-      // 3) Re-insert rendered LaTeX
       html = html.replace(/%%LATEX_(\d+)%%/g, (_, i) => placeholders[+i]);
-
       return html;
     }
 
@@ -977,7 +1078,6 @@
               const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
               if (text) {
                 fullResponse += text;
-                // Debounce markdown rendering during streaming
                 clearTimeout(renderTimer);
                 renderTimer = setTimeout(() => {
                   responseDiv.innerHTML = renderMarkdown(fullResponse);
@@ -985,17 +1085,15 @@
                   els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
                 }, 80);
               }
-            } catch (e) { /* skip malformed JSON */ }
+            } catch (e) {}
           }
         }
 
-        // Final render with complete markdown
         clearTimeout(renderTimer);
         responseDiv.innerHTML = renderMarkdown(fullResponse);
         responseDiv.classList.add('markdown-rendered');
         els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
 
-        // Update token & cost display
         if (lastUsageMetadata) updateTokenDisplay(lastUsageMetadata);
 
         conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
@@ -1026,13 +1124,10 @@
       els.gameInput.disabled = false;
       els.btnSend.disabled = false;
 
-      // 캐시 설정
       clearCache();
       if (els.useCache.checked) {
         const ok = await createCache(apiKey, model);
-        if (!ok) {
-          alert('캐시 생성에 실패했습니다. 캐시 없이 진행합니다.');
-        }
+        if (!ok) alert('캐시 생성에 실패했습니다. 캐시 없이 진행합니다.');
       }
 
       sendToGemini('게임을 시작해줘');
@@ -1053,6 +1148,95 @@
         els.btnSend.click();
       }
     });
+
+    // --- Side Panel Toggle ---
+    $('btnTogglePanel').addEventListener('click', () => {
+      els.sidePanel.classList.toggle('collapsed');
+    });
+    $('btnClosePanel').addEventListener('click', () => {
+      els.sidePanel.classList.add('collapsed');
+    });
+
+    // --- Badge Updates ---
+    function updateBadges() {
+      const hasChar = settingsData.characterName || settingsData.characterSetting;
+      els.badgeCharacter.textContent = hasChar ? '설정됨' : '미설정';
+      els.badgeCharacter.className = `menu-badge ${hasChar ? 'set' : 'empty'}`;
+
+      const hasNote = settingsData.userNote;
+      els.badgeUserNote.textContent = hasNote ? '설정됨' : '미설정';
+      els.badgeUserNote.className = `menu-badge ${hasNote ? 'set' : 'empty'}`;
+    }
+
+    // --- Modal Logic ---
+    function openModal(id) {
+      $(id).classList.add('open');
+    }
+    function closeModal(id) {
+      $(id).classList.remove('open');
+    }
+
+    // Close buttons
+    document.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(btn.dataset.close));
+    });
+
+    // Close on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal(overlay.id);
+      });
+    });
+
+    // Character Profile Modal
+    $('menuCharacter').addEventListener('click', () => {
+      $('modalCharName').value = settingsData.characterName || '';
+      $('modalCharSetting').value = settingsData.characterSetting || '';
+      openModal('modalCharacter');
+    });
+
+    $('btnSaveCharacter').addEventListener('click', () => {
+      settingsData.characterName = $('modalCharName').value.trim();
+      settingsData.characterSetting = $('modalCharSetting').value.trim();
+      updateBadges();
+      closeModal('modalCharacter');
+    });
+
+    // User Note Modal
+    $('menuUserNote').addEventListener('click', () => {
+      $('modalUserNote_text').value = settingsData.userNote || '';
+      openModal('modalUserNote');
+    });
+
+    $('btnSaveUserNote').addEventListener('click', () => {
+      settingsData.userNote = $('modalUserNote_text').value.trim();
+      updateBadges();
+      closeModal('modalUserNote');
+    });
+
+    // --- Font Size ---
+    let gameFontSize = 14;
+
+    $('btnFontDec').addEventListener('click', () => {
+      if (gameFontSize > 10) {
+        gameFontSize--;
+        els.fontSizeDisplay.textContent = gameFontSize;
+        els.gameOutput.style.fontSize = gameFontSize + 'px';
+      }
+    });
+
+    $('btnFontInc').addEventListener('click', () => {
+      if (gameFontSize < 24) {
+        gameFontSize++;
+        els.fontSizeDisplay.textContent = gameFontSize;
+        els.gameOutput.style.fontSize = gameFontSize + 'px';
+      }
+    });
+
+    // --- Init ---
+    loadFromLocalStorage();
+    updateBadges();
+    if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
   </script>
 </body>
 </html>
