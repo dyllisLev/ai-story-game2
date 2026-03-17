@@ -735,7 +735,7 @@
           <div style="display:flex;gap:6px;">
             <button id="btnLoadSettings" class="btn-icon" title="설정 파일 불러오기" style="font-size:14px;">📂</button>
             <input type="file" id="fileInput" accept=".json" hidden>
-            <a href="editor.html" class="btn-icon" title="스토리 편집" style="font-size:12px;text-decoration:none;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);color:var(--text-muted);padding:7px 10px;border-radius:6px;cursor:pointer;">편집</a>
+            <a id="btnEditStory" href="editor.html" class="btn-icon" title="스토리 편집" style="font-size:12px;text-decoration:none;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);color:var(--text-muted);padding:7px 10px;border-radius:6px;cursor:pointer;">편집</a>
           </div>
         </div>
       </div>
@@ -1816,7 +1816,16 @@
       currentStoryId = storyId;
       els.settingsName.textContent = `${data.title || '제목 없음'} (${storyId.slice(0, 8)}...)`;
       updateBadges();
+      // 편집 링크에 storyId 반영
+      $('btnEditStory').href = `editor.html?storyId=${storyId}`;
     });
+
+    // URL 파라미터로 스토리 로드 시에도 편집 링크 업데이트
+    function updateEditLink() {
+      if (currentStoryId) {
+        $('btnEditStory').href = `editor.html?storyId=${currentStoryId}`;
+      }
+    }
 
     // --- Session List UI ---
     function renderSessionList() {
@@ -1974,6 +1983,7 @@
           currentStoryId = storyId;
           els.settingsName.textContent = data.title || '제목 없음';
           updateBadges();
+          updateEditLink();
           // 스토리 드롭다운에서 선택
           const select = $('storySelect');
           if (select.querySelector(`option[value="${storyId}"]`)) {
