@@ -297,7 +297,8 @@
     function updatePromptPreview() {
       const prompt = buildPrompt();
       const escaped = escapeHtml(prompt);
-      const firstSectionIdx = escaped.indexOf('[세계관]');
+      const sectionMatch = escaped.match(/\[(세계관|스토리|주인공|유저노트)\]/);
+      const firstSectionIdx = sectionMatch ? sectionMatch.index : -1;
       let html;
       if (firstSectionIdx > 0) {
         const preamble = escaped.substring(0, firstSectionIdx);
@@ -333,13 +334,13 @@
     }
 
     function applySettingsData(data) {
-      if (data.apiKey) els.apiKey.value = data.apiKey;
-      if (data.model) els.modelSelect.value = data.model;
-      if (data.worldSetting) els.worldSetting.value = data.worldSetting;
-      if (data.story) els.story.value = data.story;
-      if (data.characterName) els.characterName.value = data.characterName;
-      if (data.characterSetting) els.characterSetting.value = data.characterSetting;
-      if (data.userNote) els.userNote.value = data.userNote;
+      if ('apiKey' in data) els.apiKey.value = data.apiKey || '';
+      if ('model' in data) els.modelSelect.value = data.model || '';
+      if ('worldSetting' in data) els.worldSetting.value = data.worldSetting || '';
+      if ('story' in data) els.story.value = data.story || '';
+      if ('characterName' in data) els.characterName.value = data.characterName || '';
+      if ('characterSetting' in data) els.characterSetting.value = data.characterSetting || '';
+      if ('userNote' in data) els.userNote.value = data.userNote || '';
       updatePromptPreview();
     }
 
