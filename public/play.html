@@ -49,26 +49,6 @@
       margin-right: 4px;
     }
 
-    .top-bar input[type="password"],
-    .top-bar select {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 7px 10px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: inherit;
-    }
-
-    .top-bar input[type="password"] { width: 240px; }
-    .top-bar select { min-width: 180px; cursor: pointer; }
-    .top-bar select:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .top-bar input:focus, .top-bar select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
     .top-bar .spacer { flex: 1; }
 
     .top-bar .settings-name {
@@ -560,13 +540,32 @@
     .turn-count.warning { color: #d29922; }
     .turn-count.danger { color: var(--accent); }
 
+    /* --- Theme --- */
+    .theme-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-input);
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .theme-btn:hover { color: var(--text); border-color: var(--text-muted); }
+    .theme-btn.active { border-color: var(--accent); color: var(--accent); }
+
+    /* --- Light Theme --- */
+    body.light-theme {
+      --bg-dark: #ffffff;
+      --bg-panel: #f6f8fa;
+      --bg-input: #f0f2f5;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --text-muted: #656d76;
+    }
+
     /* --- Responsive --- */
     @media (max-width: 768px) {
-      .top-bar { flex-wrap: wrap; padding: 8px; gap: 6px; }
-      .top-bar input[type="password"] { width: 100%; order: 10; }
-      .top-bar select { width: 100%; order: 11; }
-      .token-bar { order: 12; width: 100%; justify-content: center; }
-
       .session-bar { flex-direction: column; align-items: stretch; }
       .session-bar select, .session-bar input[type="text"] { width: 100%; max-width: none; }
 
@@ -606,21 +605,6 @@
   <!-- Top Bar -->
   <div class="top-bar">
     <span class="logo">AI Story Game</span>
-    <input type="password" id="apiKey" placeholder="Gemini API Key">
-    <select id="modelSelect" disabled>
-      <option value="">API Key를 입력하세요</option>
-    </select>
-    <div class="checkbox-group">
-      <input type="checkbox" id="useLatex" checked>
-      <label for="useLatex">LaTeX</label>
-    </div>
-    <div class="checkbox-group">
-      <input type="checkbox" id="useCache">
-      <label for="useCache">캐시</label>
-      <span class="cache-status" id="cacheStatus"></span>
-    </div>
-    <button id="btnLoadSettings" class="btn-icon" title="설정 파일 불러오기">📂</button>
-    <input type="file" id="fileInput" accept=".json" hidden>
     <span class="settings-name" id="settingsName"></span>
     <div class="save-status" id="saveStatus" style="display:none;">
       <span class="save-dot unsaved" id="saveDot"></span>
@@ -633,7 +617,6 @@
       <span id="costInfo">$0.000000</span>
     </div>
     <button id="btnStart" class="btn btn-primary">게임 시작</button>
-    <a href="editor.html" class="btn btn-secondary" title="스토리 편집">편집</a>
     <a href="index.html" class="btn btn-secondary" title="메인으로">홈</a>
     <button id="btnFocusMode" class="btn-icon" title="집중 모드">&#128065;</button>
     <button id="btnTogglePanel" class="btn-icon" title="플레이 설정">&#9776;</button>
@@ -658,8 +641,7 @@
     <div class="game-area">
       <div class="game-output" id="gameOutput">
         <p class="game-placeholder">
-          게임을 시작하려면 API Key를 입력하고 "게임 시작" 버튼을 누르세요.
-          <span class="hint">📂 버튼으로 설정 파일을 불러오거나, 설정 페이지에서 저장한 설정이 자동으로 적용됩니다.</span>
+          게임을 시작하려면 ☰ 메뉴에서 API Key를 설정하고 "게임 시작" 버튼을 누르세요.
         </p>
       </div>
       <div class="game-input-area">
@@ -699,6 +681,45 @@
           <button class="btn-icon" id="btnFontDec" style="width:32px;height:32px;border-radius:50%;font-size:16px;">-</button>
           <span id="fontSizeDisplay" style="font-size:15px;font-weight:600;min-width:24px;text-align:center;">14</span>
           <button class="btn-icon" id="btnFontInc" style="width:32px;height:32px;border-radius:50%;font-size:16px;">+</button>
+        </div>
+      </div>
+      <div class="side-divider"></div>
+      <div class="side-panel-section">
+        <div class="side-panel-section-title">API 설정</div>
+        <div style="padding:4px 12px;display:flex;flex-direction:column;gap:8px;">
+          <input type="password" id="apiKey" placeholder="Gemini API Key" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;font-family:inherit;">
+          <select id="modelSelect" disabled style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;">
+            <option value="">API Key를 입력하세요</option>
+          </select>
+        </div>
+      </div>
+      <div class="side-divider"></div>
+      <div class="side-panel-section">
+        <div class="side-panel-section-title">옵션</div>
+        <div style="padding:4px 12px;display:flex;flex-direction:column;gap:10px;">
+          <div class="checkbox-group">
+            <input type="checkbox" id="useLatex" checked>
+            <label for="useLatex">LaTeX 연출</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="useCache">
+            <label for="useCache">프롬프트 캐시</label>
+            <span class="cache-status" id="cacheStatus"></span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button id="btnLoadSettings" class="btn-icon" title="설정 파일 불러오기" style="font-size:14px;">📂</button>
+            <input type="file" id="fileInput" accept=".json" hidden>
+            <a href="editor.html" class="btn-icon" title="스토리 편집" style="font-size:12px;text-decoration:none;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);color:var(--text-muted);padding:7px 10px;border-radius:6px;cursor:pointer;">편집</a>
+          </div>
+        </div>
+      </div>
+      <div class="side-divider"></div>
+      <div class="side-panel-section">
+        <div class="side-panel-section-title">테마</div>
+        <div style="padding:4px 12px;display:flex;gap:8px;">
+          <button class="theme-btn" data-theme="system" title="시스템">자동</button>
+          <button class="theme-btn" data-theme="dark" title="다크">다크</button>
+          <button class="theme-btn" data-theme="light" title="라이트">라이트</button>
         </div>
       </div>
     </div>
@@ -1655,6 +1676,37 @@
       }
     });
 
+    // --- Theme ---
+    const THEME_KEY = 'ai-story-game-theme';
+
+    function applyTheme(theme) {
+      localStorage.setItem(THEME_KEY, theme);
+      document.body.classList.remove('light-theme');
+      if (theme === 'light') {
+        document.body.classList.add('light-theme');
+      } else if (theme === 'system') {
+        if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+          document.body.classList.add('light-theme');
+        }
+      }
+      // Update active button
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === theme);
+      });
+    }
+
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
+    });
+
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+      if (localStorage.getItem(THEME_KEY) === 'system') applyTheme('system');
+    });
+
+    // Init theme
+    applyTheme(localStorage.getItem(THEME_KEY) || 'system');
+
     // --- Save Status UI (replaces stub) ---
     renderSaveStatus = function() {
       const statusEl = $('saveStatus'), dotEl = $('saveDot'), textEl = $('saveText'), btnEl = $('btnSaveCloud');
@@ -1799,7 +1851,7 @@
       removeSessionFromLocal(currentSessionId);
       stopAutoSave();
       currentSessionId = null; conversationHistory = [];
-      els.gameOutput.innerHTML = '<p class="game-placeholder">게임을 시작하려면 API Key를 입력하고 "게임 시작" 버튼을 누르세요.</p>';
+      els.gameOutput.innerHTML = '<p class="game-placeholder">게임을 시작하려면 ☰ 메뉴에서 API Key를 설정하고 "게임 시작" 버튼을 누르세요.</p>';
       els.gameInput.disabled = true; els.btnSend.disabled = true;
       renderSessionList(); renderSessionId(); renderSaveStatus();
     });
