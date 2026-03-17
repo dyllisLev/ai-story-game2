@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 세션: 누구나 읽기/생성, 업데이트는 허용 필드만
+    match /sessions/{sessionId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll(['title', 'createdAt'])
+                    && request.resource.data.createdAt == request.time;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['messages', 'updatedAt', 'lastPlayedAt', 'title', 'ttl', 'summary', 'summaryUpToIndex', 'playerPreset', 'model']);
+      allow delete: if false;
+    }
+
+    // 스토리: 누구나 읽기/생성, 수정은 암호 해시 일치 시만
+    match /stories/{storyId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll(['title', 'createdAt'])
+                    && request.resource.data.createdAt == request.time;
+      allow update: if request.resource.data.passwordHash == resource.data.passwordHash;
+      allow delete: if false;
+    }
+
+    // 프리셋 (기본셋): 읽기만 허용 (운영자가 콘솔에서 관리)
+    match /presets/{presetId} {
+      allow read: if true;
+      allow create, update, delete: if false;
+    }
+  }
+}
