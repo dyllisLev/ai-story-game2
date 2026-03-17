@@ -327,6 +327,13 @@
     .cache-status.active {
       color: #2ea043;
     }
+
+    @media (max-width: 768px) {
+      .container { flex-direction: column; height: auto; min-height: 100vh; }
+      .panel { min-width: auto; max-height: none; }
+      .panel-prompt { display: none; }
+      .btn { min-height: 44px; }
+    }
   </style>
 </head>
 <body>

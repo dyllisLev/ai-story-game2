@@ -559,9 +559,47 @@
     .turn-count { font-size: 11px; color: var(--text-muted); }
     .turn-count.warning { color: #d29922; }
     .turn-count.danger { color: var(--accent); }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      .top-bar { flex-wrap: wrap; padding: 8px; gap: 6px; }
+      .top-bar input[type="password"] { width: 100%; order: 10; }
+      .top-bar select { width: 100%; order: 11; }
+      .token-bar { order: 12; width: 100%; justify-content: center; }
+
+      .session-bar { flex-direction: column; align-items: stretch; }
+      .session-bar select, .session-bar input[type="text"] { width: 100%; max-width: none; }
+
+      .side-panel { position: fixed; right: 0; top: 0; bottom: 0; z-index: 50; width: 280px; }
+      .side-panel.collapsed { transform: translateX(100%); margin-right: 0; }
+
+      .game-input-area input { font-size: 16px; }
+
+      .btn { min-height: 44px; padding: 12px 16px; }
+      .btn-icon { min-width: 44px; min-height: 44px; }
+      .side-menu-item { padding: 14px 12px; }
+      .modal { max-width: 95vw; max-height: 90vh; }
+    }
+
+    /* --- Focus Mode --- */
+    body.focus-mode .top-bar { display: none; }
+    body.focus-mode .session-bar { display: none; }
+    body.focus-mode .game-area { padding: 24px 15vw; }
+    body.focus-mode .side-panel { display: none; }
+
+    .focus-exit {
+      display: none;
+      position: fixed; top: 12px; right: 12px; z-index: 100;
+    }
+    body.focus-mode .focus-exit { display: block; }
+
+    @media (max-width: 768px) {
+      body.focus-mode .game-area { padding: 16px; }
+    }
   </style>
 </head>
 <body>
+  <button class="btn-icon focus-exit" id="btnExitFocus" title="집중 모드 해제">&#10005;</button>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
@@ -596,6 +634,7 @@
     </div>
     <button id="btnStart" class="btn btn-primary">게임 시작</button>
     <a href="index.html" class="btn btn-secondary" title="설정 페이지로 이동">설정</a>
+    <button id="btnFocusMode" class="btn-icon" title="집중 모드">&#128065;</button>
     <button id="btnTogglePanel" class="btn-icon" title="플레이 설정">&#9776;</button>
   </div>
 
@@ -1509,6 +1548,10 @@
     $('btnClosePanel').addEventListener('click', () => {
       els.sidePanel.classList.add('collapsed');
     });
+
+    // --- Focus Mode ---
+    $('btnFocusMode').addEventListener('click', () => document.body.classList.add('focus-mode'));
+    $('btnExitFocus').addEventListener('click', () => document.body.classList.remove('focus-mode'));
 
     // --- Badge Updates ---
     function updateBadges() {
