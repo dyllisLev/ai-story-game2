@@ -643,6 +643,11 @@
           <span class="menu-label">유저 노트</span>
           <span class="menu-badge empty" id="badgeUserNote">미설정</span>
         </div>
+        <div class="side-menu-item" id="menuSummary">
+          <span class="menu-icon">&#128221;</span>
+          <span class="menu-label">이야기 요약</span>
+          <span class="menu-badge empty" id="badgeSummary">없음</span>
+        </div>
       </div>
       <div class="side-divider"></div>
       <div class="side-panel-section">
@@ -760,6 +765,9 @@
 
     let currentSessionId = null;
     let currentStoryId = null;
+    let storySummary = '';
+    let summaryUpToIndex = 0;
+    const SLIDING_WINDOW_SIZE = 20;
     let isDirty = false;
     let saveStatus = 'idle';
     let autoSaveInterval = null;
@@ -822,6 +830,46 @@
       }));
     }
 
+    async function generateSummary() {
+      const apiKey = els.apiKey.value.trim();
+      const model = els.modelSelect.value;
+      if (!apiKey || !model) return;
+
+      const windowStart = Math.max(0, conversationHistory.length - SLIDING_WINDOW_SIZE);
+      if (windowStart <= summaryUpToIndex) return;
+
+      const toSummarize = conversationHistory.slice(summaryUpToIndex, windowStart);
+      if (toSummarize.length === 0) return;
+
+      const summaryPrompt = storySummary
+        ? `기존 요약:\n${storySummary}\n\n아래 새로운 대화를 기존 요약에 통합하여 업데이트해주세요.`
+        : '아래 대화 내용을 핵심 줄거리, 중요 사건, 캐릭터 상태 변화 중심으로 요약해주세요.';
+
+      const messages = toSummarize.map(m => `${m.role === 'user' ? '사용자' : 'AI'}: ${m.parts[0].text}`).join('\n\n');
+
+      try {
+        const res = await fetch(
+          `${GEMINI_BASE}/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: `${summaryPrompt}\n\n---\n${messages}` }] }],
+              systemInstruction: { parts: [{ text: '당신은 이야기 요약 전문가입니다. 핵심 줄거리, 캐릭터 상태, 중요 사건을 간결하게 요약하세요. 500자 이내.' }] },
+            }),
+          }
+        );
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const data = await res.json();
+        storySummary = data.candidates?.[0]?.content?.parts?.[0]?.text || storySummary;
+        summaryUpToIndex = windowStart;
+        updateSummaryBadge();
+        markDirty();
+      } catch (e) {
+        console.error('Summary generation failed:', e);
+      }
+    }
+
     function buildSessionDocument() {
       return {
         storyId: currentStoryId || null,
@@ -839,6 +887,8 @@
         },
         messages: messagesToStorage(conversationHistory),
         model: els.modelSelect.value || '',
+        summary: storySummary || '',
+        summaryUpToIndex: summaryUpToIndex || 0,
         updatedAt: serverTimestamp(),
         lastPlayedAt: serverTimestamp(),
       };
@@ -1311,9 +1361,18 @@
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
         ];
 
+        // 슬라이딩 윈도우: 최근 N개만 전송, 나머지는 요약으로 대체
+        const windowStart = Math.max(0, conversationHistory.length - SLIDING_WINDOW_SIZE);
+        const recentMessages = conversationHistory.slice(windowStart);
+
+        let systemPrompt = buildPrompt();
+        if (storySummary) {
+          systemPrompt += `\n\n[이전 이야기 요약]\n${storySummary}`;
+        }
+
         const body = cachedContentName
-          ? { cachedContent: cachedContentName, contents: conversationHistory, safetySettings }
-          : { system_instruction: { parts: [{ text: buildPrompt() }] }, contents: conversationHistory, safetySettings };
+          ? { cachedContent: cachedContentName, contents: recentMessages, safetySettings }
+          : { system_instruction: { parts: [{ text: systemPrompt }] }, contents: recentMessages, safetySettings };
 
         const res = await fetch(
           `${GEMINI_BASE}/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
@@ -1376,6 +1435,9 @@
         conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
         markDirty();
         updateTurnCount();
+        if (conversationHistory.length > SLIDING_WINDOW_SIZE + 10) {
+          generateSummary();
+        }
       } catch (err) {
         responseDiv.textContent = `[오류] ${err.message}`;
         responseDiv.style.color = 'var(--accent)';
@@ -1459,6 +1521,14 @@
       els.badgeUserNote.className = `menu-badge ${hasNote ? 'set' : 'empty'}`;
     }
 
+    function updateSummaryBadge() {
+      const badge = $('badgeSummary');
+      if (badge) {
+        badge.textContent = storySummary ? '있음' : '없음';
+        badge.className = `menu-badge ${storySummary ? 'set' : 'empty'}`;
+      }
+    }
+
     // --- Modal Logic ---
     function openModal(id) {
       $(id).classList.add('open');
@@ -1503,6 +1573,21 @@
       settingsData.userNote = $('modalUserNote_text').value.trim();
       updateBadges();
       closeModal('modalUserNote');
+    });
+
+    // Summary Menu
+    $('menuSummary').addEventListener('click', async () => {
+      if (!storySummary && conversationHistory.length > 4) {
+        if (confirm('아직 요약이 없습니다. 지금 생성할까요?')) {
+          summaryUpToIndex = 0;
+          await generateSummary();
+        }
+      }
+      if (storySummary) {
+        alert(`[이야기 요약]\n\n${storySummary}`);
+      } else {
+        alert('요약이 없습니다. 게임을 진행한 후 다시 시도해주세요.');
+      }
     });
 
     // --- Font Size ---
@@ -1642,6 +1727,9 @@
       } else {
         conversationHistory = messages;
       }
+      storySummary = data.summary || '';
+      summaryUpToIndex = data.summaryUpToIndex || 0;
+      updateSummaryBadge();
 
       els.gameOutput.innerHTML = '';
       for (const msg of conversationHistory) {
