@@ -364,8 +364,8 @@
         const app = initializeApp(FIREBASE_CONFIG);
         db = getFirestore(app);
         const auth = getAuth(app);
-        await signInAnonymously(auth);
-        currentUser = auth.currentUser;
+        const userCredential = await signInAnonymously(auth);
+        currentUser = userCredential.user;
       }
     } catch (e) {
       console.warn('Firebase init failed:', e);

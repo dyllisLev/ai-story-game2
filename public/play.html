@@ -823,8 +823,8 @@
         const app = initializeApp(FIREBASE_CONFIG);
         db = getFirestore(app);
         const auth = getAuth(app);
-        await signInAnonymously(auth);
-        currentUser = auth.currentUser;
+        const userCredential = await signInAnonymously(auth);
+        currentUser = userCredential.user;
       }
     } catch (e) {
       console.warn('Firebase init failed:', e);
@@ -1400,7 +1400,8 @@
 
       let html = DOMPurify.sanitize(marked.parse(processed), {
         ADD_TAGS: ['annotation', 'semantics', 'math', 'mrow', 'msup', 'munder', 'mover', 'mfrac', 'msqrt', 'mtable', 'mtr', 'mtd', 'mtext', 'mn', 'mo', 'mi', 'mspace', 'mpadded', 'mstyle', 'menclose'],
-        ADD_ATTR: ['encoding', 'class', 'style', 'displaystyle', 'scriptlevel', 'mathvariant', 'fence', 'separator', 'stretchy', 'symmetric', 'maxsize', 'minsize', 'largeop', 'movablelimits', 'accent', 'lspace', 'rspace', 'linethickness', 'columnalign', 'rowalign', 'columnlines', 'rowlines', 'frame', 'framespacing', 'equalrows', 'equalcolumns', 'side', 'minlabelspacing', 'href'],
+        ADD_ATTR: ['encoding', 'class', 'displaystyle', 'scriptlevel', 'mathvariant', 'fence', 'separator', 'stretchy', 'symmetric', 'maxsize', 'minsize', 'largeop', 'movablelimits', 'accent', 'lspace', 'rspace', 'linethickness', 'columnalign', 'rowalign', 'columnlines', 'rowlines', 'frame', 'framespacing', 'equalrows', 'equalcolumns', 'side', 'minlabelspacing'],
+        ALLOW_DATA_ATTR: false,
       });
       html = html.replace(/%%LATEX_(\d+)%%/g, (_, i) => placeholders[+i]);
       return html;
