@@ -804,6 +804,8 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
     import { getFirestore, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, limit as firestoreLimit, serverTimestamp }
       from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
+    import { getAuth, signInAnonymously, onAuthStateChanged }
+      from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js';
 
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyAaO9dQmykNuiaf23jh_QJVJFBZn4HsMZw",
@@ -815,10 +817,14 @@
     };
 
     let db = null;
+    let currentUser = null;
     try {
       if (FIREBASE_CONFIG.apiKey) {
         const app = initializeApp(FIREBASE_CONFIG);
         db = getFirestore(app);
+        const auth = getAuth(app);
+        await signInAnonymously(auth);
+        currentUser = auth.currentUser;
       }
     } catch (e) {
       console.warn('Firebase init failed:', e);
@@ -989,6 +995,7 @@
           ...buildSessionDocument(),
           createdAt: serverTimestamp(),
           ttl: null,
+          ownerUid: currentUser?.uid || null,
         });
         return true;
       } catch (e) { console.error('Firestore create failed:', e); return false; }
@@ -1042,21 +1049,14 @@
       if (document.visibilityState === 'hidden' && isDirty && currentSessionId) saveToCloud();
     });
 
+    // pagehide: rely on visibilitychange and auto-save interval instead
+    // (raw fetch without auth token would be rejected by updated Firestore rules)
     window.addEventListener('pagehide', () => {
-      if (!isDirty || !currentSessionId || !FIREBASE_CONFIG.projectId) return;
-      const now = new Date().toISOString();
-      fetch(
-        `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/sessions/${currentSessionId}?updateMask.fieldPaths=updatedAt&updateMask.fieldPaths=lastPlayedAt`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields: {
-            updatedAt: { timestampValue: now },
-            lastPlayedAt: { timestampValue: now },
-          }}),
-          keepalive: true,
-        }
-      ).catch(() => {});
+      if (!isDirty || !currentSessionId) return;
+      // Save to localStorage as last resort
+      const localData = { ...buildSessionDocument(), updatedAt: Date.now(), lastPlayedAt: Date.now() };
+      saveSessionToLocal(currentSessionId, localData);
+      addToSessionList(currentSessionId, localData.title);
     });
 
     function startAutoSave() {

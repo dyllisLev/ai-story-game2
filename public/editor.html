@@ -453,6 +453,8 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
     import { getFirestore, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, where, serverTimestamp }
       from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
+    import { getAuth, signInAnonymously }
+      from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js';
 
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyAaO9dQmykNuiaf23jh_QJVJFBZn4HsMZw",
@@ -464,10 +466,14 @@
     };
 
     let db = null;
+    let currentUser = null;
     try {
       if (FIREBASE_CONFIG.apiKey) {
         const app = initializeApp(FIREBASE_CONFIG);
         db = getFirestore(app);
+        const auth = getAuth(app);
+        await signInAnonymously(auth);
+        currentUser = auth.currentUser;
       }
     } catch (e) {
       console.warn('Firebase init failed:', e);
@@ -493,6 +499,7 @@
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           isPublic,
+          ownerUid: currentUser?.uid || null,
         });
         return storyId;
       } catch (e) {
