@@ -337,6 +337,12 @@
     <div class="panel panel-settings" id="panelSettings">
       <h2 class="panel-title">① 설정</h2>
       <div class="form-group">
+        <label>기본 프리셋</label>
+        <select id="presetSelect">
+          <option value="">직접 작성...</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label for="presetTitle">제목</label>
         <input type="text" id="presetTitle" placeholder="프리셋 제목 (예: 무협 강호 모험)">
       </div>
@@ -1195,6 +1201,52 @@
       const ok = await updateStoryInFirestore(storyId, data, passwordHash);
       alert(ok ? '스토리가 수정되었습니다.' : '수정에 실패했습니다. (Firestore Rules에서 암호 해시 불일치)');
     });
+
+    // --- Preset System ---
+    async function loadPublicPresets() {
+      if (!db) return [];
+      try {
+        const q = query(collection(db, 'presets'), where('isDefault', '==', true));
+        const snap = await getDocs(q);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e) {
+        console.error('Preset load failed:', e);
+        return [];
+      }
+    }
+
+    async function initPresets() {
+      try {
+        const res = await fetch('presets/default.json');
+        if (res.ok) {
+          const data = await res.json();
+          const opt = document.createElement('option');
+          opt.value = '__default__';
+          opt.textContent = data.title || '기본 세계관';
+          opt.dataset.preset = JSON.stringify(data);
+          $('presetSelect').appendChild(opt);
+        }
+      } catch {}
+
+      const presets = await loadPublicPresets();
+      for (const p of presets) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.title || p.id;
+        opt.dataset.preset = JSON.stringify(p);
+        $('presetSelect').appendChild(opt);
+      }
+    }
+
+    $('presetSelect').addEventListener('change', (e) => {
+      const opt = e.target.selectedOptions[0];
+      if (!opt?.dataset?.preset) return;
+      const data = JSON.parse(opt.dataset.preset);
+      applySettingsData(data);
+      saveToLocalStorage();
+    });
+
+    initPresets();
   </script>
 </body>
 </html>
