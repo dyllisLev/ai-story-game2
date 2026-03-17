@@ -259,11 +259,9 @@ service cloud.firestore {
     match /sessions/{sessionId} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasAll(['title', 'createdAt'])
-                    && request.resource.data.createdAt == request.time
-                    && request.resource.size < 800000;  // ~800KB 제한
+                    && request.resource.data.createdAt == request.time;
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['messages', 'updatedAt', 'lastPlayedAt', 'title', 'ttl', 'preset', 'model'])
-        && request.resource.size < 1000000;  // ~1MB 제한
+        .hasOnly(['messages', 'updatedAt', 'lastPlayedAt', 'title', 'ttl', 'preset', 'model']);
       allow delete: if false;
     }
 
@@ -271,15 +269,14 @@ service cloud.firestore {
     match /presets/{presetId} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasAll(['title', 'createdAt'])
-                    && request.resource.data.createdAt == request.time
-                    && request.resource.size < 100000;  // ~100KB 제한
+                    && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
   }
 }
 ```
 
-참고: 문서 크기 제한과 `createdAt == request.time` 검증으로 기본적인 남용 방지. 소규모 사용(~30명)이므로 Firebase App Check는 향후 필요 시 추가.
+참고: Firestore는 플랫폼 레벨에서 1MB 문서 크기 제한을 자동 적용. `createdAt == request.time` 검증으로 기본적인 남용 방지. 소규모 사용(~30명)이므로 Firebase App Check는 향후 필요 시 추가.
 
 ## 변경 범위
 
