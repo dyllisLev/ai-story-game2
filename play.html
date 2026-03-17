@@ -753,7 +753,7 @@
   <script type="module">
     // --- Firebase ---
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, orderBy, limit as firestoreLimit, serverTimestamp }
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, limit as firestoreLimit, serverTimestamp }
       from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
 
     const FIREBASE_CONFIG = {
@@ -1679,15 +1679,26 @@
       if (!db) return;
       const select = $('storySelect');
       try {
-        const q = query(collection(db, 'stories'), orderBy('createdAt', 'desc'), firestoreLimit(50));
+        const q = query(collection(db, 'stories'), firestoreLimit(50));
         const snap = await getDocs(q);
+        const stories = [];
         snap.forEach(d => {
           const data = d.data();
-          const opt = document.createElement('option');
-          opt.value = d.id;
-          opt.textContent = `${data.title || '제목 없음'} (${d.id.slice(0, 8)}...)`;
-          select.appendChild(opt);
+          stories.push({ id: d.id, title: data.title || '제목 없음', createdAt: data.createdAt });
         });
+        // 클라이언트에서 정렬 (인덱스 불필요)
+        stories.sort((a, b) => {
+          const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
+          const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
+          return tb - ta;
+        });
+        for (const s of stories) {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = `${s.title} (${s.id.slice(0, 8)}...)`;
+          select.appendChild(opt);
+        }
+        if (stories.length > 0) console.log(`Loaded ${stories.length} stories`);
       } catch (e) {
         console.error('Story list load failed:', e);
       }
