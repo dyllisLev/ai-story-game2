@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Story Game</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.css" crossorigin="anonymous">
+  <style>
+    :root {
+      --bg-dark: #0d1117;
+      --bg-panel: #161b22;
+      --bg-input: #1c2128;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #e94560;
+      --accent-hover: #ff6b81;
+      --cyan: #53d8fb;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-settings { flex: 1; min-width: 280px; }
+    .panel-prompt { flex: 1; min-width: 280px; }
+    .panel-game { flex: 1.2; min-width: 320px; }
+
+    .panel-title {
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .form-group { margin-bottom: 12px; }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    select { cursor: pointer; }
+    select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: var(--bg-input);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      flex: 1;
+    }
+
+    .btn-secondary:hover { color: var(--text); border-color: var(--text-muted); }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .prompt-preview {
+      flex: 1;
+      background: var(--bg-input);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      overflow-y: auto;
+    }
+
+    .prompt-section { color: var(--cyan); }
+    .prompt-system { color: var(--accent); }
+
+    .token-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      margin-bottom: 8px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text-muted);
+    }
+
+    .token-bar #costInfo {
+      color: #2ea043;
+    }
+
+    .game-output {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .game-placeholder {
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 40%;
+    }
+
+    .game-text {
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+    }
+
+    .game-text.narrator { color: var(--text); }
+    .game-text.narrator.markdown-rendered { white-space: normal; }
+
+    .game-text h1, .game-text h2, .game-text h3 {
+      margin: 12px 0 6px;
+      color: var(--cyan);
+    }
+    .game-text h1 { font-size: 18px; }
+    .game-text h2 { font-size: 16px; }
+    .game-text h3 { font-size: 14px; }
+
+    .game-text strong { color: var(--accent); font-weight: 700; }
+    .game-text em { color: var(--text-muted); font-style: italic; }
+
+    .game-text code {
+      background: var(--bg-input);
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+    }
+
+    .game-text pre {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      margin: 8px 0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .game-text pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .game-text ul, .game-text ol {
+      margin: 6px 0;
+      padding-left: 20px;
+    }
+
+    .game-text li { margin: 2px 0; }
+
+    .game-text hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 12px 0;
+    }
+
+    .game-text p {
+      margin: 0 0 0.5em;
+    }
+
+    .game-text p:last-child { margin-bottom: 0; }
+
+    .game-text blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: 12px;
+      margin: 8px 0;
+      color: var(--text-muted);
+    }
+
+    .game-text table {
+      border-collapse: collapse;
+      margin: 8px 0;
+      width: 100%;
+    }
+
+    .game-text th, .game-text td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .game-text th {
+      background: var(--bg-input);
+      color: var(--cyan);
+    }
+    .game-text.user-action {
+      color: var(--cyan);
+      padding-left: 12px;
+      border-left: 2px solid var(--cyan);
+    }
+
+    /* KaTeX overrides for dark theme */
+    .game-text .katex { font-size: 1.1em; }
+    .game-text .katex-display { margin: 8px 0; }
+
+    .game-input-area {
+      display: flex;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 12px;
+    }
+
+    .game-input-area input { flex: 1; }
+
+    .game-input-area .btn {
+      width: auto;
+      margin-top: 0;
+    }
+
+    .loading::after {
+      content: '⏳ 생성 중...';
+      display: block;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 8px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .cache-status {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .cache-status.active {
+      color: #2ea043;
+    }
+
+    @media (max-width: 768px) {
+      .container { flex-direction: column; height: auto; min-height: 100vh; }
+      .panel { min-width: auto; max-height: none; }
+      .panel-prompt { display: none; }
+      .btn { min-height: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <div class="container">
+    <!-- Panel 1: Settings -->
+    <div class="panel panel-settings" id="panelSettings">
+      <h2 class="panel-title">① 설정</h2>
+      <div class="form-group">
+        <label>기본 프리셋</label>
+        <select id="presetSelect">
+          <option value="">직접 작성...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="presetTitle">제목</label>
+        <input type="text" id="presetTitle" placeholder="프리셋 제목 (예: 무협 강호 모험)">
+      </div>
+      <div class="form-group">
+        <label for="apiKey">API Key</label>
+        <input type="password" id="apiKey" placeholder="Gemini API Key 입력">
+      </div>
+      <div class="form-group">
+        <label for="modelSelect">모델 선택</label>
+        <select id="modelSelect" disabled>
+          <option value="">API Key를 입력하세요</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="systemRules">시스템 규칙</label>
+        <textarea id="systemRules" rows="4" placeholder="AI 출력 규칙, 금지사항, 대사 형식 등..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="worldSetting">세계관</label>
+        <textarea id="worldSetting" rows="4" placeholder="게임의 세계관을 설명하세요..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="story">스토리</label>
+        <textarea id="story" rows="4" placeholder="메인 스토리/줄거리..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="characters">등장인물</label>
+        <textarea id="characters" rows="4" placeholder="주요 NPC 정보 (이름, 성격, 역할 등)..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="characterName">주인공 이름</label>
+        <input type="text" id="characterName" placeholder="캐릭터 이름">
+      </div>
+      <div class="form-group">
+        <label for="characterSetting">주인공 설정</label>
+        <textarea id="characterSetting" rows="3" placeholder="캐릭터 배경/성격/능력..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="userNote">유저노트</label>
+        <textarea id="userNote" rows="3" placeholder="참고 메모 (분위기, 선호 장르 등)..."></textarea>
+      </div>
+      <div class="form-group checkbox-group">
+        <label><input type="checkbox" id="useLatex" checked> LaTeX 연출 활성화</label>
+      </div>
+      <div class="form-group checkbox-group">
+        <label><input type="checkbox" id="useCache"> 프롬프트 캐시 사용</label>
+        <span class="cache-status" id="cacheStatus"></span>
+      </div>
+      <button id="btnStart" class="btn btn-primary">게임 시작</button>
+      <div class="btn-row">
+        <button id="btnSave" class="btn btn-secondary">저장</button>
+        <button id="btnLoad" class="btn btn-secondary">불러오기</button>
+        <input type="file" id="fileInput" accept=".json" hidden>
+      </div>
+      <div class="btn-row">
+        <button id="btnShareStory" class="btn btn-secondary">온라인 공유</button>
+        <button id="btnLoadStory" class="btn btn-secondary">스토리 불러오기</button>
+        <button id="btnUpdateStory" class="btn btn-secondary">스토리 수정</button>
+      </div>
+    </div>
+
+    <!-- Panel 2: Prompt Preview -->
+    <div class="panel panel-prompt" id="panelPrompt">
+      <h2 class="panel-title">② 프롬프트 미리보기</h2>
+      <div class="prompt-preview" id="promptPreview"></div>
+    </div>
+
+    <!-- Panel 3: Game -->
+    <div class="panel panel-game" id="panelGame">
+      <h2 class="panel-title">③ 게임</h2>
+      <div class="token-bar" id="tokenBar">
+        <span id="tokenInfo">토큰: 0</span>
+        <span id="costInfo">$0.000000</span>
+      </div>
+      <div class="game-output" id="gameOutput">
+        <p class="game-placeholder">게임을 시작하려면 설정을 입력하고 "게임 시작" 버튼을 누르세요.</p>
+      </div>
+      <div class="game-input-area">
+        <input type="text" id="gameInput" placeholder="행동을 입력하세요..." disabled>
+        <button id="btnSend" class="btn btn-primary" disabled>전송</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // --- Firebase ---
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, where, serverTimestamp }
+      from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
+
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAaO9dQmykNuiaf23jh_QJVJFBZn4HsMZw",
+      authDomain: "ai-story-game-5278.firebaseapp.com",
+      projectId: "ai-story-game-5278",
+      storageBucket: "ai-story-game-5278.firebasestorage.app",
+      messagingSenderId: "571520885404",
+      appId: "1:571520885404:web:cfc13ab40dd9a81edc4359"
+    };
+
+    let db = null;
+    try {
+      if (FIREBASE_CONFIG.apiKey) {
+        const app = initializeApp(FIREBASE_CONFIG);
+        db = getFirestore(app);
+      }
+    } catch (e) {
+      console.warn('Firebase init failed:', e);
+    }
+
+    // --- Password Hashing ---
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // --- Story Management ---
+    async function saveStoryToFirestore(storyData, passwordHash) {
+      if (!db) return null;
+      const storyId = crypto.randomUUID();
+      try {
+        await setDoc(doc(db, 'stories', storyId), {
+          ...storyData,
+          passwordHash: passwordHash || null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          isPublic: true,
+        });
+        return storyId;
+      } catch (e) {
+        console.error('Story save failed:', e);
+        return null;
+      }
+    }
+
+    async function loadStoryFromFirestore(storyId) {
+      if (!db) return null;
+      try {
+        const snap = await getDoc(doc(db, 'stories', storyId));
+        return snap.exists() ? snap.data() : null;
+      } catch (e) {
+        console.error('Story load failed:', e);
+        return null;
+      }
+    }
+
+    async function updateStoryInFirestore(storyId, storyData, passwordHash) {
+      if (!db) return false;
+      try {
+        await updateDoc(doc(db, 'stories', storyId), {
+          ...storyData,
+          passwordHash,
+          updatedAt: serverTimestamp(),
+        });
+        return true;
+      } catch (e) {
+        console.error('Story update failed:', e);
+        return false;
+      }
+    }
+
+    // --- DOM References ---
+    const $ = id => document.getElementById(id);
+
+    const els = {
+      presetTitle: $('presetTitle'),
+      apiKey: $('apiKey'),
+      modelSelect: $('modelSelect'),
+      worldSetting: $('worldSetting'),
+      story: $('story'),
+      characterName: $('characterName'),
+      characterSetting: $('characterSetting'),
+      characters: $('characters'),
+      userNote: $('userNote'),
+      systemRules: $('systemRules'),
+      promptPreview: $('promptPreview'),
+      gameOutput: $('gameOutput'),
+      gameInput: $('gameInput'),
+      btnStart: $('btnStart'),
+      btnSend: $('btnSend'),
+      btnSave: $('btnSave'),
+      btnLoad: $('btnLoad'),
+      fileInput: $('fileInput'),
+      useLatex: $('useLatex'),
+      useCache: $('useCache'),
+      cacheStatus: $('cacheStatus'),
+      tokenInfo: $('tokenInfo'),
+      costInfo: $('costInfo'),
+    };
+
+    // --- Token & Cost Tracking ---
+    const MODEL_PRICING = {
+      // per 1M tokens [input, output] — https://ai.google.dev/gemini-api/docs/pricing
+      // Gemini 3.x
+      'gemini-3.1-pro':        [2.00, 12.00],
+      'gemini-3.1-flash-lite': [0.25, 1.50],
+      'gemini-3-flash':        [0.50, 3.00],
+      // Gemini 2.5
+      'gemini-2.5-pro':        [1.25, 10.00],
+      'gemini-2.5-flash-lite': [0.10, 0.40],
+      'gemini-2.5-flash':      [0.30, 2.50],
+      // Gemini 2.0
+      'gemini-2.0-flash-lite': [0.075, 0.30],
+      'gemini-2.0-flash':      [0.10, 0.40],
+      // Legacy
+      'gemini-1.5-pro':        [1.25, 5.00],
+      'gemini-1.5-flash-8b':   [0.0375, 0.15],
+      'gemini-1.5-flash':      [0.075, 0.30],
+    };
+
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let totalCost = 0;
+
+    function getModelPricing(modelId) {
+      // Match model ID to pricing (e.g. "gemini-2.5-flash-preview-05-20" → "gemini-2.5-flash")
+      for (const key of Object.keys(MODEL_PRICING)) {
+        if (modelId.startsWith(key)) return MODEL_PRICING[key];
+      }
+      return null;
+    }
+
+    function updateTokenDisplay(usageMetadata) {
+      if (!usageMetadata) return;
+      const promptTokens = usageMetadata.promptTokenCount || 0;
+      const candidateTokens = usageMetadata.candidatesTokenCount || 0;
+
+      totalInputTokens += promptTokens;
+      totalOutputTokens += candidateTokens;
+
+      // Calculate cost
+      const modelId = els.modelSelect.value;
+      const pricing = getModelPricing(modelId);
+      if (pricing) {
+        totalCost += (promptTokens / 1_000_000) * pricing[0]
+                   + (candidateTokens / 1_000_000) * pricing[1];
+      }
+
+      const totalTokens = totalInputTokens + totalOutputTokens;
+      els.tokenInfo.textContent = `토큰: ${totalTokens.toLocaleString()} (↑${totalInputTokens.toLocaleString()} ↓${totalOutputTokens.toLocaleString()})`;
+      els.costInfo.textContent = pricing
+        ? `$${totalCost.toFixed(6)}`
+        : `$-.-- (가격 정보 없음)`;
+    }
+
+    function resetTokens() {
+      totalInputTokens = 0;
+      totalOutputTokens = 0;
+      totalCost = 0;
+      els.tokenInfo.textContent = '토큰: 0';
+      els.costInfo.textContent = '$0.000000';
+    }
+
+    // --- Prompt Builder ---
+    function buildPrompt() {
+      const w = els.worldSetting.value.trim();
+      const s = els.story.value.trim();
+      const cn = els.characterName.value.trim();
+      const cs = els.characterSetting.value.trim();
+      const ch = els.characters.value.trim();
+      const un = els.userNote.value.trim();
+      const sr = els.systemRules.value.trim();
+
+      let prompt = `당신은 인터랙티브 소설 게임의 AI 스토리텔러입니다.
+아래 설정을 기반으로 몰입감 있는 소설을 진행하세요.
+
+사용자가 행동을 입력하면 그에 따라 이야기를 이어가세요.
+각 응답은 소설체로 작성하세요.`;
+
+      if (sr) prompt += `\n\n[시스템 규칙]\n${sr}`;
+      if (w) prompt += `\n\n[세계관]\n${w}`;
+      if (s) prompt += `\n\n[스토리]\n${s}`;
+      if (ch) prompt += `\n\n[등장인물]\n${ch}`;
+      if (cn || cs) {
+        prompt += `\n\n[주인공]`;
+        if (cn) prompt += `\n이름: ${cn}`;
+        if (cs) prompt += `\n설정: ${cs}`;
+      }
+      if (un) prompt += `\n\n[유저노트]\n${un}`;
+
+      // LaTeX 연출 지시
+      if (els.useLatex.checked) {
+        prompt += `\n\n[LaTeX 연출 규칙]
+대사와 효과음에 LaTeX 수식 문법을 사용하여 시각적으로 연출하세요.
+반드시 $ 기호로 감싸서 인라인 수식으로 작성합니다.
+
+■ 대사 작성 형식:
+발화자 이름과 대사를 반드시 하나의 $ 안에 함께 포함하세요.
+형식: $\\text{발화자: }\\textsf{\\textbf{"대사 내용"}}$
+잘못된 예: 사내 $\\textsf{\\textbf{"대사"}}$ (발화자가 $ 밖에 있음 ✗)
+올바른 예: $\\text{사내: }\\textsf{\\textbf{"대사"}}$ (발화자가 $ 안에 있음 ✓)
+
+■ 대사 감정 연출:
+- 일반 대사: $\\text{이름: }\\textsf{\\textbf{"대사 내용"}}$
+- 귓속말/속삭임: $\\text{이름: }\\color{gray}\\small\\textsf{\\textbf{"속삭이는 내용"}}$
+- 외침/비명: $\\text{이름: }\\huge\\textsf{\\textbf{"외치는 내용!"}}$
+- 분노/격앙: $\\text{이름: }\\large\\color{red}\\textsf{\\textbf{"분노하는 내용!"}}$
+- 부끄러움/유혹: $\\text{이름: }\\color{lightpink}\\textsf{\\textbf{"부끄러운 내용"}}$
+- 슬픔/비탄: $\\text{이름: }\\color{SteelBlue}\\textsf{\\textbf{"슬픈 내용..."}}$
+- 냉소/조롱: $\\text{이름: }\\color{darkviolet}\\textit{\\textsf{"냉소적인 내용"}}$
+- 위압/경고: $\\text{이름: }\\Large\\color{darkred}\\textsf{\\textbf{"위압적인 내용"}}$
+- 신비/예언: $\\text{이름: }\\color{gold}\\mathcal{\\text{신비로운 내용}}$
+
+■ 효과 연출:
+- 효과음/환경음: $\\colorbox{black}{\\color{cyan}\\small\\text{효과음}}$
+- 시스템/알림: $\\fcolorbox{gray}{black}{\\color{lime}\\footnotesize\\text{시스템 메시지}}$
+- 취소선(부정/철회): $\\cancel{\\text{취소된 내용}}$
+- 강조/각성: $\\boxed{\\color{orange}\\textbf{\\text{강조 내용}}}$
+
+■ 주의사항 (매우 중요 - 반드시 준수):
+- 모든 LaTeX 표현은 반드시 $ 기호로 열고 닫아야 합니다. $가 없으면 렌더링되지 않습니다!
+- 잘못된 예: \\text{이름: }\\textsf{\\textbf{"대사"}} ($ 없음 ✗)
+- 올바른 예: $\\text{이름: }\\textsf{\\textbf{"대사"}}$ ($ 있음 ✓)
+- 발화자 이름은 반드시 $ 안에 \\text{이름: } 형태로 포함하세요.
+- HTML 태그나 &quot; 같은 HTML 엔티티는 절대 사용하지 마세요. 따옴표는 그냥 "를 쓰세요.
+- 지문/나레이션은 LaTeX 없이 일반 텍스트로 작성하세요.
+- 대사에만 LaTeX를 적용하세요. 남용하지 마세요.`;
+      }
+
+      // {{user}}를 주인공 이름으로 치환
+      if (cn) prompt = prompt.replaceAll('{{user}}', cn);
+
+      return prompt;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function updatePromptPreview() {
+      const prompt = buildPrompt();
+      const escaped = escapeHtml(prompt);
+      const sectionMatch = escaped.match(/\[(시스템 규칙|세계관|스토리|주인공|유저노트|LaTeX 연출 규칙)\]/);
+      const firstSectionIdx = sectionMatch ? sectionMatch.index : -1;
+      let html;
+      if (firstSectionIdx > 0) {
+        const preamble = escaped.substring(0, firstSectionIdx);
+        const rest = escaped.substring(firstSectionIdx);
+        html = `<span class="prompt-system">${preamble.trim()}</span>\n\n` +
+          rest.replace(/\[(시스템 규칙)\]/g, '<span class="prompt-system">[$1]</span>')
+               .replace(/\[(세계관|스토리|등장인물|주인공|유저노트|LaTeX 연출 규칙)\]/g, '<span class="prompt-section">[$1]</span>');
+      } else {
+        html = `<span class="prompt-system">${escaped}</span>`;
+      }
+      els.promptPreview.innerHTML = html;
+    }
+
+    const inputFields = ['presetTitle', 'systemRules', 'worldSetting', 'story', 'characters', 'characterName', 'characterSetting', 'userNote'];
+    inputFields.forEach(id => {
+      els[id].addEventListener('input', updatePromptPreview);
+    });
+
+    updatePromptPreview();
+
+    // --- localStorage ---
+    const STORAGE_KEY = 'ai-story-game-settings';
+
+    function getSettingsData() {
+      return {
+        title: els.presetTitle.value,
+        apiKey: els.apiKey.value,
+        model: els.modelSelect.value,
+        worldSetting: els.worldSetting.value,
+        story: els.story.value,
+        characterName: els.characterName.value,
+        characterSetting: els.characterSetting.value,
+        characters: els.characters.value,
+        userNote: els.userNote.value,
+        systemRules: els.systemRules.value,
+        useLatex: els.useLatex.checked,
+        useCache: els.useCache.checked,
+      };
+    }
+
+    function applySettingsData(data) {
+      if ('title' in data) els.presetTitle.value = data.title || '';
+      if ('apiKey' in data) els.apiKey.value = data.apiKey || '';
+      if ('model' in data) els.modelSelect.value = data.model || '';
+      if ('characters' in data) els.characters.value = data.characters || '';
+      if ('systemRules' in data) els.systemRules.value = data.systemRules || '';
+      if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
+      if ('useCache' in data) els.useCache.checked = !!data.useCache;
+      if ('worldSetting' in data) els.worldSetting.value = data.worldSetting || '';
+      if ('story' in data) els.story.value = data.story || '';
+      if ('characterName' in data) els.characterName.value = data.characterName || '';
+      if ('characterSetting' in data) els.characterSetting.value = data.characterSetting || '';
+      if ('userNote' in data) els.userNote.value = data.userNote || '';
+      updatePromptPreview();
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(getSettingsData()));
+    }
+
+    function loadFromLocalStorage() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try { applySettingsData(JSON.parse(saved)); } catch (e) {}
+      }
+    }
+
+    // Auto-save on any input change
+    [...inputFields, 'apiKey'].forEach(id => {
+      els[id].addEventListener('input', saveToLocalStorage);
+    });
+    els.modelSelect.addEventListener('change', saveToLocalStorage);
+
+    // --- JSON Export/Import ---
+    let currentFileHandle = null;
+
+    els.btnSave.addEventListener('click', async () => {
+      const json = JSON.stringify(getSettingsData(), null, 2);
+
+      // 이미 불러온 파일이 있으면 덮어쓰기
+      if (currentFileHandle) {
+        try {
+          const writable = await currentFileHandle.createWritable();
+          await writable.write(json);
+          await writable.close();
+          return;
+        } catch (e) {
+          // 권한 거부 등 실패 시 새 파일로 저장
+          currentFileHandle = null;
+        }
+      }
+
+      // File System Access API 지원 시 새 파일 저장
+      if (window.showSaveFilePicker) {
+        try {
+          currentFileHandle = await window.showSaveFilePicker({
+            suggestedName: 'story-game-settings.json',
+            types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+          });
+          const writable = await currentFileHandle.createWritable();
+          await writable.write(json);
+          await writable.close();
+          return;
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+        }
+      }
+
+      // 폴백: 다운로드
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'story-game-settings.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    els.btnLoad.addEventListener('click', async () => {
+      // File System Access API 지원 시 파일 핸들 저장
+      if (window.showOpenFilePicker) {
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+          });
+          currentFileHandle = handle;
+          const file = await handle.getFile();
+          const text = await file.text();
+          const data = JSON.parse(text);
+          applySettingsData(data);
+          saveToLocalStorage();
+          if (data.apiKey && typeof fetchModels === 'function') fetchModels(data.apiKey);
+          return;
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+        }
+      }
+
+      // 폴백: 기존 file input
+      els.fileInput.click();
+    });
+
+    els.fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      currentFileHandle = null;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          applySettingsData(data);
+          saveToLocalStorage();
+          if (data.apiKey && typeof fetchModels === 'function') fetchModels(data.apiKey);
+        } catch (err) {
+          alert('잘못된 JSON 파일입니다.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    // --- Gemini API ---
+    const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+
+    async function fetchModels(apiKey) {
+      if (!apiKey) return;
+      els.modelSelect.disabled = true;
+      els.modelSelect.innerHTML = '<option value="">모델 목록 조회 중...</option>';
+
+      try {
+        const res = await fetch(`${GEMINI_BASE}/models?key=${apiKey}`);
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+        const data = await res.json();
+        const models = (data.models || [])
+          .filter(m => m.name.startsWith('models/gemini-') && m.supportedGenerationMethods?.includes('generateContent'))
+          .map(m => ({ id: m.name.replace('models/', ''), name: m.displayName || m.name.replace('models/', '') }));
+
+        els.modelSelect.innerHTML = models.length
+          ? models.map(m => `<option value="${m.id}">${m.name}</option>`).join('')
+          : '<option value="">사용 가능한 모델이 없습니다</option>';
+        els.modelSelect.disabled = models.length === 0;
+
+        // Restore saved model selection
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const { model } = JSON.parse(saved);
+          if (model && models.some(m => m.id === model)) {
+            els.modelSelect.value = model;
+          }
+        }
+      } catch (err) {
+        els.modelSelect.innerHTML = `<option value="">오류: ${err.message}</option>`;
+        els.modelSelect.disabled = true;
+      }
+    }
+
+    // Debounced API key input → fetch models
+    let apiKeyTimer = null;
+    els.apiKey.addEventListener('input', () => {
+      clearTimeout(apiKeyTimer);
+      apiKeyTimer = setTimeout(() => fetchModels(els.apiKey.value.trim()), 800);
+    });
+
+    // Load saved settings on page load
+    loadFromLocalStorage();
+    if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
+
+    // --- Cache ---
+    let cachedContentName = null;
+
+    async function createCache(apiKey, model) {
+      const prompt = buildPrompt();
+      els.cacheStatus.textContent = '캐시 생성 중...';
+      els.cacheStatus.className = 'cache-status';
+
+      try {
+        const res = await fetch(`${GEMINI_BASE}/cachedContents?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: `models/${model}`,
+            systemInstruction: {
+              parts: [{ text: prompt }],
+            },
+            ttl: '3600s',
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(`Cache Error ${res.status}: ${err}`);
+        }
+
+        const data = await res.json();
+        cachedContentName = data.name;
+        els.cacheStatus.textContent = '캐시 활성';
+        els.cacheStatus.className = 'cache-status active';
+        return true;
+      } catch (err) {
+        els.cacheStatus.textContent = `캐시 실패: ${err.message}`;
+        els.cacheStatus.className = 'cache-status';
+        cachedContentName = null;
+        return false;
+      }
+    }
+
+    function clearCache() {
+      cachedContentName = null;
+      els.cacheStatus.textContent = '';
+      els.cacheStatus.className = 'cache-status';
+    }
+
+    els.useLatex.addEventListener('change', () => {
+      saveToLocalStorage();
+      updatePromptPreview();
+    });
+
+    els.useCache.addEventListener('change', () => {
+      if (!els.useCache.checked) clearCache();
+      saveToLocalStorage();
+    });
+
+    // --- Game State ---
+    let conversationHistory = [];
+    let isGenerating = false;
+
+    // --- Markdown Parser (marked.js) ---
+    marked.setOptions({
+      breaks: true,   // \n → <br>
+      gfm: true,      // GitHub Flavored Markdown (tables, etc.)
+    });
+
+    function renderMarkdown(text) {
+      // 1) Extract LaTeX BEFORE marked.js (prevents &quot; and other HTML entity corruption)
+      const placeholders = [];
+      let processed = text;
+
+      // Block LaTeX: $$...$$
+      processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
+        const id = `%%LATEX_${placeholders.length}%%`;
+        try {
+          placeholders.push(katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false, trust: true }));
+        } catch (e) { placeholders.push(`<code>${tex}</code>`); }
+        return id;
+      });
+
+      // Inline LaTeX: $...$
+      processed = processed.replace(/\$([^\$\n]+?)\$/g, (_, tex) => {
+        const id = `%%LATEX_${placeholders.length}%%`;
+        try {
+          placeholders.push(katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false, trust: true }));
+        } catch (e) { placeholders.push(`<code>${tex}</code>`); }
+        return id;
+      });
+
+      // 2) Run marked.js on LaTeX-free text
+      let html = marked.parse(processed);
+
+      // 3) Re-insert rendered LaTeX
+      html = html.replace(/%%LATEX_(\d+)%%/g, (_, i) => placeholders[+i]);
+
+      return html;
+    }
+
+    function appendToGame(text, className) {
+      const placeholder = els.gameOutput.querySelector('.game-placeholder');
+      if (placeholder) placeholder.remove();
+
+      const div = document.createElement('div');
+      div.className = `game-text ${className}`;
+      div.textContent = text;
+      els.gameOutput.appendChild(div);
+      els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+      return div;
+    }
+
+    async function sendToGemini(userMessage) {
+      const apiKey = els.apiKey.value.trim();
+      const model = els.modelSelect.value;
+
+      if (!apiKey || !model) {
+        alert('API Key와 모델을 선택해주세요.');
+        return;
+      }
+
+      isGenerating = true;
+      els.gameInput.disabled = true;
+      els.btnSend.disabled = true;
+      els.btnStart.disabled = true;
+
+      conversationHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+
+      const responseDiv = appendToGame('', 'narrator');
+      responseDiv.classList.add('loading');
+
+      try {
+        const safetySettings = [
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+        ];
+
+        const body = cachedContentName
+          ? { cachedContent: cachedContentName, contents: conversationHistory, safetySettings }
+          : { system_instruction: { parts: [{ text: buildPrompt() }] }, contents: conversationHistory, safetySettings };
+
+        const res = await fetch(
+          `${GEMINI_BASE}/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }
+        );
+
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(`API Error ${res.status}: ${err}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+        let buffer = '';
+        let renderTimer = null;
+        let lastUsageMetadata = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === '[DONE]') continue;
+
+            try {
+              const data = JSON.parse(jsonStr);
+              if (data.usageMetadata) lastUsageMetadata = data.usageMetadata;
+              const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (text) {
+                fullResponse += text;
+                // Debounce markdown rendering during streaming
+                clearTimeout(renderTimer);
+                renderTimer = setTimeout(() => {
+                  responseDiv.innerHTML = renderMarkdown(fullResponse);
+                  responseDiv.classList.add('markdown-rendered');
+                  els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+                }, 80);
+              }
+            } catch (e) { /* skip malformed JSON */ }
+          }
+        }
+
+        // Final render with complete markdown
+        clearTimeout(renderTimer);
+        responseDiv.innerHTML = renderMarkdown(fullResponse);
+        responseDiv.classList.add('markdown-rendered');
+        els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+
+        // Update token & cost display
+        if (lastUsageMetadata) updateTokenDisplay(lastUsageMetadata);
+
+        conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
+      } catch (err) {
+        responseDiv.textContent = `[오류] ${err.message}`;
+        responseDiv.style.color = 'var(--accent)';
+        conversationHistory.pop();
+      } finally {
+        responseDiv.classList.remove('loading');
+        isGenerating = false;
+        els.gameInput.disabled = false;
+        els.btnSend.disabled = false;
+        els.btnStart.disabled = false;
+        els.gameInput.focus();
+      }
+    }
+
+    // --- Game Controls ---
+    els.btnStart.addEventListener('click', async () => {
+      if (isGenerating) return;
+      const apiKey = els.apiKey.value.trim();
+      const model = els.modelSelect.value;
+      if (!apiKey) { alert('API Key를 입력해주세요.'); els.apiKey.focus(); return; }
+      if (!model) { alert('모델을 선택해주세요.'); return; }
+      conversationHistory = [];
+      els.gameOutput.innerHTML = '';
+      resetTokens();
+      els.gameInput.disabled = false;
+      els.btnSend.disabled = false;
+
+      // 캐시 설정
+      clearCache();
+      if (els.useCache.checked) {
+        const ok = await createCache(apiKey, model);
+        if (!ok) {
+          alert('캐시 생성에 실패했습니다. 캐시 없이 진행합니다.');
+        }
+      }
+
+      sendToGemini('게임을 시작해줘');
+    });
+
+    els.btnSend.addEventListener('click', () => {
+      if (isGenerating) return;
+      const text = els.gameInput.value.trim();
+      if (!text) return;
+      appendToGame(`▸ ${text}`, 'user-action');
+      els.gameInput.value = '';
+      sendToGemini(text);
+    });
+
+    els.gameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        els.btnSend.click();
+      }
+    });
+
+    // --- Story Share/Load/Update ---
+    $('btnShareStory').addEventListener('click', async () => {
+      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      const data = getSettingsData();
+      delete data.apiKey;
+      delete data.model;
+
+      const password = prompt('스토리 수정 암호를 설정하세요 (빈칸이면 암호 없음):');
+      const passwordHash = password ? await hashPassword(password) : null;
+
+      const storyId = await saveStoryToFirestore(data, passwordHash);
+      if (storyId) {
+        const msg = password
+          ? '스토리가 공유되었습니다. 암호가 설정되어 수정 시 암호가 필요합니다.\n아래 ID를 공유하세요:'
+          : '스토리가 공유되었습니다. 아래 ID를 공유하세요:';
+        prompt(msg, storyId);
+      } else {
+        alert('스토리 공유에 실패했습니다.');
+      }
+    });
+
+    $('btnLoadStory').addEventListener('click', async () => {
+      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      const storyId = prompt('스토리 ID를 입력하세요:');
+      if (!storyId) return;
+      const data = await loadStoryFromFirestore(storyId);
+      if (data) {
+        applySettingsData(data);
+        saveToLocalStorage();
+        alert('스토리를 불러왔습니다.');
+      } else {
+        alert('스토리를 찾을 수 없습니다.');
+      }
+    });
+
+    $('btnUpdateStory').addEventListener('click', async () => {
+      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      const storyId = prompt('수정할 스토리 ID:');
+      if (!storyId) return;
+
+      const existing = await loadStoryFromFirestore(storyId);
+      if (!existing) { alert('스토리를 찾을 수 없습니다.'); return; }
+
+      let passwordHash = existing.passwordHash;
+      if (passwordHash) {
+        const password = prompt('스토리 수정 암호를 입력하세요:');
+        if (!password) return;
+        const inputHash = await hashPassword(password);
+        if (inputHash !== passwordHash) { alert('암호가 일치하지 않습니다.'); return; }
+      }
+
+      const data = getSettingsData();
+      delete data.apiKey;
+      delete data.model;
+
+      const ok = await updateStoryInFirestore(storyId, data, passwordHash);
+      alert(ok ? '스토리가 수정되었습니다.' : '수정에 실패했습니다. (Firestore Rules에서 암호 해시 불일치)');
+    });
+
+    // --- Preset System ---
+    async function loadPublicPresets() {
+      if (!db) return [];
+      try {
+        const q = query(collection(db, 'presets'), where('isDefault', '==', true));
+        const snap = await getDocs(q);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e) {
+        console.error('Preset load failed:', e);
+        return [];
+      }
+    }
+
+    async function initPresets() {
+      try {
+        const res = await fetch('presets/default.json');
+        if (res.ok) {
+          const data = await res.json();
+          const opt = document.createElement('option');
+          opt.value = '__default__';
+          opt.textContent = data.title || '기본 세계관';
+          opt.dataset.preset = JSON.stringify(data);
+          $('presetSelect').appendChild(opt);
+        }
+      } catch {}
+
+      const presets = await loadPublicPresets();
+      for (const p of presets) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.title || p.id;
+        opt.dataset.preset = JSON.stringify(p);
+        $('presetSelect').appendChild(opt);
+      }
+    }
+
+    $('presetSelect').addEventListener('change', (e) => {
+      const opt = e.target.selectedOptions[0];
+      if (!opt?.dataset?.preset) return;
+      const data = JSON.parse(opt.dataset.preset);
+      applySettingsData(data);
+      saveToLocalStorage();
+    });
+
+    initPresets();
+  </script>
+</body>
+</html>

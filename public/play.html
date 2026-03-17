@@ -633,7 +633,8 @@
       <span id="costInfo">$0.000000</span>
     </div>
     <button id="btnStart" class="btn btn-primary">게임 시작</button>
-    <a href="index.html" class="btn btn-secondary" title="설정 페이지로 이동">설정</a>
+    <a href="editor.html" class="btn btn-secondary" title="스토리 편집">편집</a>
+    <a href="index.html" class="btn btn-secondary" title="메인으로">홈</a>
     <button id="btnFocusMode" class="btn-icon" title="집중 모드">&#128065;</button>
     <button id="btnTogglePanel" class="btn-icon" title="플레이 설정">&#9776;</button>
   </div>
@@ -1868,6 +1869,41 @@
     renderSessionList();
     renderSaveStatus();
     loadStoryList();
+
+    // --- URL Parameter Auto-Load ---
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const storyId = params.get('storyId');
+      const sessionId = params.get('sessionId');
+
+      if (sessionId) {
+        // 세션 이어하기
+        await loadSession(sessionId);
+      } else if (storyId) {
+        // 스토리 선택 → 설정 적용
+        const data = await loadStoryFromFirestore(storyId);
+        if (data) {
+          settingsData.title = data.title || '';
+          settingsData.worldSetting = data.worldSetting || '';
+          settingsData.story = data.story || '';
+          settingsData.characterName = data.characterName || '';
+          settingsData.characterSetting = data.characterSetting || '';
+          settingsData.characters = data.characters || '';
+          settingsData.userNote = data.userNote || '';
+          settingsData.systemRules = data.systemRules || '';
+          if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
+          if ('useCache' in data) els.useCache.checked = !!data.useCache;
+          currentStoryId = storyId;
+          els.settingsName.textContent = data.title || '제목 없음';
+          updateBadges();
+          // 스토리 드롭다운에서 선택
+          const select = $('storySelect');
+          if (select.querySelector(`option[value="${storyId}"]`)) {
+            select.value = storyId;
+          }
+        }
+      }
+    })();
   </script>
 </body>
 </html>
