@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Story Game</title>
+  <style>
+    :root {
+      --bg-dark: #0d1117;
+      --bg-panel: #161b22;
+      --bg-input: #1c2128;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #e94560;
+      --accent-hover: #ff6b81;
+      --cyan: #53d8fb;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-settings { flex: 1; min-width: 280px; }
+    .panel-prompt { flex: 1; min-width: 280px; }
+    .panel-game { flex: 1.2; min-width: 320px; }
+
+    .panel-title {
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .form-group { margin-bottom: 12px; }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    select { cursor: pointer; }
+    select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: var(--bg-input);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      flex: 1;
+    }
+
+    .btn-secondary:hover { color: var(--text); border-color: var(--text-muted); }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .prompt-preview {
+      flex: 1;
+      background: var(--bg-input);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      overflow-y: auto;
+    }
+
+    .prompt-section { color: var(--cyan); }
+    .prompt-system { color: var(--accent); }
+
+    .game-output {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .game-placeholder {
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 40%;
+    }
+
+    .game-text {
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+    }
+
+    .game-text.narrator { color: var(--text); }
+    .game-text.user-action {
+      color: var(--cyan);
+      padding-left: 12px;
+      border-left: 2px solid var(--cyan);
+    }
+
+    .game-input-area {
+      display: flex;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 12px;
+    }
+
+    .game-input-area input { flex: 1; }
+
+    .game-input-area .btn {
+      width: auto;
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Panel 1: Settings -->
+    <div class="panel panel-settings" id="panelSettings">
+      <h2 class="panel-title">① 설정</h2>
+      <div class="form-group">
+        <label for="apiKey">API Key</label>
+        <input type="password" id="apiKey" placeholder="Gemini API Key 입력">
+      </div>
+      <div class="form-group">
+        <label for="modelSelect">모델 선택</label>
+        <select id="modelSelect" disabled>
+          <option value="">API Key를 입력하세요</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="worldSetting">세계관</label>
+        <textarea id="worldSetting" rows="4" placeholder="게임의 세계관을 설명하세요..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="story">스토리</label>
+        <textarea id="story" rows="4" placeholder="메인 스토리/줄거리..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="characterName">주인공 이름</label>
+        <input type="text" id="characterName" placeholder="캐릭터 이름">
+      </div>
+      <div class="form-group">
+        <label for="characterSetting">주인공 설정</label>
+        <textarea id="characterSetting" rows="3" placeholder="캐릭터 배경/성격/능력..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="userNote">유저노트</label>
+        <textarea id="userNote" rows="3" placeholder="AI에 대한 추가 지시사항..."></textarea>
+      </div>
+      <button id="btnStart" class="btn btn-primary">게임 시작</button>
+      <div class="btn-row">
+        <button id="btnSave" class="btn btn-secondary">저장</button>
+        <button id="btnLoad" class="btn btn-secondary">불러오기</button>
+        <input type="file" id="fileInput" accept=".json" hidden>
+      </div>
+    </div>
+
+    <!-- Panel 2: Prompt Preview -->
+    <div class="panel panel-prompt" id="panelPrompt">
+      <h2 class="panel-title">② 프롬프트 미리보기</h2>
+      <div class="prompt-preview" id="promptPreview"></div>
+    </div>
+
+    <!-- Panel 3: Game -->
+    <div class="panel panel-game" id="panelGame">
+      <h2 class="panel-title">③ 게임</h2>
+      <div class="game-output" id="gameOutput">
+        <p class="game-placeholder">게임을 시작하려면 설정을 입력하고 "게임 시작" 버튼을 누르세요.</p>
+      </div>
+      <div class="game-input-area">
+        <input type="text" id="gameInput" placeholder="행동을 입력하세요..." disabled>
+        <button id="btnSend" class="btn btn-primary" disabled>전송</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
