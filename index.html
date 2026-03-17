@@ -178,6 +178,20 @@
       width: auto;
       margin-top: 0;
     }
+
+    .loading::after {
+      content: '⏳ 생성 중...';
+      display: block;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 8px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -394,8 +408,179 @@
       e.target.value = '';
     });
 
+    // --- Gemini API ---
+    const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+
+    async function fetchModels(apiKey) {
+      if (!apiKey) return;
+      els.modelSelect.disabled = true;
+      els.modelSelect.innerHTML = '<option value="">모델 목록 조회 중...</option>';
+
+      try {
+        const res = await fetch(`${GEMINI_BASE}/models?key=${apiKey}`);
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+        const data = await res.json();
+        const models = (data.models || [])
+          .filter(m => m.name.startsWith('models/gemini-') && m.supportedGenerationMethods?.includes('generateContent'))
+          .map(m => ({ id: m.name.replace('models/', ''), name: m.displayName || m.name.replace('models/', '') }));
+
+        els.modelSelect.innerHTML = models.length
+          ? models.map(m => `<option value="${m.id}">${m.name}</option>`).join('')
+          : '<option value="">사용 가능한 모델이 없습니다</option>';
+        els.modelSelect.disabled = models.length === 0;
+
+        // Restore saved model selection
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const { model } = JSON.parse(saved);
+          if (model && models.some(m => m.id === model)) {
+            els.modelSelect.value = model;
+          }
+        }
+      } catch (err) {
+        els.modelSelect.innerHTML = `<option value="">오류: ${err.message}</option>`;
+        els.modelSelect.disabled = true;
+      }
+    }
+
+    // Debounced API key input → fetch models
+    let apiKeyTimer = null;
+    els.apiKey.addEventListener('input', () => {
+      clearTimeout(apiKeyTimer);
+      apiKeyTimer = setTimeout(() => fetchModels(els.apiKey.value.trim()), 800);
+    });
+
     // Load saved settings on page load
     loadFromLocalStorage();
+    if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
+
+    // --- Game State ---
+    let conversationHistory = [];
+    let isGenerating = false;
+
+    function appendToGame(text, className) {
+      const placeholder = els.gameOutput.querySelector('.game-placeholder');
+      if (placeholder) placeholder.remove();
+
+      const div = document.createElement('div');
+      div.className = `game-text ${className}`;
+      div.textContent = text;
+      els.gameOutput.appendChild(div);
+      els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+      return div;
+    }
+
+    async function sendToGemini(userMessage) {
+      const apiKey = els.apiKey.value.trim();
+      const model = els.modelSelect.value;
+
+      if (!apiKey || !model) {
+        alert('API Key와 모델을 선택해주세요.');
+        return;
+      }
+
+      isGenerating = true;
+      els.gameInput.disabled = true;
+      els.btnSend.disabled = true;
+      els.btnStart.disabled = true;
+
+      conversationHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+
+      const responseDiv = appendToGame('', 'narrator');
+      responseDiv.classList.add('loading');
+
+      try {
+        const res = await fetch(
+          `${GEMINI_BASE}/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: buildPrompt() }] },
+              contents: conversationHistory,
+            }),
+          }
+        );
+
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(`API Error ${res.status}: ${err}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === '[DONE]') continue;
+
+            try {
+              const data = JSON.parse(jsonStr);
+              const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (text) {
+                fullResponse += text;
+                responseDiv.textContent = fullResponse;
+                els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+              }
+            } catch (e) { /* skip malformed JSON */ }
+          }
+        }
+
+        conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
+      } catch (err) {
+        responseDiv.textContent = `[오류] ${err.message}`;
+        responseDiv.style.color = 'var(--accent)';
+        conversationHistory.pop();
+      } finally {
+        responseDiv.classList.remove('loading');
+        isGenerating = false;
+        els.gameInput.disabled = false;
+        els.btnSend.disabled = false;
+        els.btnStart.disabled = false;
+        els.gameInput.focus();
+      }
+    }
+
+    // --- Game Controls ---
+    els.btnStart.addEventListener('click', () => {
+      if (isGenerating) return;
+      const apiKey = els.apiKey.value.trim();
+      const model = els.modelSelect.value;
+      if (!apiKey) { alert('API Key를 입력해주세요.'); els.apiKey.focus(); return; }
+      if (!model) { alert('모델을 선택해주세요.'); return; }
+      conversationHistory = [];
+      els.gameOutput.innerHTML = '';
+      els.gameInput.disabled = false;
+      els.btnSend.disabled = false;
+      sendToGemini('게임을 시작해줘');
+    });
+
+    els.btnSend.addEventListener('click', () => {
+      if (isGenerating) return;
+      const text = els.gameInput.value.trim();
+      if (!text) return;
+      appendToGame(`▸ ${text}`, 'user-action');
+      els.gameInput.value = '';
+      sendToGemini(text);
+    });
+
+    els.gameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        els.btnSend.click();
+      }
+    });
   </script>
 </body>
 </html>
