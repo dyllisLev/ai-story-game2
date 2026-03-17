@@ -348,7 +348,8 @@
 </head>
 <body>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js" crossorigin="anonymous"></script>
   <div class="container">
     <!-- Panel 1: Settings -->
     <div class="panel panel-settings" id="panelSettings">
@@ -691,7 +692,7 @@
     }
 
     function escapeHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
     }
 
     function updatePromptPreview() {
@@ -982,7 +983,7 @@
       processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
         const id = `%%LATEX_${placeholders.length}%%`;
         try {
-          placeholders.push(katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false, trust: true }));
+          placeholders.push(katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }));
         } catch (e) { placeholders.push(`<code>${tex}</code>`); }
         return id;
       });
@@ -991,13 +992,16 @@
       processed = processed.replace(/\$([^\$\n]+?)\$/g, (_, tex) => {
         const id = `%%LATEX_${placeholders.length}%%`;
         try {
-          placeholders.push(katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false, trust: true }));
+          placeholders.push(katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }));
         } catch (e) { placeholders.push(`<code>${tex}</code>`); }
         return id;
       });
 
       // 2) Run marked.js on LaTeX-free text
-      let html = marked.parse(processed);
+      let html = DOMPurify.sanitize(marked.parse(processed), {
+        ADD_TAGS: ['annotation', 'semantics', 'math', 'mrow', 'msup', 'munder', 'mover', 'mfrac', 'msqrt', 'mtable', 'mtr', 'mtd', 'mtext', 'mn', 'mo', 'mi', 'mspace', 'mpadded', 'mstyle', 'menclose'],
+        ADD_ATTR: ['encoding', 'class', 'style', 'displaystyle', 'scriptlevel', 'mathvariant', 'fence', 'separator', 'stretchy', 'symmetric', 'maxsize', 'minsize', 'largeop', 'movablelimits', 'accent', 'lspace', 'rspace', 'linethickness', 'columnalign', 'rowalign', 'columnlines', 'rowlines', 'frame', 'framespacing', 'equalrows', 'equalcolumns', 'side', 'minlabelspacing', 'href'],
+      });
 
       // 3) Re-insert rendered LaTeX
       html = html.replace(/%%LATEX_(\d+)%%/g, (_, i) => placeholders[+i]);

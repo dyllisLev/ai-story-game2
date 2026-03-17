@@ -617,7 +617,8 @@
 <body>
   <button class="btn-icon focus-exit" id="btnExitFocus" title="집중 모드 해제">&#10005;</button>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js" crossorigin="anonymous"></script>
 
   <!-- Top Bar -->
   <div class="top-bar">
@@ -969,8 +970,6 @@
           characterName: settingsData.characterName || '',
           characterSetting: settingsData.characterSetting || '',
           characters: settingsData.characters || '',
-          userNote: settingsData.userNote || '',
-          systemRules: settingsData.systemRules || '',
           useLatex: els.useLatex.checked,
           useCache: els.useCache.checked,
         },
@@ -1386,7 +1385,7 @@
       processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
         const id = `%%LATEX_${placeholders.length}%%`;
         try {
-          placeholders.push(katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false, trust: true }));
+          placeholders.push(katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }));
         } catch (e) { placeholders.push(`<code>${tex}</code>`); }
         return id;
       });
@@ -1394,12 +1393,15 @@
       processed = processed.replace(/\$([^\$\n]+?)\$/g, (_, tex) => {
         const id = `%%LATEX_${placeholders.length}%%`;
         try {
-          placeholders.push(katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false, trust: true }));
+          placeholders.push(katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }));
         } catch (e) { placeholders.push(`<code>${tex}</code>`); }
         return id;
       });
 
-      let html = marked.parse(processed);
+      let html = DOMPurify.sanitize(marked.parse(processed), {
+        ADD_TAGS: ['annotation', 'semantics', 'math', 'mrow', 'msup', 'munder', 'mover', 'mfrac', 'msqrt', 'mtable', 'mtr', 'mtd', 'mtext', 'mn', 'mo', 'mi', 'mspace', 'mpadded', 'mstyle', 'menclose'],
+        ADD_ATTR: ['encoding', 'class', 'style', 'displaystyle', 'scriptlevel', 'mathvariant', 'fence', 'separator', 'stretchy', 'symmetric', 'maxsize', 'minsize', 'largeop', 'movablelimits', 'accent', 'lspace', 'rspace', 'linethickness', 'columnalign', 'rowalign', 'columnlines', 'rowlines', 'frame', 'framespacing', 'equalrows', 'equalcolumns', 'side', 'minlabelspacing', 'href'],
+      });
       html = html.replace(/%%LATEX_(\d+)%%/g, (_, i) => placeholders[+i]);
       return html;
     }
@@ -1990,6 +1992,11 @@
             select.value = storyId;
           }
         }
+      }
+
+      // Remove sensitive IDs from URL bar
+      if (storyId || sessionId) {
+        history.replaceState(null, '', window.location.pathname);
       }
     })();
   </script>

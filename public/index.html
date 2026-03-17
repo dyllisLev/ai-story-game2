@@ -441,7 +441,7 @@
     }
 
     function escapeHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
     }
 
     // --- Load Recent Sessions from localStorage ---
