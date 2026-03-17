@@ -316,6 +316,85 @@
     });
 
     updatePromptPreview();
+
+    // --- localStorage ---
+    const STORAGE_KEY = 'ai-story-game-settings';
+
+    function getSettingsData() {
+      return {
+        apiKey: els.apiKey.value,
+        model: els.modelSelect.value,
+        worldSetting: els.worldSetting.value,
+        story: els.story.value,
+        characterName: els.characterName.value,
+        characterSetting: els.characterSetting.value,
+        userNote: els.userNote.value,
+      };
+    }
+
+    function applySettingsData(data) {
+      if (data.apiKey) els.apiKey.value = data.apiKey;
+      if (data.model) els.modelSelect.value = data.model;
+      if (data.worldSetting) els.worldSetting.value = data.worldSetting;
+      if (data.story) els.story.value = data.story;
+      if (data.characterName) els.characterName.value = data.characterName;
+      if (data.characterSetting) els.characterSetting.value = data.characterSetting;
+      if (data.userNote) els.userNote.value = data.userNote;
+      updatePromptPreview();
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(getSettingsData()));
+    }
+
+    function loadFromLocalStorage() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try { applySettingsData(JSON.parse(saved)); } catch (e) {}
+      }
+    }
+
+    // Auto-save on any input change
+    [...inputFields, 'apiKey'].forEach(id => {
+      els[id].addEventListener('input', saveToLocalStorage);
+    });
+    els.modelSelect.addEventListener('change', saveToLocalStorage);
+
+    // --- JSON Export/Import ---
+    els.btnSave.addEventListener('click', () => {
+      const data = getSettingsData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'story-game-settings.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    els.btnLoad.addEventListener('click', () => els.fileInput.click());
+
+    els.fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          applySettingsData(data);
+          saveToLocalStorage();
+          // fetchModels will be defined in Chunk 2 - safe because this only runs on user action
+          if (data.apiKey && typeof fetchModels === 'function') fetchModels(data.apiKey);
+        } catch (err) {
+          alert('잘못된 JSON 파일입니다.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    // Load saved settings on page load
+    loadFromLocalStorage();
   </script>
 </body>
 </html>
