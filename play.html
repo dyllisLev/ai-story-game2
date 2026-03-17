@@ -544,7 +544,7 @@
       background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px;
       padding: 5px 8px; color: var(--text); font-size: 12px; font-family: inherit;
     }
-    .session-bar select { max-width: 250px; }
+    .session-bar select { max-width: 280px; }
     .session-bar input[type="text"] { width: 320px; }
     .session-bar input:focus, .session-bar select:focus { outline: none; border-color: var(--accent); }
     .session-bar .label { color: var(--text-muted); white-space: nowrap; }
@@ -640,6 +640,9 @@
 
   <!-- Session Bar -->
   <div class="session-bar" id="sessionBar">
+    <span class="label">스토리:</span>
+    <select id="storySelect"><option value="">스토리 선택...</option></select>
+    <span class="separator" style="color:var(--border);">|</span>
     <span class="label">세션:</span>
     <select id="sessionSelect"><option value="">새 게임 또는 세션 선택...</option></select>
     <input type="text" id="sessionIdInput" placeholder="세션 ID 입력 (다른 기기에서 이어하기)">
@@ -750,7 +753,7 @@
   <script type="module">
     // --- Firebase ---
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp }
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, orderBy, limit as firestoreLimit, serverTimestamp }
       from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
 
     const FIREBASE_CONFIG = {
@@ -1671,6 +1674,60 @@
       if (currentSessionId) { isDirty = true; saveToCloud(); }
     });
 
+    // --- Story List UI ---
+    async function loadStoryList() {
+      if (!db) return;
+      const select = $('storySelect');
+      try {
+        const q = query(collection(db, 'stories'), orderBy('createdAt', 'desc'), firestoreLimit(50));
+        const snap = await getDocs(q);
+        snap.forEach(d => {
+          const data = d.data();
+          const opt = document.createElement('option');
+          opt.value = d.id;
+          opt.textContent = `${data.title || '제목 없음'} (${d.id.slice(0, 8)}...)`;
+          select.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('Story list load failed:', e);
+      }
+    }
+
+    async function loadStoryFromFirestore(storyId) {
+      if (!db) return null;
+      try {
+        const snap = await getDoc(doc(db, 'stories', storyId));
+        return snap.exists() ? snap.data() : null;
+      } catch (e) {
+        console.error('Story load failed:', e);
+        return null;
+      }
+    }
+
+    $('storySelect').addEventListener('change', async (e) => {
+      const storyId = e.target.value;
+      if (!storyId) return;
+
+      const data = await loadStoryFromFirestore(storyId);
+      if (!data) { alert('스토리를 찾을 수 없습니다.'); return; }
+
+      // 스토리 설정 적용
+      settingsData.title = data.title || '';
+      settingsData.worldSetting = data.worldSetting || '';
+      settingsData.story = data.story || '';
+      settingsData.characterName = data.characterName || '';
+      settingsData.characterSetting = data.characterSetting || '';
+      settingsData.characters = data.characters || '';
+      settingsData.userNote = data.userNote || '';
+      settingsData.systemRules = data.systemRules || '';
+      if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
+      if ('useCache' in data) els.useCache.checked = !!data.useCache;
+
+      currentStoryId = storyId;
+      els.settingsName.textContent = `${data.title || '제목 없음'} (${storyId.slice(0, 8)}...)`;
+      updateBadges();
+    });
+
     // --- Session List UI ---
     function renderSessionList() {
       const select = $('sessionSelect');
@@ -1799,6 +1856,7 @@
     if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
     renderSessionList();
     renderSaveStatus();
+    loadStoryList();
   </script>
 </body>
 </html>
