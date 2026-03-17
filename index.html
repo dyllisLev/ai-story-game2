@@ -241,5 +241,81 @@
       </div>
     </div>
   </div>
+
+  <script>
+    // --- DOM References ---
+    const $ = id => document.getElementById(id);
+
+    const els = {
+      apiKey: $('apiKey'),
+      modelSelect: $('modelSelect'),
+      worldSetting: $('worldSetting'),
+      story: $('story'),
+      characterName: $('characterName'),
+      characterSetting: $('characterSetting'),
+      userNote: $('userNote'),
+      promptPreview: $('promptPreview'),
+      gameOutput: $('gameOutput'),
+      gameInput: $('gameInput'),
+      btnStart: $('btnStart'),
+      btnSend: $('btnSend'),
+      btnSave: $('btnSave'),
+      btnLoad: $('btnLoad'),
+      fileInput: $('fileInput'),
+    };
+
+    // --- Prompt Builder ---
+    function buildPrompt() {
+      const w = els.worldSetting.value.trim();
+      const s = els.story.value.trim();
+      const cn = els.characterName.value.trim();
+      const cs = els.characterSetting.value.trim();
+      const un = els.userNote.value.trim();
+
+      let prompt = `당신은 인터랙티브 소설 게임의 AI 스토리텔러입니다.
+아래 설정을 기반으로 몰입감 있는 소설을 진행하세요.
+
+사용자가 행동을 입력하면 그에 따라 이야기를 이어가세요.
+각 응답은 소설체로 작성하고, 마지막에 "▸ 당신의 행동은?" 으로 끝내세요.`;
+
+      if (w) prompt += `\n\n[세계관]\n${w}`;
+      if (s) prompt += `\n\n[스토리]\n${s}`;
+      if (cn || cs) {
+        prompt += `\n\n[주인공]`;
+        if (cn) prompt += `\n이름: ${cn}`;
+        if (cs) prompt += `\n설정: ${cs}`;
+      }
+      if (un) prompt += `\n\n[유저노트]\n${un}`;
+
+      return prompt;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function updatePromptPreview() {
+      const prompt = buildPrompt();
+      const escaped = escapeHtml(prompt);
+      const firstSectionIdx = escaped.indexOf('[세계관]');
+      let html;
+      if (firstSectionIdx > 0) {
+        const preamble = escaped.substring(0, firstSectionIdx);
+        const rest = escaped.substring(firstSectionIdx);
+        html = `<span class="prompt-system">${preamble.trim()}</span>\n\n` +
+          rest.replace(/\[(세계관|스토리|주인공|유저노트)\]/g, '<span class="prompt-section">[$1]</span>');
+      } else {
+        html = `<span class="prompt-system">${escaped}</span>`;
+      }
+      els.promptPreview.innerHTML = html;
+    }
+
+    const inputFields = ['worldSetting', 'story', 'characterName', 'characterSetting', 'userNote'];
+    inputFields.forEach(id => {
+      els[id].addEventListener('input', updatePromptPreview);
+    });
+
+    updatePromptPreview();
+  </script>
 </body>
 </html>
