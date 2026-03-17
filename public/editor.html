@@ -339,10 +339,13 @@
     }
 
     @media (max-width: 768px) {
-      .container { flex-direction: column; height: auto; min-height: 100vh; }
-      .panel { min-width: auto; max-height: none; }
+      body { height: auto; overflow: auto; }
+      .container { flex-direction: column; height: auto; min-height: auto; gap: 0; }
+      .panel { min-width: auto; max-height: none; overflow-y: visible; }
       .panel-prompt { display: none; }
+      .panel-game { display: none; }
       .btn { min-height: 44px; }
+      textarea { min-height: 100px; }
     }
   </style>
 </head>
