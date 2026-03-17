@@ -3,3 +3,6 @@
 .claude/
 story-game-settings.json
 test
+node_modules/
+package-lock.json
+package.json
