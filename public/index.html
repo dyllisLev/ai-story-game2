@@ -187,6 +187,22 @@
     }
 
     /* --- Empty State --- */
+    /* --- Continue Banner --- */
+    .continue-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, rgba(233, 69, 96, 0.1), rgba(83, 216, 251, 0.05));
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+    }
+    .continue-info { display: flex; flex-direction: column; gap: 4px; }
+    .continue-label { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .continue-title { font-size: 16px; font-weight: 700; color: var(--text); }
+    .continue-time { font-size: 12px; color: var(--text-muted); }
+
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -300,6 +316,16 @@
   </div>
 
   <div class="main">
+    <!-- Continue Playing Banner -->
+    <div class="continue-banner" id="continueBanner" style="display:none;">
+      <div class="continue-info">
+        <span class="continue-label">마지막 플레이</span>
+        <span class="continue-title" id="continueTitle"></span>
+        <span class="continue-time" id="continueTime"></span>
+      </div>
+      <button class="btn btn-primary" id="btnContinue">이어서 하기</button>
+    </div>
+
     <!-- Stories Section -->
     <div class="section-title">
       공개 스토리 <span class="story-count" id="storyCount"></span>
@@ -354,7 +380,9 @@
         const snap = await getDocs(q);
         const stories = [];
         snap.forEach(d => {
-          stories.push({ id: d.id, ...d.data() });
+          const data = d.data();
+          if (data.isPublic === false) return; // 비공개 스토리 제외
+          stories.push({ id: d.id, ...data });
         });
 
         // Sort by createdAt desc
@@ -464,7 +492,24 @@
       if (localStorage.getItem('ai-story-game-theme') === 'system') applyTheme('system');
     });
 
+    // --- Continue Banner ---
+    function showContinueBanner() {
+      const SESSION_LIST_KEY = 'ai-story-game-sessions';
+      try {
+        const list = JSON.parse(localStorage.getItem(SESSION_LIST_KEY) || '[]');
+        if (list.length === 0) return;
+        const latest = list[0]; // Already sorted by lastPlayedAt
+        document.getElementById('continueBanner').style.display = 'flex';
+        document.getElementById('continueTitle').textContent = latest.title || '제목 없음';
+        document.getElementById('continueTime').textContent = new Date(latest.lastPlayedAt).toLocaleString('ko-KR');
+        document.getElementById('btnContinue').addEventListener('click', () => {
+          window.location.href = `play.html?sessionId=${latest.sessionId}`;
+        });
+      } catch (e) {}
+    }
+
     // --- Init ---
+    showContinueBanner();
     loadStories();
     loadSessions();
   </script>

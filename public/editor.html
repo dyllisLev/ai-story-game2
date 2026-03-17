@@ -408,6 +408,9 @@
         <label><input type="checkbox" id="useCache"> 프롬프트 캐시 사용</label>
         <span class="cache-status" id="cacheStatus"></span>
       </div>
+      <div class="form-group checkbox-group">
+        <label><input type="checkbox" id="isPublic" checked> 스토리 공개 (홈에서 검색 가능)</label>
+      </div>
       <button id="btnStart" class="btn btn-primary">게임 시작</button>
       <div class="btn-row">
         <button id="btnSave" class="btn btn-secondary">저장</button>
@@ -482,12 +485,13 @@
       if (!db) return null;
       const storyId = crypto.randomUUID();
       try {
+        const isPublic = storyData.isPublic !== undefined ? storyData.isPublic : true;
         await setDoc(doc(db, 'stories', storyId), {
           ...storyData,
           passwordHash: passwordHash || null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-          isPublic: true,
+          isPublic,
         });
         return storyId;
       } catch (e) {
@@ -732,6 +736,7 @@
         systemRules: els.systemRules.value,
         useLatex: els.useLatex.checked,
         useCache: els.useCache.checked,
+        isPublic: $('isPublic').checked,
       };
     }
 
@@ -743,6 +748,7 @@
       if ('systemRules' in data) els.systemRules.value = data.systemRules || '';
       if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
       if ('useCache' in data) els.useCache.checked = !!data.useCache;
+      if ('isPublic' in data) $('isPublic').checked = data.isPublic !== false;
       if ('worldSetting' in data) els.worldSetting.value = data.worldSetting || '';
       if ('story' in data) els.story.value = data.story || '';
       if ('characterName' in data) els.characterName.value = data.characterName || '';
