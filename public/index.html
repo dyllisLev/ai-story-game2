@@ -268,6 +268,17 @@
       font-weight: 600;
     }
 
+    /* --- Light Theme --- */
+    body.light-theme {
+      --bg-dark: #ffffff;
+      --bg-panel: #f6f8fa;
+      --bg-input: #f0f2f5;
+      --bg-card: #f0f2f5;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --text-muted: #656d76;
+    }
+
     /* --- Responsive --- */
     @media (max-width: 768px) {
       .header { padding: 16px; flex-wrap: wrap; gap: 12px; }
@@ -436,6 +447,22 @@
         }
       } catch (e) {}
     }
+
+    // --- Theme (shared with play.html via localStorage) ---
+    function applyTheme(theme) {
+      document.body.classList.remove('light-theme');
+      if (theme === 'light') {
+        document.body.classList.add('light-theme');
+      } else if (theme === 'system') {
+        if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+          document.body.classList.add('light-theme');
+        }
+      }
+    }
+    applyTheme(localStorage.getItem('ai-story-game-theme') || 'system');
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+      if (localStorage.getItem('ai-story-game-theme') === 'system') applyTheme('system');
+    });
 
     // --- Init ---
     loadStories();
