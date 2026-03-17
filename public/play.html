@@ -514,20 +514,12 @@
     .btn-save-cloud:hover { color: var(--text); border-color: var(--text-muted); }
     .btn-save-cloud:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* --- Session Bar --- */
-    .session-bar {
-      display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+    /* --- Session Info Bar (minimal, below top bar) --- */
+    .session-info-bar {
+      display: flex; align-items: center; gap: 8px; padding: 4px 16px;
       background: var(--bg-panel); border-bottom: 1px solid var(--border);
-      flex-shrink: 0; font-size: 12px; flex-wrap: wrap;
+      flex-shrink: 0; font-size: 12px;
     }
-    .session-bar select, .session-bar input[type="text"] {
-      background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px;
-      padding: 5px 8px; color: var(--text); font-size: 12px; font-family: inherit;
-    }
-    .session-bar select { max-width: 280px; }
-    .session-bar input[type="text"] { width: 320px; }
-    .session-bar input:focus, .session-bar select:focus { outline: none; border-color: var(--accent); }
-    .session-bar .label { color: var(--text-muted); white-space: nowrap; }
 
     .session-id-display {
       font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: var(--text-muted);
@@ -566,9 +558,6 @@
 
     /* --- Responsive --- */
     @media (max-width: 768px) {
-      .session-bar { flex-direction: column; align-items: stretch; }
-      .session-bar select, .session-bar input[type="text"] { width: 100%; max-width: none; }
-
       .side-panel { position: fixed; right: 0; top: 0; bottom: 0; z-index: 50; width: 280px; }
       .side-panel.collapsed { transform: translateX(100%); margin-right: 0; }
 
@@ -582,7 +571,7 @@
 
     /* --- Focus Mode --- */
     body.focus-mode .top-bar { display: none; }
-    body.focus-mode .session-bar { display: none; }
+    body.focus-mode .session-info-bar { display: none; }
     body.focus-mode .game-area { padding: 24px 15vw; }
     body.focus-mode .side-panel { display: none; }
 
@@ -622,18 +611,11 @@
     <button id="btnTogglePanel" class="btn-icon" title="플레이 설정">&#9776;</button>
   </div>
 
-  <!-- Session Bar -->
-  <div class="session-bar" id="sessionBar">
-    <span class="label">스토리:</span>
-    <select id="storySelect"><option value="">스토리 선택...</option></select>
-    <span class="separator" style="color:var(--border);">|</span>
-    <span class="label">세션:</span>
-    <select id="sessionSelect"><option value="">새 게임 또는 세션 선택...</option></select>
-    <input type="text" id="sessionIdInput" placeholder="세션 ID 입력 (다른 기기에서 이어하기)">
-    <button class="btn-icon" id="btnLoadSession" style="font-size:12px;padding:5px 8px;">불러오기</button>
-    <span class="session-id-display" id="sessionIdDisplay" style="display:none;"></span>
+  <!-- Session info in top area (minimal) -->
+  <div class="session-info-bar" id="sessionInfoBar" style="display:none;">
+    <span class="session-id-display" id="sessionIdDisplay"></span>
     <span class="turn-count" id="turnCount"></span>
-    <button class="btn-icon" id="btnDeleteSession" style="display:none;font-size:11px;padding:4px 8px;color:var(--accent);" title="세션 삭제">삭제</button>
+    <button class="btn-icon" id="btnDeleteSession" style="font-size:11px;padding:4px 8px;color:var(--accent);" title="세션 삭제">삭제</button>
   </div>
 
   <div class="main-content">
@@ -656,6 +638,22 @@
         <span>플레이 설정</span>
         <button id="btnClosePanel">&times;</button>
       </div>
+      <div class="side-panel-section">
+        <div class="side-panel-section-title">스토리 / 세션</div>
+        <div style="padding:4px 12px;display:flex;flex-direction:column;gap:8px;">
+          <select id="storySelect" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;font-family:inherit;">
+            <option value="">스토리 선택...</option>
+          </select>
+          <select id="sessionSelect" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;font-family:inherit;">
+            <option value="">새 게임 또는 세션 선택...</option>
+          </select>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="sessionIdInput" placeholder="세션 ID 입력" style="flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;font-family:inherit;">
+            <button class="btn-icon" id="btnLoadSession" style="font-size:12px;padding:8px 12px;">불러오기</button>
+          </div>
+        </div>
+      </div>
+      <div class="side-divider"></div>
       <div class="side-panel-section">
         <div class="side-panel-section-title">캐릭터</div>
         <div class="side-menu-item" id="menuCharacter">
@@ -1807,15 +1805,15 @@
     }
 
     function renderSessionId() {
-      const display = $('sessionIdDisplay'), deleteBtn = $('btnDeleteSession');
+      const bar = $('sessionInfoBar');
+      const display = $('sessionIdDisplay');
+      const deleteBtn = $('btnDeleteSession');
       if (currentSessionId) {
-        display.style.display = 'inline-block';
+        bar.style.display = 'flex';
         display.textContent = `ID: ${currentSessionId.slice(0, 8)}...`;
         display.title = `${currentSessionId} — 클릭하여 복사`;
-        deleteBtn.style.display = 'inline-block';
       } else {
-        display.style.display = 'none';
-        deleteBtn.style.display = 'none';
+        bar.style.display = 'none';
       }
     }
 
