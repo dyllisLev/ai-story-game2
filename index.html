@@ -391,6 +391,11 @@
         <button id="btnLoad" class="btn btn-secondary">불러오기</button>
         <input type="file" id="fileInput" accept=".json" hidden>
       </div>
+      <div class="btn-row">
+        <button id="btnShareStory" class="btn btn-secondary">온라인 공유</button>
+        <button id="btnLoadStory" class="btn btn-secondary">스토리 불러오기</button>
+        <button id="btnUpdateStory" class="btn btn-secondary">스토리 수정</button>
+      </div>
     </div>
 
     <!-- Panel 2: Prompt Preview -->
@@ -416,7 +421,85 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    // --- Firebase ---
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, where, serverTimestamp }
+      from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
+
+    const FIREBASE_CONFIG = {
+      // TODO: Firebase 콘솔에서 프로젝트 생성 후 값 채우기
+      apiKey: "",
+      authDomain: "",
+      projectId: "",
+      storageBucket: "",
+      messagingSenderId: "",
+      appId: ""
+    };
+
+    let db = null;
+    try {
+      if (FIREBASE_CONFIG.apiKey) {
+        const app = initializeApp(FIREBASE_CONFIG);
+        db = getFirestore(app);
+      }
+    } catch (e) {
+      console.warn('Firebase init failed:', e);
+    }
+
+    // --- Password Hashing ---
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // --- Story Management ---
+    async function saveStoryToFirestore(storyData, passwordHash) {
+      if (!db) return null;
+      const storyId = crypto.randomUUID();
+      try {
+        await setDoc(doc(db, 'stories', storyId), {
+          ...storyData,
+          passwordHash: passwordHash || null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          isPublic: true,
+        });
+        return storyId;
+      } catch (e) {
+        console.error('Story save failed:', e);
+        return null;
+      }
+    }
+
+    async function loadStoryFromFirestore(storyId) {
+      if (!db) return null;
+      try {
+        const snap = await getDoc(doc(db, 'stories', storyId));
+        return snap.exists() ? snap.data() : null;
+      } catch (e) {
+        console.error('Story load failed:', e);
+        return null;
+      }
+    }
+
+    async function updateStoryInFirestore(storyId, storyData, passwordHash) {
+      if (!db) return false;
+      try {
+        await updateDoc(doc(db, 'stories', storyId), {
+          ...storyData,
+          passwordHash,
+          updatedAt: serverTimestamp(),
+        });
+        return true;
+      } catch (e) {
+        console.error('Story update failed:', e);
+        return false;
+      }
+    }
+
     // --- DOM References ---
     const $ = id => document.getElementById(id);
 
@@ -1052,6 +1135,65 @@
         e.preventDefault();
         els.btnSend.click();
       }
+    });
+
+    // --- Story Share/Load/Update ---
+    $('btnShareStory').addEventListener('click', async () => {
+      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      const data = getSettingsData();
+      delete data.apiKey;
+      delete data.model;
+
+      const password = prompt('스토리 수정 암호를 설정하세요 (빈칸이면 암호 없음):');
+      const passwordHash = password ? await hashPassword(password) : null;
+
+      const storyId = await saveStoryToFirestore(data, passwordHash);
+      if (storyId) {
+        const msg = password
+          ? '스토리가 공유되었습니다. 암호가 설정되어 수정 시 암호가 필요합니다.\n아래 ID를 공유하세요:'
+          : '스토리가 공유되었습니다. 아래 ID를 공유하세요:';
+        prompt(msg, storyId);
+      } else {
+        alert('스토리 공유에 실패했습니다.');
+      }
+    });
+
+    $('btnLoadStory').addEventListener('click', async () => {
+      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      const storyId = prompt('스토리 ID를 입력하세요:');
+      if (!storyId) return;
+      const data = await loadStoryFromFirestore(storyId);
+      if (data) {
+        applySettingsData(data);
+        saveToLocalStorage();
+        alert('스토리를 불러왔습니다.');
+      } else {
+        alert('스토리를 찾을 수 없습니다.');
+      }
+    });
+
+    $('btnUpdateStory').addEventListener('click', async () => {
+      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      const storyId = prompt('수정할 스토리 ID:');
+      if (!storyId) return;
+
+      const existing = await loadStoryFromFirestore(storyId);
+      if (!existing) { alert('스토리를 찾을 수 없습니다.'); return; }
+
+      let passwordHash = existing.passwordHash;
+      if (passwordHash) {
+        const password = prompt('스토리 수정 암호를 입력하세요:');
+        if (!password) return;
+        const inputHash = await hashPassword(password);
+        if (inputHash !== passwordHash) { alert('암호가 일치하지 않습니다.'); return; }
+      }
+
+      const data = getSettingsData();
+      delete data.apiKey;
+      delete data.model;
+
+      const ok = await updateStoryInFirestore(storyId, data, passwordHash);
+      alert(ok ? '스토리가 수정되었습니다.' : '수정에 실패했습니다. (Firestore Rules에서 암호 해시 불일치)');
     });
   </script>
 </body>
