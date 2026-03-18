@@ -1,6 +1,8 @@
 // --- Supabase ---
 import { supabase, currentUser, promptConfig, gameplayConfig } from './supabase-config.js';
-import { buildPrompt } from './prompt-builder.js';
+import { buildPrompt, buildMemoryPrompt } from './prompt-builder.js';
+import { generateMemory, saveMemoryToLocal, loadMemoryFromLocal, migrateOldSummary } from './memory-manager.js';
+import { upsertSessionMemory, loadSessionMemory } from './supabase-ops.js';
 import { renderMarkdown } from './markdown-renderer.js';
 import { fetchModels as _fetchModels, createCache as _createCache, clearCache as _clearCache, streamGenerate, generate } from './gemini-api.js';
 import { updateTokenDisplay, resetTokens } from './token-tracker.js';
@@ -49,8 +51,9 @@ const MAX_SESSION_LIST = gameplayConfig.max_session_list;
 
 let currentSessionId = null;
 let currentStoryId = null;
-let storySummary = '';
-let summaryUpToIndex = 0;
+let sessionMemory = null;
+let memoryUpToIndex = 0;
+let isGeneratingMemory = false;
 const SLIDING_WINDOW_SIZE = gameplayConfig.sliding_window_size;
 let isDirty = false;
 let saveStatus = 'idle';
@@ -114,37 +117,46 @@ function messagesFromStorage(stored) {
   }));
 }
 
-async function generateSummary() {
+async function generateSessionMemory() {
   const apiKey = els.apiKey.value.trim();
   const model = els.modelSelect.value;
   if (!apiKey || !model) return;
+  if (isGeneratingMemory) return;
 
-  const windowStart = Math.max(0, conversationHistory.length - SLIDING_WINDOW_SIZE);
-  if (windowStart <= summaryUpToIndex) return;
+  const interval = SLIDING_WINDOW_SIZE;
+  if (conversationHistory.length <= interval) return;
+  if ((conversationHistory.length - memoryUpToIndex) < interval) return;
 
-  const toSummarize = conversationHistory.slice(summaryUpToIndex, windowStart);
-  if (toSummarize.length === 0) return;
-
-  const summaryPrompt = storySummary
-    ? promptConfig.summary_request_update.replace('{summary}', storySummary)
-    : promptConfig.summary_request_new;
-
-  const messages = toSummarize.map(m => `${m.role === 'user' ? '사용자' : 'AI'}: ${m.parts[0].text}`).join('\n\n');
+  isGeneratingMemory = true;
+  updateMemoryBadge('generating');
 
   try {
-    const result = await generate({
-      apiKey, model,
-      body: {
-        contents: [{ role: 'user', parts: [{ text: `${summaryPrompt}\n\n---\n${messages}` }] }],
-        systemInstruction: { parts: [{ text: promptConfig.summary_system_instruction.replace('{max_chars}', String(gameplayConfig.summary_max_chars)) }] },
-      },
+    const windowStart = Math.max(0, conversationHistory.length - SLIDING_WINDOW_SIZE);
+    const recentMessages = conversationHistory.slice(windowStart);
+
+    const result = await generateMemory({
+      apiKey,
+      model,
+      messages: recentMessages,
+      existingMemory: sessionMemory,
+      promptConfig,
     });
-    storySummary = result.text || storySummary;
-    summaryUpToIndex = windowStart;
-    updateSummaryBadge();
+
+    sessionMemory = result;
+    memoryUpToIndex = conversationHistory.length;
+
+    if (currentSessionId) {
+      upsertSessionMemory(currentSessionId, sessionMemory);
+      saveMemoryToLocal(currentSessionId, sessionMemory);
+    }
+
+    updateMemoryBadge('exists');
     markDirty();
   } catch (e) {
-    console.error('Summary generation failed:', e);
+    console.error('Memory generation failed:', e);
+    updateMemoryBadge('failed');
+  } finally {
+    isGeneratingMemory = false;
   }
 }
 
@@ -164,8 +176,8 @@ function buildSessionDocument() {
     },
     messages: messagesToStorage(conversationHistory),
     model: els.modelSelect.value || '',
-    summary: storySummary || '',
-    summary_up_to_index: summaryUpToIndex || 0,
+    summary: sessionMemory?.longTerm?.map(e => `${e.title}: ${e.content}`).join('\n') || '',
+    summary_up_to_index: memoryUpToIndex || 0,
   };
 }
 
@@ -478,9 +490,7 @@ async function sendToGemini(userMessage) {
     const recentMessages = conversationHistory.slice(windowStart);
 
     let systemPrompt = getPrompt();
-    if (storySummary) {
-      systemPrompt += `\n\n[이전 이야기 요약]\n${storySummary}`;
-    }
+    systemPrompt += buildMemoryPrompt(sessionMemory);
 
     const body = cachedContentName
       ? { cachedContent: cachedContentName, contents: recentMessages, safetySettings: promptConfig.safety_settings }
@@ -509,9 +519,7 @@ async function sendToGemini(userMessage) {
     conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
     markDirty();
     updateTurnCount();
-    if (conversationHistory.length > SLIDING_WINDOW_SIZE + gameplayConfig.summary_trigger_offset) {
-      generateSummary();
-    }
+    generateSessionMemory();
   } catch (err) {
     console.error('Gemini API error:', err);
     const detail = err.message || '';
@@ -671,11 +679,27 @@ function updateBadges() {
   els.badgeUserNote.className = `menu-badge ${hasNote ? 'set' : 'empty'}`;
 }
 
-function updateSummaryBadge() {
+function updateMemoryBadge(state) {
   const badge = $('badgeSummary');
-  if (badge) {
-    badge.textContent = storySummary ? '있음' : '없음';
-    badge.className = `menu-badge ${storySummary ? 'set' : 'empty'}`;
+  const retryBtn = $('menuSummaryRetry');
+  if (!badge) return;
+  if (retryBtn) retryBtn.style.display = state === 'failed' ? 'inline' : 'none';
+  switch (state) {
+    case 'exists':
+      badge.textContent = '있음';
+      badge.className = 'menu-badge set';
+      break;
+    case 'generating':
+      badge.textContent = '생성 중...';
+      badge.className = 'menu-badge generating';
+      break;
+    case 'failed':
+      badge.textContent = '실패';
+      badge.className = 'menu-badge failed';
+      break;
+    default:
+      badge.textContent = '없음';
+      badge.className = 'menu-badge empty';
   }
 }
 
@@ -726,18 +750,9 @@ $('btnSaveUserNote').addEventListener('click', () => {
 });
 
 // Summary Menu
-$('menuSummary').addEventListener('click', async () => {
-  if (!storySummary && conversationHistory.length > 4) {
-    if (confirm('아직 요약이 없습니다. 지금 생성할까요?')) {
-      summaryUpToIndex = 0;
-      await generateSummary();
-    }
-  }
-  if (storySummary) {
-    alert(`[이야기 요약]\n\n${storySummary}`);
-  } else {
-    alert('요약이 없습니다. 게임을 진행한 후 다시 시도해주세요.');
-  }
+$('menuSummary').addEventListener('click', () => {
+  renderMemoryModal();
+  openModal('modalMemory');
 });
 
 // --- Font Size ---
@@ -1011,9 +1026,15 @@ async function loadSession(sessionId) {
   } else {
     conversationHistory = messages;
   }
-  storySummary = data.summary || '';
-  summaryUpToIndex = data.summaryUpToIndex || 0;
-  updateSummaryBadge();
+  memoryUpToIndex = data.summaryUpToIndex || 0;
+  const loadedMemory = await loadSessionMemory(currentSessionId)
+    || loadMemoryFromLocal(currentSessionId);
+  if (loadedMemory) {
+    sessionMemory = loadedMemory;
+  } else if (data.summary) {
+    sessionMemory = migrateOldSummary(data.summary);
+  }
+  updateMemoryBadge(sessionMemory ? 'exists' : 'empty');
 
   els.gameOutput.innerHTML = '';
   for (const msg of conversationHistory) {
@@ -1034,6 +1055,191 @@ async function loadSession(sessionId) {
 
   if (remoteData) saveSessionToLocal(sessionId, { ...data, updatedAt: Date.now(), lastPlayedAt: Date.now() });
 }
+
+// --- Memory Modal ---
+let activeMemoryTab = 'long_term';
+
+function renderMemoryModal() {
+  document.querySelectorAll('.memory-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.type === activeMemoryTab);
+  });
+
+  const content = $('memoryContent');
+  const countEl = $('memoryCount');
+  const footer = $('memoryFooter');
+
+  if (!sessionMemory) {
+    content.innerHTML = '<p class="memory-empty">메모리가 없습니다. 게임을 진행하면 자동으로 생성됩니다.</p>';
+    countEl.textContent = '총 0개';
+    footer.innerHTML = '<button class="btn btn-primary" data-close="modalMemory">확인</button>';
+    footer.querySelector('[data-close]')?.addEventListener('click', () => closeModal('modalMemory'));
+    return;
+  }
+
+  switch (activeMemoryTab) {
+    case 'long_term': renderLongTermTab(content, countEl, footer); break;
+    case 'short_term': renderShortTermTab(content, countEl, footer); break;
+    case 'characters': renderCharactersTab(content, countEl, footer); break;
+    case 'goals': renderGoalsTab(content, countEl, footer); break;
+  }
+}
+
+function renderLongTermTab(content, countEl, footer) {
+  const items = sessionMemory?.longTerm || [];
+  countEl.textContent = `총 ${items.length}개`;
+
+  if (items.length === 0) {
+    content.innerHTML = '<p class="memory-empty">장기 기억이 없습니다.</p>';
+  } else {
+    content.innerHTML = items.map((item, i) => `
+      <div class="memory-accordion" data-index="${i}">
+        <div class="memory-accordion-header">
+          <span class="memory-accordion-arrow">&#9658;</span>
+          <span class="memory-accordion-title">${escapeHtml(item.title)}</span>
+        </div>
+        <div class="memory-accordion-body">${escapeHtml(item.content)}</div>
+      </div>
+    `).join('');
+  }
+
+  footer.innerHTML = `
+    <button class="btn btn-secondary" id="btnMemoryEdit">편집</button>
+    <button class="btn btn-primary" id="btnMemoryAdd">추가</button>
+  `;
+
+  content.querySelectorAll('.memory-accordion-header').forEach(header => {
+    header.addEventListener('click', () => {
+      header.parentElement.classList.toggle('open');
+    });
+  });
+
+  $('btnMemoryEdit')?.addEventListener('click', () => enableLongTermEdit(content, footer));
+  $('btnMemoryAdd')?.addEventListener('click', () => {
+    if (!sessionMemory) sessionMemory = { shortTerm: [], characters: [], goals: '', longTerm: [] };
+    sessionMemory.longTerm.push({ title: '새 기억', content: '' });
+    renderMemoryModal();
+    const accs = content.querySelectorAll('.memory-accordion');
+    accs[accs.length - 1]?.classList.add('open');
+  });
+}
+
+function enableLongTermEdit(content, footer) {
+  const items = sessionMemory?.longTerm || [];
+  content.innerHTML = items.map((item, i) => `
+    <div class="memory-edit-item" data-index="${i}">
+      <input type="text" class="memory-edit-title" value="${escapeHtml(item.title)}" placeholder="제목">
+      <textarea class="memory-edit-content" placeholder="내용">${escapeHtml(item.content)}</textarea>
+      <button class="btn btn-danger btn-sm memory-delete-btn" data-index="${i}">삭제</button>
+    </div>
+  `).join('');
+
+  footer.innerHTML = `
+    <button class="btn btn-secondary" id="btnMemoryEditCancel">취소</button>
+    <button class="btn btn-primary" id="btnMemoryEditSave">저장</button>
+  `;
+
+  $('btnMemoryEditCancel')?.addEventListener('click', () => renderMemoryModal());
+  $('btnMemoryEditSave')?.addEventListener('click', () => {
+    const editItems = content.querySelectorAll('.memory-edit-item');
+    sessionMemory.longTerm = Array.from(editItems).map(el => ({
+      title: el.querySelector('.memory-edit-title').value.trim(),
+      content: el.querySelector('.memory-edit-content').value.trim(),
+    })).filter(item => item.title || item.content);
+
+    if (currentSessionId) {
+      upsertSessionMemory(currentSessionId, sessionMemory);
+      saveMemoryToLocal(currentSessionId, sessionMemory);
+    }
+    markDirty();
+    renderMemoryModal();
+  });
+
+  content.querySelectorAll('.memory-delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.index);
+      sessionMemory.longTerm.splice(idx, 1);
+      enableLongTermEdit(content, footer);
+    });
+  });
+}
+
+function renderShortTermTab(content, countEl, footer) {
+  const items = sessionMemory?.shortTerm || [];
+  countEl.textContent = `총 ${items.length}개`;
+
+  if (items.length === 0) {
+    content.innerHTML = '<p class="memory-empty">단기 기억이 없습니다.</p>';
+  } else {
+    content.innerHTML = items.map(item => `
+      <div class="memory-card">
+        <h4 class="memory-card-title">${escapeHtml(item.title)}</h4>
+        <p class="memory-card-content">${escapeHtml(item.content)}</p>
+      </div>
+    `).join('');
+  }
+
+  footer.innerHTML = '<button class="btn btn-primary" data-close="modalMemory">확인</button>';
+  footer.querySelector('[data-close]')?.addEventListener('click', () => closeModal('modalMemory'));
+}
+
+function renderCharactersTab(content, countEl, footer) {
+  const items = sessionMemory?.characters || [];
+  countEl.textContent = `총 ${items.length}개`;
+
+  if (items.length === 0) {
+    content.innerHTML = '<p class="memory-empty">등장인물 정보가 없습니다.</p>';
+  } else {
+    content.innerHTML = items.map(c => `
+      <div class="memory-card">
+        <h4 class="memory-card-title">${escapeHtml(c.name)} (${escapeHtml(c.role)})</h4>
+        <p class="memory-card-content">${escapeHtml(c.description)}</p>
+      </div>
+    `).join('');
+  }
+
+  footer.innerHTML = '<button class="btn btn-primary" data-close="modalMemory">확인</button>';
+  footer.querySelector('[data-close]')?.addEventListener('click', () => closeModal('modalMemory'));
+}
+
+function renderGoalsTab(content, countEl, footer) {
+  const goals = sessionMemory?.goals || '';
+  countEl.textContent = '';
+
+  content.innerHTML = `
+    <textarea id="memoryGoalsText" class="memory-goals-textarea" placeholder="현재 목표...">${escapeHtml(goals)}</textarea>
+  `;
+
+  footer.innerHTML = '<button class="btn btn-primary" id="btnMemoryGoalsSave">확인</button>';
+  $('btnMemoryGoalsSave')?.addEventListener('click', () => {
+    if (sessionMemory) {
+      sessionMemory.goals = $('memoryGoalsText').value.trim();
+      if (currentSessionId) {
+        upsertSessionMemory(currentSessionId, sessionMemory);
+        saveMemoryToLocal(currentSessionId, sessionMemory);
+      }
+      markDirty();
+    }
+    closeModal('modalMemory');
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('.memory-tab');
+  if (tab) {
+    activeMemoryTab = tab.dataset.type;
+    renderMemoryModal();
+  }
+});
+
+$('menuSummaryRetry')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  generateSessionMemory();
+});
 
 // --- Init ---
 loadFromLocalStorage();
