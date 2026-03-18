@@ -69,6 +69,14 @@
         <label for="userNote">유저노트</label>
         <textarea id="userNote" rows="3" placeholder="참고 메모 (분위기, 선호 장르 등)..."></textarea>
       </div>
+      <div class="form-group">
+        <label>서술 분량</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn btn-secondary" id="btnNarrDec" style="width:32px;height:32px;padding:0;font-size:16px;">-</button>
+          <span id="narrativeLengthDisplay" style="font-size:14px;font-weight:600;min-width:48px;text-align:center;">3문단</span>
+          <button class="btn btn-secondary" id="btnNarrInc" style="width:32px;height:32px;padding:0;font-size:16px;">+</button>
+        </div>
+      </div>
       <div class="form-group checkbox-group">
         <label><input type="checkbox" id="useLatex" checked> LaTeX 연출 활성화</label>
       </div>
@@ -108,18 +116,22 @@
       </div>
       <div class="game-input-area">
         <input type="text" id="gameInput" placeholder="행동을 입력하세요..." disabled>
+        <button id="btnRegenerate" class="btn-icon" title="마지막 응답 재생성" disabled style="font-size:16px;background:none;border:1px solid var(--border);color:var(--text-muted);width:38px;height:38px;border-radius:6px;cursor:pointer;">&#x21bb;</button>
         <button id="btnSend" class="btn btn-primary" disabled>전송</button>
       </div>
     </div>
   </div>
 
   <script type="module">
-    import { db } from './js/firebase-config.js';
+    import { supabase } from './js/supabase-config.js';
     import { hashPassword, verifyPassword } from './js/crypto.js';
-    import { saveStoryToFirestore, loadStoryFromFirestore, updateStoryInFirestore, deleteStoryFromFirestore, loadPublicPresets } from './js/firestore-ops.js';
+    import { saveStory, loadStory, updateStory, deleteStory, loadPublicPresets } from './js/supabase-ops.js';
     import { renderMarkdown } from './js/markdown-renderer.js';
     import { updateTokenDisplay, resetTokens } from './js/token-tracker.js';
+    import { escapeHtml } from './js/utils.js';
     import { initTheme } from './js/theme.js';
+    import { buildPrompt } from './js/prompt-builder.js';
+    import { GEMINI_BASE, SAFETY_SETTINGS, fetchModels as _fetchModels, createCache as _createCache, clearCache as _clearCache } from './js/gemini-api.js';
 
     // --- DOM References ---
     const $ = id => document.getElementById(id);
@@ -140,6 +152,7 @@
       gameInput: $('gameInput'),
       btnStart: $('btnStart'),
       btnSend: $('btnSend'),
+      btnRegenerate: $('btnRegenerate'),
       btnSave: $('btnSave'),
       btnLoad: $('btnLoad'),
       isPublic: $('isPublic'),
@@ -148,86 +161,36 @@
       cacheStatus: $('cacheStatus'),
       tokenInfo: $('tokenInfo'),
       costInfo: $('costInfo'),
+      narrativeLengthDisplay: $('narrativeLengthDisplay'),
     };
 
-    // --- Prompt Builder ---
-    function buildPrompt() {
-      const w = els.worldSetting.value.trim();
-      const s = els.story.value.trim();
-      const cn = els.characterName.value.trim();
-      const cs = els.characterSetting.value.trim();
-      const ch = els.characters.value.trim();
-      const un = els.userNote.value.trim();
-      const sr = els.systemRules.value.trim();
-
-      let prompt = `당신은 인터랙티브 소설 게임의 AI 스토리텔러입니다.
-아래 설정을 기반으로 몰입감 있는 소설을 진행하세요.
-
-사용자가 행동을 입력하면 그에 따라 이야기를 이어가세요.
-각 응답은 소설체로 작성하세요.`;
-
-      if (sr) prompt += `\n\n[시스템 규칙]\n${sr}`;
-      if (w) prompt += `\n\n[세계관]\n${w}`;
-      if (s) prompt += `\n\n[스토리]\n${s}`;
-      if (ch) prompt += `\n\n[등장인물]\n${ch}`;
-      if (cn || cs) {
-        prompt += `\n\n[주인공]`;
-        if (cn) prompt += `\n이름: ${cn}`;
-        if (cs) prompt += `\n설정: ${cs}`;
-      }
-      if (un) prompt += `\n\n[유저노트]\n${un}`;
-
-      // LaTeX 연출 지시
-      if (els.useLatex.checked) {
-        prompt += `\n\n[LaTeX 연출 규칙]
-대사와 효과음에 LaTeX 수식 문법을 사용하여 시각적으로 연출하세요.
-반드시 $ 기호로 감싸서 인라인 수식으로 작성합니다.
-
-■ 대사 작성 형식:
-발화자 이름과 대사를 반드시 하나의 $ 안에 함께 포함하세요.
-형식: $\\text{발화자: }\\textsf{\\textbf{"대사 내용"}}$
-잘못된 예: 사내 $\\textsf{\\textbf{"대사"}}$ (발화자가 $ 밖에 있음 ✗)
-올바른 예: $\\text{사내: }\\textsf{\\textbf{"대사"}}$ (발화자가 $ 안에 있음 ✓)
-
-■ 대사 감정 연출:
-- 일반 대사: $\\text{이름: }\\textsf{\\textbf{"대사 내용"}}$
-- 귓속말/속삭임: $\\text{이름: }\\color{gray}\\small\\textsf{\\textbf{"속삭이는 내용"}}$
-- 외침/비명: $\\text{이름: }\\huge\\textsf{\\textbf{"외치는 내용!"}}$
-- 분노/격앙: $\\text{이름: }\\large\\color{red}\\textsf{\\textbf{"분노하는 내용!"}}$
-- 부끄러움/유혹: $\\text{이름: }\\color{lightpink}\\textsf{\\textbf{"부끄러운 내용"}}$
-- 슬픔/비탄: $\\text{이름: }\\color{SteelBlue}\\textsf{\\textbf{"슬픈 내용..."}}$
-- 냉소/조롱: $\\text{이름: }\\color{darkviolet}\\textit{\\textsf{"냉소적인 내용"}}$
-- 위압/경고: $\\text{이름: }\\Large\\color{darkred}\\textsf{\\textbf{"위압적인 내용"}}$
-- 신비/예언: $\\text{이름: }\\color{gold}\\mathcal{\\text{신비로운 내용}}$
-
-■ 효과 연출:
-- 효과음/환경음: $\\colorbox{black}{\\color{cyan}\\small\\text{효과음}}$
-- 시스템/알림: $\\fcolorbox{gray}{black}{\\color{lime}\\footnotesize\\text{시스템 메시지}}$
-- 취소선(부정/철회): $\\cancel{\\text{취소된 내용}}$
-- 강조/각성: $\\boxed{\\color{orange}\\textbf{\\text{강조 내용}}}$
-
-■ 주의사항 (매우 중요 - 반드시 준수):
-- 모든 LaTeX 표현은 반드시 $ 기호로 열고 닫아야 합니다. $가 없으면 렌더링되지 않습니다!
-- 잘못된 예: \\text{이름: }\\textsf{\\textbf{"대사"}} ($ 없음 ✗)
-- 올바른 예: $\\text{이름: }\\textsf{\\textbf{"대사"}}$ ($ 있음 ✓)
-- 발화자 이름은 반드시 $ 안에 \\text{이름: } 형태로 포함하세요.
-- HTML 태그나 &quot; 같은 HTML 엔티티는 절대 사용하지 마세요. 따옴표는 그냥 "를 쓰세요.
-- 지문/나레이션은 LaTeX 없이 일반 텍스트로 작성하세요.
-- 대사에만 LaTeX를 적용하세요. 남용하지 마세요.`;
-      }
-
-      // {{user}}를 주인공 이름으로 치환
-      if (cn) prompt = prompt.replaceAll('{{user}}', cn);
-
-      return prompt;
+    // --- Narrative Length ---
+    let narrativeLength = 3;
+    function updateNarrativeDisplay() {
+      els.narrativeLengthDisplay.textContent = narrativeLength + '문단';
     }
+    $('btnNarrDec').addEventListener('click', () => {
+      if (narrativeLength > 1) { narrativeLength--; updateNarrativeDisplay(); }
+    });
+    $('btnNarrInc').addEventListener('click', () => {
+      if (narrativeLength < 10) { narrativeLength++; updateNarrativeDisplay(); }
+    });
 
-    function escapeHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+    // --- Prompt Builder (uses shared module) ---
+    function getPrompt() {
+      return buildPrompt({
+        worldSetting: els.worldSetting.value,
+        story: els.story.value,
+        characterName: els.characterName.value,
+        characterSetting: els.characterSetting.value,
+        characters: els.characters.value,
+        userNote: els.userNote.value,
+        systemRules: els.systemRules.value,
+      }, { useLatex: els.useLatex.checked, narrativeLength });
     }
 
     function updatePromptPreview() {
-      const prompt = buildPrompt();
+      const prompt = getPrompt();
       const escaped = escapeHtml(prompt);
       const sectionMatch = escaped.match(/\[(시스템 규칙|세계관|스토리|주인공|유저노트|LaTeX 연출 규칙)\]/);
       const firstSectionIdx = sectionMatch ? sectionMatch.index : -1;
@@ -270,7 +233,6 @@
     function getSettingsData() {
       return {
         title: els.presetTitle.value,
-        apiKey: els.apiKey.value,
         model: els.modelSelect.value,
         worldSetting: els.worldSetting.value,
         story: els.story.value,
@@ -287,7 +249,6 @@
 
     function applySettingsData(data) {
       if ('title' in data) els.presetTitle.value = data.title || '';
-      if ('apiKey' in data) els.apiKey.value = data.apiKey || '';
       if ('model' in data) els.modelSelect.value = data.model || '';
       if ('characters' in data) els.characters.value = data.characters || '';
       if ('systemRules' in data) els.systemRules.value = data.systemRules || '';
@@ -304,6 +265,8 @@
 
     function saveToLocalStorage() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(getSettingsData()));
+      // SEC-006: API 키는 sessionStorage에만 저장 (탭 종료 시 삭제)
+      if (els.apiKey.value) sessionStorage.setItem('gemini-api-key', els.apiKey.value);
     }
 
     function loadFromLocalStorage() {
@@ -319,12 +282,12 @@
     });
     els.modelSelect.addEventListener('change', saveToLocalStorage);
 
-    // --- Story Save/Load (Firestore) ---
+    // --- Story Save/Load (Supabase) ---
     let currentStoryId = null;
     let currentPasswordHash = null;
 
     els.btnSave.addEventListener('click', async () => {
-      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      if (!supabase) { alert('Supabase가 설정되지 않았습니다.'); return; }
 
       // 첫 저장 시 암호 설정
       if (!currentPasswordHash) {
@@ -339,11 +302,11 @@
 
       if (currentStoryId) {
         // 기존 스토리 업데이트
-        const ok = await updateStoryInFirestore(currentStoryId, data, currentPasswordHash);
+        const ok = await updateStory(currentStoryId, data, currentPasswordHash);
         alert(ok ? '스토리가 저장되었습니다.' : '저장에 실패했습니다.');
       } else {
         // 새 스토리 생성
-        const storyId = await saveStoryToFirestore(data, currentPasswordHash);
+        const storyId = await saveStory(data, currentPasswordHash);
         if (storyId) {
           currentStoryId = storyId;
           updateSaveButtonText();
@@ -359,11 +322,11 @@
     });
 
     els.btnLoad.addEventListener('click', async () => {
-      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      if (!supabase) { alert('Supabase가 설정되지 않았습니다.'); return; }
       const storyId = prompt('스토리 ID를 입력하세요:');
       if (!storyId) return;
 
-      const existing = await loadStoryFromFirestore(storyId);
+      const existing = await loadStory(storyId);
       if (!existing) { alert('스토리를 찾을 수 없습니다.'); return; }
 
       if (!existing.passwordHash) { alert('이 스토리는 암호가 설정되지 않아 편집할 수 없습니다.'); return; }
@@ -393,6 +356,7 @@
     function setGameControlsEnabled(enabled) {
       els.gameInput.disabled = !enabled;
       els.btnSend.disabled = !enabled;
+      els.btnRegenerate.disabled = !enabled || conversationHistory.length < 2;
       els.btnStart.disabled = !enabled;
     }
 
@@ -402,55 +366,46 @@
       saveToLocalStorage();
     }
 
-    // --- Gemini API ---
-    const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+    // --- Gemini API (shared module) ---
+    function getSavedModel() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved).model || '';
+      } catch (e) {}
+      return '';
+    }
 
     async function fetchModels(apiKey) {
-      if (!apiKey) return;
-      els.modelSelect.disabled = true;
-      els.modelSelect.innerHTML = '<option value="">모델 목록 조회 중...</option>';
-
-      try {
-        const res = await fetch(`${GEMINI_BASE}/models?key=${apiKey}`);
-        if (!res.ok) throw new Error(`API Error: ${res.status}`);
-        const data = await res.json();
-        const models = (data.models || [])
-          .filter(m => m.name.startsWith('models/gemini-') && m.supportedGenerationMethods?.includes('generateContent'))
-          .map(m => ({ id: m.name.replace('models/', ''), name: m.displayName || m.name.replace('models/', '') }));
-
-        els.modelSelect.innerHTML = models.length
-          ? models.map(m => `<option value="${m.id}">${m.name}</option>`).join('')
-          : '<option value="">사용 가능한 모델이 없습니다</option>';
-        els.modelSelect.disabled = models.length === 0;
-
-        // Restore saved model selection
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const { model } = JSON.parse(saved);
-          if (model && models.some(m => m.id === model)) {
-            els.modelSelect.value = model;
-          }
-        }
-      } catch (err) {
-        els.modelSelect.innerHTML = `<option value="">오류: ${err.message}</option>`;
-        els.modelSelect.disabled = true;
-      }
+      await _fetchModels(apiKey, els.modelSelect, { savedModel: getSavedModel() });
     }
 
     // Debounced API key input → fetch models
     let apiKeyTimer = null;
     els.apiKey.addEventListener('input', () => {
       clearTimeout(apiKeyTimer);
-      apiKeyTimer = setTimeout(() => fetchModels(els.apiKey.value.trim()), 800);
+      apiKeyTimer = setTimeout(() => {
+        const key = els.apiKey.value.trim();
+        if (key) sessionStorage.setItem('gemini-api-key', key);
+        fetchModels(key);
+      }, 800);
     });
 
     // Load only API key on fresh page (story fields start empty)
     // Full restore happens only via URL param (?storyId=...)
+    // API 키는 sessionStorage에서 복원, 모델은 localStorage에서 복원
+    const sessionApiKey = sessionStorage.getItem('gemini-api-key');
+    if (sessionApiKey) els.apiKey.value = sessionApiKey;
     const savedRaw = localStorage.getItem(STORAGE_KEY);
     if (savedRaw) {
       try {
         const saved = JSON.parse(savedRaw);
-        if (saved.apiKey) els.apiKey.value = saved.apiKey;
+        // localStorage에 남아있는 레거시 apiKey 마이그레이션
+        if (!sessionApiKey && saved.apiKey) {
+          els.apiKey.value = saved.apiKey;
+          sessionStorage.setItem('gemini-api-key', saved.apiKey);
+          delete saved.apiKey;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        }
         if (saved.model) els.modelSelect.value = saved.model;
       } catch (e) {}
     }
@@ -460,45 +415,17 @@
     let cachedContentName = null;
 
     async function createCache(apiKey, model) {
-      const prompt = buildPrompt();
-      els.cacheStatus.textContent = '캐시 생성 중...';
-      els.cacheStatus.className = 'cache-status';
-
-      try {
-        const res = await fetch(`${GEMINI_BASE}/cachedContents?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: `models/${model}`,
-            systemInstruction: {
-              parts: [{ text: prompt }],
-            },
-            ttl: '3600s',
-          }),
-        });
-
-        if (!res.ok) {
-          const err = await res.text();
-          throw new Error(`Cache Error ${res.status}: ${err}`);
-        }
-
-        const data = await res.json();
-        cachedContentName = data.name;
-        els.cacheStatus.textContent = '캐시 활성';
-        els.cacheStatus.className = 'cache-status active';
+      const result = await _createCache(apiKey, model, getPrompt(), els.cacheStatus);
+      if (result) {
+        cachedContentName = result.name;
         return true;
-      } catch (err) {
-        els.cacheStatus.textContent = `캐시 실패: ${err.message}`;
-        els.cacheStatus.className = 'cache-status';
-        cachedContentName = null;
-        return false;
       }
+      cachedContentName = null;
+      return false;
     }
 
     function clearCache() {
-      cachedContentName = null;
-      els.cacheStatus.textContent = '';
-      els.cacheStatus.className = 'cache-status';
+      cachedContentName = _clearCache(els.cacheStatus);
     }
 
     els.useLatex.addEventListener('change', () => {
@@ -515,12 +442,6 @@
     const MAX_HISTORY = 20;
     let conversationHistory = [];
     let isGenerating = false;
-
-    // --- Markdown Parser ---
-    marked.setOptions({
-      breaks: true,
-      gfm: true,
-    });
 
     // Task #2: Unified render helper
     function renderResponse(div, text) {
@@ -559,22 +480,15 @@
       responseDiv.classList.add('loading');
 
       try {
-        const safetySettings = [
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-        ];
-
         const body = cachedContentName
-          ? { cachedContent: cachedContentName, contents: conversationHistory, safetySettings }
-          : { system_instruction: { parts: [{ text: buildPrompt() }] }, contents: conversationHistory, safetySettings };
+          ? { cachedContent: cachedContentName, contents: conversationHistory, safetySettings: SAFETY_SETTINGS }
+          : { system_instruction: { parts: [{ text: getPrompt() }] }, contents: conversationHistory, safetySettings: SAFETY_SETTINGS };
 
         const res = await fetch(
-          `${GEMINI_BASE}/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
+          `${GEMINI_BASE}/models/${model}:streamGenerateContent?alt=sse`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
             body: JSON.stringify(body),
           }
         );
@@ -630,7 +544,8 @@
           conversationHistory = conversationHistory.slice(-MAX_HISTORY);
         }
       } catch (err) {
-        responseDiv.textContent = `[오류] ${err.message}`;
+        console.error('Gemini API error:', err);
+        responseDiv.textContent = '[오류] API 요청에 실패했습니다. API 키와 모델을 확인해주세요.';
         responseDiv.style.color = 'var(--accent)';
         conversationHistory.pop();
       } finally {
@@ -674,6 +589,18 @@
       sendToGemini(text);
     });
 
+    els.btnRegenerate.addEventListener('click', () => {
+      if (isGenerating || conversationHistory.length < 2) return;
+      const lastModel = conversationHistory[conversationHistory.length - 1];
+      if (lastModel.role !== 'model') return;
+      conversationHistory.pop();
+      const lastUser = conversationHistory.pop();
+      const lastUserText = lastUser.parts[0].text;
+      const narrators = els.gameOutput.querySelectorAll('.game-text.narrator');
+      if (narrators.length) narrators[narrators.length - 1].remove();
+      sendToGemini(lastUserText);
+    });
+
     els.gameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -694,7 +621,7 @@
 
     // --- Story Delete ---
     $('btnDelete').addEventListener('click', async () => {
-      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      if (!supabase) { alert('Supabase가 설정되지 않았습니다.'); return; }
       if (!currentStoryId) { alert('먼저 저장하거나 불러오세요.'); return; }
 
       const password = prompt('삭제하려면 암호를 입력하세요:');
@@ -706,7 +633,7 @@
 
       if (!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
 
-      const ok = await deleteStoryFromFirestore(currentStoryId);
+      const ok = await deleteStory(currentStoryId);
       if (ok) {
         alert('스토리가 삭제되었습니다.');
         currentStoryId = null;
@@ -744,9 +671,9 @@
     (async () => {
       const params = new URLSearchParams(window.location.search);
       const storyId = params.get('storyId');
-      if (!storyId || !db) return;
+      if (!storyId || !supabase) return;
 
-      const data = await loadStoryFromFirestore(storyId);
+      const data = await loadStory(storyId);
       if (!data) { alert('스토리를 찾을 수 없습니다.'); return; }
 
       if (!data.passwordHash) {

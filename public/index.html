@@ -342,61 +342,41 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
-    import { getFirestore, getDocs, collection, query, limit as firestoreLimit }
-      from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
-    import { getAuth, signInAnonymously }
-      from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js';
-
-    const FIREBASE_CONFIG = {
-      apiKey: "AIzaSyAaO9dQmykNuiaf23jh_QJVJFBZn4HsMZw",
-      authDomain: "ai-story-game-5278.firebaseapp.com",
-      projectId: "ai-story-game-5278",
-      storageBucket: "ai-story-game-5278.firebasestorage.app",
-      messagingSenderId: "571520885404",
-      appId: "1:571520885404:web:cfc13ab40dd9a81edc4359"
-    };
-
-    let db = null;
-    let currentUser = null;
-    try {
-      if (FIREBASE_CONFIG.apiKey) {
-        const app = initializeApp(FIREBASE_CONFIG);
-        db = getFirestore(app);
-        const auth = getAuth(app);
-        const userCredential = await signInAnonymously(auth);
-        currentUser = userCredential.user;
-      }
-    } catch (e) {
-      console.warn('Firebase init failed:', e);
-    }
+    import { supabase } from './js/supabase-config.js';
+    import { escapeHtml } from './js/utils.js';
+    import { initTheme } from './js/theme.js';
 
     const storyGrid = document.getElementById('storyGrid');
     const storyCount = document.getElementById('storyCount');
 
-    // --- Load Stories from Firestore ---
+    // --- Load Stories from Supabase ---
     async function loadStories() {
-      if (!db) {
-        storyGrid.innerHTML = '<div class="empty-state"><div class="icon">&#9888;</div><p>Firebase가 설정되지 않았습니다.</p></div>';
+      if (!supabase) {
+        storyGrid.innerHTML = '<div class="empty-state"><div class="icon">&#9888;</div><p>Supabase가 설정되지 않았습니다.</p></div>';
         return;
       }
 
       try {
-        const q = query(collection(db, 'stories'), firestoreLimit(50));
-        const snap = await getDocs(q);
-        const stories = [];
-        snap.forEach(d => {
-          const data = d.data();
-          if (data.isPublic === false) return; // 비공개 스토리 제외
-          stories.push({ id: d.id, ...data });
-        });
+        const { data: rows, error } = await supabase
+          .from('stories')
+          .select('*')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (error) throw error;
 
-        // Sort by createdAt desc
-        stories.sort((a, b) => {
-          const ta = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
-          const tb = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
-          return tb - ta;
-        });
+        const stories = (rows || []).map(row => ({
+          id: row.id,
+          title: row.title,
+          worldSetting: row.world_setting,
+          story: row.story,
+          characterName: row.character_name,
+          characterSetting: row.character_setting,
+          characters: row.characters,
+          useLatex: row.use_latex,
+          isPublic: row.is_public,
+          createdAt: row.created_at,
+        }));
 
         storyCount.textContent = `(${stories.length})`;
 
@@ -446,10 +426,6 @@
       }
     }
 
-    function escapeHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
-    }
-
     // --- Load Recent Sessions from localStorage ---
     function loadSessions() {
       const SESSION_LIST_KEY = 'ai-story-game-sessions';
@@ -482,21 +458,8 @@
       } catch (e) {}
     }
 
-    // --- Theme (shared with play.html via localStorage) ---
-    function applyTheme(theme) {
-      document.body.classList.remove('light-theme');
-      if (theme === 'light') {
-        document.body.classList.add('light-theme');
-      } else if (theme === 'system') {
-        if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-          document.body.classList.add('light-theme');
-        }
-      }
-    }
-    applyTheme(localStorage.getItem('ai-story-game-theme') || 'system');
-    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-      if (localStorage.getItem('ai-story-game-theme') === 'system') applyTheme('system');
-    });
+    // --- Theme ---
+    initTheme();
 
     // --- Continue Banner ---
     function showContinueBanner() {

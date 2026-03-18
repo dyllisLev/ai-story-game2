@@ -1,8 +1,11 @@
 .superpowers/
 .DS_Store
 .claude/
+.env
 story-game-settings.json
 test
 node_modules/
 package-lock.json
 package.json
+.wrangler/
+public/.wrangler/

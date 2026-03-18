@@ -89,6 +89,9 @@
   margin-top: 0;
 }
 
+.game-input-area .btn-icon:hover:not(:disabled) { color: var(--text); border-color: var(--text-muted); }
+.game-input-area .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .loading::after {
   content: '⏳ 생성 중...';
   display: block;
