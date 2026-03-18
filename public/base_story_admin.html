@@ -40,74 +40,6 @@
       gap: 12px;
     }
 
-    .logged-in-badge {
-      font-size: 11px;
-      color: #3fb950;
-      background: rgba(63, 185, 80, 0.12);
-      border: 1px solid rgba(63, 185, 80, 0.3);
-      border-radius: 4px;
-      padding: 3px 8px;
-    }
-
-    .btn-logout {
-      font-size: 12px;
-      color: var(--text-muted);
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 10px;
-      cursor: pointer;
-    }
-
-    .btn-logout:hover {
-      color: var(--text);
-      border-color: var(--text-muted);
-    }
-
-    /* Auth overlay */
-    #authOverlay {
-      position: fixed;
-      inset: 0;
-      background: var(--bg-dark);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .auth-box {
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 32px;
-      width: 100%;
-      max-width: 360px;
-    }
-
-    .auth-box h2 {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: var(--text);
-    }
-
-    .auth-box p {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-    }
-
-    .auth-box .form-group {
-      margin-bottom: 16px;
-    }
-
-    .auth-error {
-      font-size: 12px;
-      color: var(--accent);
-      margin-top: 8px;
-      min-height: 18px;
-    }
-
     /* Section titles */
     .section-title {
       font-size: 13px;
@@ -389,32 +321,10 @@
 </head>
 <body>
 
-  <!-- Auth overlay -->
-  <div id="authOverlay">
-    <div class="auth-box">
-      <h2 id="authTitle">관리자 로그인</h2>
-      <p id="authDesc">프리셋 관리 페이지에 접근하려면 관리자 암호를 입력하세요.</p>
-      <div class="form-group">
-        <label for="authPassword" id="authPasswordLabel">암호</label>
-        <input type="password" id="authPassword" placeholder="관리자 암호 입력" autocomplete="current-password">
-      </div>
-      <div class="form-group" id="authConfirmGroup" style="display:none;">
-        <label for="authPasswordConfirm">암호 확인</label>
-        <input type="password" id="authPasswordConfirm" placeholder="암호 다시 입력">
-      </div>
-      <button class="btn btn-primary" id="authSubmit">확인</button>
-      <div class="auth-error" id="authError"></div>
-    </div>
-  </div>
-
   <!-- Main content -->
-  <div class="admin-wrap" id="mainContent" style="display:none;">
+  <div class="admin-wrap" id="mainContent">
     <div class="admin-header">
       <h1>프리셋 관리</h1>
-      <div class="header-meta">
-        <span class="logged-in-badge">관리자</span>
-        <button class="btn-logout" id="btnLogout">로그아웃</button>
-      </div>
     </div>
 
     <!-- Preset list -->

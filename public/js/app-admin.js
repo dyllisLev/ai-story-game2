@@ -1,5 +1,4 @@
 import { supabase } from './supabase-config.js';
-import { hashPassword, verifyPassword } from './crypto.js';
 import { initTheme } from './theme.js';
 import { escapeHtml } from './utils.js';
 
@@ -17,139 +16,6 @@ function showToast(msg, type = 'success') {
 
 // --- DOM refs ---
 const $ = id => document.getElementById(id);
-
-// --- Auth state ---
-let isAuthenticated = false;
-let loginAttempts = 0;
-let lockoutUntil = 0;
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 30000; // 30초
-
-async function checkAdminExists() {
-  if (!supabase) return null;
-  try {
-    const { data, error } = await supabase.from('config').select('*').eq('id', 'admin').single();
-    if (error && error.code === 'PGRST116') return null; // not found
-    if (error) throw error;
-    return data ? { passwordHash: data.password_hash } : null;
-  } catch (e) {
-    console.error('Admin config read failed:', e);
-    return null;
-  }
-}
-
-async function initAuth() {
-  if (!supabase) {
-    $('authError').textContent = 'Supabase에 연결할 수 없습니다.';
-    return;
-  }
-
-  const adminDoc = await checkAdminExists();
-
-  if (!adminDoc || !adminDoc.passwordHash) {
-    // First-time setup
-    $('authTitle').textContent = '초기 관리자 암호 설정';
-    $('authDesc').textContent = '관리자 암호가 설정되어 있지 않습니다. 새 암호를 설정하세요.';
-    $('authPasswordLabel').textContent = '새 암호';
-    $('authPassword').placeholder = '새 관리자 암호 입력';
-    $('authConfirmGroup').style.display = '';
-    $('authSubmit').textContent = '암호 설정';
-    $('authSubmit').onclick = () => handleSetPassword();
-  } else {
-    $('authSubmit').onclick = () => handleLogin(adminDoc.passwordHash);
-    $('authPassword').addEventListener('keydown', e => {
-      if (e.key === 'Enter') handleLogin(adminDoc.passwordHash);
-    });
-  }
-
-  $('authPassword').focus();
-}
-
-async function handleLogin(passwordHash) {
-  const pw = $('authPassword').value;
-  if (!pw) { $('authError').textContent = '암호를 입력하세요.'; return; }
-
-  // SEC-007: 로그인 시도 횟수 제한
-  const now = Date.now();
-  if (loginAttempts >= MAX_LOGIN_ATTEMPTS && now < lockoutUntil) {
-    const remaining = Math.ceil((lockoutUntil - now) / 1000);
-    $('authError').textContent = `너무 많은 시도. ${remaining}초 후 다시 시도하세요.`;
-    return;
-  }
-  if (now >= lockoutUntil) loginAttempts = 0;
-
-  $('authSubmit').disabled = true;
-  $('authSubmit').innerHTML = '<span class="spinner"></span> 확인 중...';
-  $('authError').textContent = '';
-
-  const ok = await verifyPassword(pw, passwordHash);
-
-  if (ok) {
-    loginAttempts = 0;
-    isAuthenticated = true;
-    $('authOverlay').style.display = 'none';
-    $('mainContent').style.display = '';
-    loadPresets();
-  } else {
-    loginAttempts++;
-    if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
-      lockoutUntil = Date.now() + LOCKOUT_DURATION_MS;
-      $('authError').textContent = `${MAX_LOGIN_ATTEMPTS}회 실패. 30초 후 다시 시도하세요.`;
-    } else {
-      $('authError').textContent = `암호가 일치하지 않습니다. (${loginAttempts}/${MAX_LOGIN_ATTEMPTS})`;
-    }
-    $('authSubmit').disabled = false;
-    $('authSubmit').textContent = '확인';
-    $('authPassword').focus();
-    $('authPassword').select();
-  }
-}
-
-async function handleSetPassword() {
-  const pw = $('authPassword').value;
-  const pw2 = $('authPasswordConfirm').value;
-
-  if (!pw) { $('authError').textContent = '암호를 입력하세요.'; return; }
-  if (pw.length < 8) { $('authError').textContent = '암호는 8자 이상이어야 합니다.'; return; }
-  if (pw !== pw2) { $('authError').textContent = '암호가 일치하지 않습니다.'; return; }
-
-  $('authSubmit').disabled = true;
-  $('authSubmit').innerHTML = '<span class="spinner"></span> 저장 중...';
-  $('authError').textContent = '';
-
-  try {
-    const hash = await hashPassword(pw);
-    const { error } = await supabase.from('config').upsert({
-      id: 'admin',
-      password_hash: hash,
-    });
-    if (error) throw error;
-    isAuthenticated = true;
-    $('authOverlay').style.display = 'none';
-    $('mainContent').style.display = '';
-    loadPresets();
-    showToast('관리자 암호가 설정되었습니다.');
-  } catch (e) {
-    console.error('Admin password set failed:', e);
-    $('authError').textContent = '저장에 실패했습니다. 다시 시도해주세요.';
-    $('authSubmit').disabled = false;
-    $('authSubmit').textContent = '암호 설정';
-  }
-}
-
-// --- Logout ---
-$('btnLogout').addEventListener('click', () => {
-  if (!confirm('로그아웃 하시겠습니까?')) return;
-  isAuthenticated = false;
-  hideForm();
-  $('mainContent').style.display = 'none';
-  $('authOverlay').style.display = 'flex';
-  $('authPassword').value = '';
-  $('authPasswordConfirm').value = '';
-  $('authError').textContent = '';
-  $('authSubmit').disabled = false;
-  $('authSubmit').textContent = '확인';
-});
 
 // --- Preset List ---
 let presets = [];
@@ -384,5 +250,5 @@ $('btnDeletePreset').addEventListener('click', () => {
   if (id) confirmDelete(id);
 });
 
-// --- Init ---
-initAuth();
+// --- Init: Basic Auth로 이미 인증됨, 바로 프리셋 로드 ---
+loadPresets();
