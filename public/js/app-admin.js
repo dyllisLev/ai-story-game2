@@ -4,6 +4,23 @@ import { escapeHtml } from './utils.js';
 
 initTheme();
 
+// --- Tab Switching ---
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-content').forEach(c => {
+      c.style.display = 'none';
+      c.classList.remove('active');
+    });
+    const target = tab === 'presets' ? $('tabPresets') : $('tabConfig');
+    target.style.display = '';
+    target.classList.add('active');
+    if (tab === 'config') loadConfig();
+  });
+});
+
 // --- Toast ---
 let toastTimer = null;
 function showToast(msg, type = 'success') {
@@ -248,6 +265,158 @@ async function confirmDelete(id) {
 $('btnDeletePreset').addEventListener('click', () => {
   const id = $('editingPresetId').value;
   if (id) confirmDelete(id);
+});
+
+// --- Safety Thresholds ---
+const SAFETY_THRESHOLDS = ['BLOCK_NONE', 'BLOCK_LOW_AND_ABOVE', 'BLOCK_MEDIUM_AND_ABOVE', 'BLOCK_HIGH_AND_ABOVE'];
+const SAFETY_CATEGORY_MAP = {
+  'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'cfgSafetySexual',
+  'HARM_CATEGORY_HATE_SPEECH': 'cfgSafetyHate',
+  'HARM_CATEGORY_HARASSMENT': 'cfgSafetyHarassment',
+  'HARM_CATEGORY_DANGEROUS_CONTENT': 'cfgSafetyDangerous',
+};
+
+for (const elId of Object.values(SAFETY_CATEGORY_MAP)) {
+  const sel = $(elId);
+  for (const t of SAFETY_THRESHOLDS) {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    sel.appendChild(opt);
+  }
+}
+
+// --- Config Load ---
+let configLoaded = false;
+
+async function loadConfig() {
+  if (configLoaded) return;
+  try {
+    const { data: rows, error } = await supabase
+      .from('config')
+      .select('id, value')
+      .in('id', ['prompt_config', 'gameplay_config']);
+    if (error) throw error;
+
+    let prompt = null, gameplay = null;
+    for (const row of rows) {
+      if (row.id === 'prompt_config') prompt = row.value;
+      else if (row.id === 'gameplay_config') gameplay = row.value;
+    }
+    if (!prompt || !gameplay) throw new Error('Config rows not found');
+
+    $('cfgSystemPreamble').value = prompt.system_preamble || '';
+    $('cfgLatexRules').value = prompt.latex_rules || '';
+    $('cfgNarrativeTemplate').value = prompt.narrative_length_template || '';
+    $('cfgSummaryInstruction').value = prompt.summary_system_instruction || '';
+    $('cfgSummaryNew').value = prompt.summary_request_new || '';
+    $('cfgSummaryUpdate').value = prompt.summary_request_update || '';
+    $('cfgGameStartMsg').value = prompt.game_start_message || '';
+    $('cfgCacheTtl').value = prompt.cache_ttl || '';
+
+    for (const setting of (prompt.safety_settings || [])) {
+      const elId = SAFETY_CATEGORY_MAP[setting.category];
+      if (elId) $(elId).value = setting.threshold;
+    }
+
+    $('cfgDefaultNarrLen').value = gameplay.default_narrative_length;
+    $('cfgNarrMin').value = gameplay.narrative_length_min;
+    $('cfgNarrMax').value = gameplay.narrative_length_max;
+    $('cfgSlidingWindow').value = gameplay.sliding_window_size;
+    $('cfgMaxHistory').value = gameplay.max_history;
+    $('cfgMsgLimit').value = gameplay.message_limit;
+    $('cfgMsgWarning').value = gameplay.message_warning_threshold;
+    $('cfgSummaryOffset').value = gameplay.summary_trigger_offset;
+    $('cfgSummaryMaxChars').value = gameplay.summary_max_chars;
+    $('cfgAutoSaveMs').value = gameplay.auto_save_interval_ms;
+    $('cfgMaxSessions').value = gameplay.max_session_list;
+
+    configLoaded = true;
+  } catch (e) {
+    console.error('Config load failed:', e);
+    showToast('설정을 불러오는 데 실패했습니다.', 'error');
+  }
+}
+
+// --- Config Validation ---
+function validateConfig(prompt, gameplay) {
+  const promptFields = ['system_preamble', 'latex_rules', 'narrative_length_template',
+    'summary_system_instruction', 'summary_request_new', 'summary_request_update', 'game_start_message'];
+  for (const f of promptFields) {
+    if (!prompt[f]?.trim()) return `프롬프트 필드 "${f}"는 비워둘 수 없습니다.`;
+  }
+  if (!/^\d+s$/.test(prompt.cache_ttl)) return '캐시 TTL은 "숫자s" 형식이어야 합니다 (예: 3600s).';
+
+  for (const [key, val] of Object.entries(gameplay)) {
+    if (typeof val !== 'number' || isNaN(val) || val <= 0) return `"${key}" 값은 0보다 커야 합니다.`;
+  }
+  if (gameplay.narrative_length_min < 1) return '서술 길이 최소값은 1 이상이어야 합니다.';
+  if (gameplay.narrative_length_max <= gameplay.narrative_length_min) return '서술 길이 최대값은 최소값보다 커야 합니다.';
+  if (gameplay.default_narrative_length < gameplay.narrative_length_min || gameplay.default_narrative_length > gameplay.narrative_length_max) {
+    return '기본 서술 길이는 최소~최대 범위 내여야 합니다.';
+  }
+  if (gameplay.message_warning_threshold >= gameplay.message_limit) return '경고 임계값은 메시지 한도보다 작아야 합니다.';
+  return null;
+}
+
+// --- Config Save ---
+$('btnSaveConfig').addEventListener('click', async () => {
+  const promptData = {
+    system_preamble: $('cfgSystemPreamble').value,
+    latex_rules: $('cfgLatexRules').value,
+    narrative_length_template: $('cfgNarrativeTemplate').value,
+    summary_system_instruction: $('cfgSummaryInstruction').value,
+    summary_request_new: $('cfgSummaryNew').value,
+    summary_request_update: $('cfgSummaryUpdate').value,
+    game_start_message: $('cfgGameStartMsg').value,
+    cache_ttl: $('cfgCacheTtl').value.trim(),
+    safety_settings: Object.entries(SAFETY_CATEGORY_MAP).map(([category, elId]) => ({
+      category,
+      threshold: $(elId).value,
+    })),
+  };
+
+  const gameplayData = {
+    default_narrative_length: parseInt($('cfgDefaultNarrLen').value, 10),
+    narrative_length_min: parseInt($('cfgNarrMin').value, 10),
+    narrative_length_max: parseInt($('cfgNarrMax').value, 10),
+    sliding_window_size: parseInt($('cfgSlidingWindow').value, 10),
+    max_history: parseInt($('cfgMaxHistory').value, 10),
+    message_limit: parseInt($('cfgMsgLimit').value, 10),
+    message_warning_threshold: parseInt($('cfgMsgWarning').value, 10),
+    summary_trigger_offset: parseInt($('cfgSummaryOffset').value, 10),
+    summary_max_chars: parseInt($('cfgSummaryMaxChars').value, 10),
+    auto_save_interval_ms: parseInt($('cfgAutoSaveMs').value, 10),
+    max_session_list: parseInt($('cfgMaxSessions').value, 10),
+  };
+
+  const validationError = validateConfig(promptData, gameplayData);
+  if (validationError) {
+    showToast(validationError, 'error');
+    return;
+  }
+
+  const btn = $('btnSaveConfig');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 저장 중...';
+
+  try {
+    const res = await fetch('/api/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ promptConfig: promptData, gameplayConfig: gameplayData }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Save failed');
+    configLoaded = false;
+    showToast('설정이 저장되었습니다. 5분 이내에 반영됩니다.');
+  } catch (e) {
+    console.error('Config save failed:', e);
+    showToast('설정 저장에 실패했습니다: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '설정 저장';
+  }
 });
 
 // --- Init: Basic Auth로 이미 인증됨, 바로 프리셋 로드 ---
