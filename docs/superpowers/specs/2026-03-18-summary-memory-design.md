@@ -27,10 +27,36 @@ CREATE TABLE session_memory (
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(session_id, type)
 );
+
+-- updated_at 자동 갱신 트리거
+CREATE TRIGGER update_session_memory_updated_at
+  BEFORE UPDATE ON session_memory
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- RLS 정책 (sessions 테이블과 동일한 패턴: UUID를 아는 사람은 읽기 가능, 소유자만 쓰기)
+ALTER TABLE session_memory ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "session_memory_select" ON session_memory
+  FOR SELECT USING (true);
+
+CREATE POLICY "session_memory_insert" ON session_memory
+  FOR INSERT WITH CHECK (
+    session_id IN (SELECT id FROM sessions WHERE owner_uid = auth.uid())
+  );
+
+CREATE POLICY "session_memory_update" ON session_memory
+  FOR UPDATE USING (
+    session_id IN (SELECT id FROM sessions WHERE owner_uid = auth.uid())
+  );
+
+CREATE POLICY "session_memory_delete" ON session_memory
+  FOR DELETE USING (
+    session_id IN (SELECT id FROM sessions WHERE owner_uid = auth.uid())
+  );
 ```
 
-- RLS: 세션 소유자만 읽기/쓰기
 - `sessions.summary`, `sessions.summary_up_to_index`는 하위 호환을 위해 유지
+- `goals` 타입은 content에 JSON 문자열로 저장 (예: `'"목표 텍스트"'::jsonb`)
 
 ### 카테고리별 content 예시
 
@@ -65,18 +91,33 @@ CREATE TABLE session_memory (
 const interval = gameplayConfig.sliding_window_size; // 20
 const totalMessages = conversationHistory.length;
 
-if (totalMessages > 0 && totalMessages % interval === 0) {
+// 동시 실행 방지
+if (isGeneratingMemory) return;
+
+// 메시지가 윈도우를 초과하고, 이전 요약 이후 interval만큼 쌓였을 때 트리거
+// 첫 트리거: 메시지 21+ (윈도우 밖 메시지가 생길 때)
+// 이후: memoryUpToIndex 기준으로 interval만큼 새 메시지가 쌓였을 때
+if (totalMessages > interval && (totalMessages - memoryUpToIndex) >= interval) {
   generateMemory();
 }
 ```
 
-- 메시지 20, 40, 60... 도달 시 트리거
+- 첫 트리거는 윈도우를 초과하는 시점 (메시지 21개 이상)
+- 이후 memoryUpToIndex 기준 interval 간격으로 트리거
+- `isGeneratingMemory` 플래그로 동시 실행 방지
 - 모든 카테고리를 한 번의 API 호출로 생성/갱신
 
 ### 단기→장기 전환
 
-- 단기기억이 10개(`memory_short_term_max`) 초과 시 오래된 이벤트를 장기기억으로 압축 이동
-- AI가 한 번의 호출에서 자동 판단하여 처리 (별도 API 호출 없음)
+- AI 프롬프트 규칙에 "shortTerm 최대 10개, 초과 시 오래된 것은 longTerm으로 통합" 명시
+- AI가 기존 메모리를 입력받고 한 번의 호출에서 자동 판단하여 처리 (별도 API 호출 없음)
+- 클라이언트 코드에서는 10개 제한을 검증하지 않음 — AI 인스트럭션에 위임
+
+### 실패 시 트리거 복구
+
+- 메모리 생성 실패 시 `memoryUpToIndex`를 갱신하지 않음
+- 다음 메시지에서 조건이 여전히 충족되므로 자연스럽게 재트리거됨
+- 재트리거 시 현재 윈도우 전체 + 기존 메모리를 다시 전달하므로 누락 없음
 
 ## AI 요약 프롬프트
 
@@ -117,10 +158,46 @@ if (totalMessages > 0 && totalMessages % interval === 0) {
 {윈도우 내 메시지들}
 ```
 
+### Gemini API 호출 설정
+
+- `responseMimeType: "application/json"` 설정으로 JSON 출력 강제
+- 추가로 JSON 파싱 실패 시 코드펜스 제거 후 재시도하는 fallback 포함
+
 ### 입력 데이터
 
-- 현재 윈도우 내 메시지 (최근 20개)
+- 현재 윈도우 내 메시지 (최근 20개) — 트리거 시점에 윈도우가 곧 요약 대상 전체
 - 기존 메모리 4개 카테고리 (있으면)
+
+### 키 매핑 (AI 응답 camelCase → DB snake_case)
+
+| AI 응답 키 | DB type 값 |
+|-----------|-----------|
+| `shortTerm` | `short_term` |
+| `longTerm` | `long_term` |
+| `characters` | `characters` |
+| `goals` | `goals` |
+
+### `{memory}` 치환 형식
+
+기존 메모리가 있을 때:
+```json
+{
+  "shortTerm": [...기존 단기기억],
+  "characters": [...기존 관계도],
+  "goals": "기존 목표 텍스트",
+  "longTerm": [...기존 장기기억]
+}
+```
+
+기존 메모리가 없을 때: `"없음"`
+
+### `{messages}` 치환 형식
+
+```
+[user] 사용자 입력 내용
+[model] AI 응답 내용
+[user] ...
+```
 
 ## 시스템 프롬프트 주입
 
@@ -152,9 +229,9 @@ if (totalMessages > 0 && totalMessages % interval === 0) {
 ### 저장
 
 1. 메모리 생성 완료
-2. `session_memory` 테이블에 4개 row UPSERT
+2. `session_memory` 테이블에 4개 row UPSERT (Supabase `.upsert()` 배열로 한 번에 전송)
 3. `localStorage`에 캐시 (`ai-story-session-{id}-memory`)
-4. `sessions.summary_up_to_index` 갱신 (트리거 중복 방지)
+4. 인메모리 `memoryUpToIndex`를 현재 `conversationHistory.length`로 갱신
 
 ### 로드 (세션 복원)
 
@@ -240,6 +317,12 @@ if (totalMessages > 0 && totalMessages % interval === 0) {
 | 단기 기억 | 카드형 (제목 볼드 + 내용 노출) | 확인 |
 | 관계도 | "이름 (역할)" 볼드 + 설명 | 확인 |
 | 목표 | 편집 가능한 textarea | 확인 |
+
+### 편집/추가 기능 (장기기억)
+
+- **편집**: 선택한 항목의 title/content를 인라인 편집 → 직접 DB 저장
+- **추가**: 빈 항목 추가 → 사용자가 title/content 입력 → DB 저장
+- 사용자가 수동 편집한 내용은 다음 AI 메모리 생성 시 "기존 메모리"로 전달되므로 AI가 자연스럽게 유지/통합함
 
 ### 상태 표시
 
