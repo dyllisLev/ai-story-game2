@@ -261,3 +261,39 @@ CREATE POLICY config_update_admin ON config FOR UPDATE
 CREATE TRIGGER config_updated_at
   BEFORE UPDATE ON config
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================
+-- Session Memory (요약 메모리 시스템)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS session_memory (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('short_term', 'characters', 'goals', 'long_term')),
+  content JSONB NOT NULL DEFAULT '[]'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(session_id, type)
+);
+
+CREATE TRIGGER update_session_memory_updated_at
+  BEFORE UPDATE ON session_memory
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE session_memory ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "session_memory_select" ON session_memory
+  FOR SELECT USING (true);
+
+CREATE POLICY "session_memory_insert" ON session_memory
+  FOR INSERT WITH CHECK (
+    session_id IN (SELECT id FROM sessions WHERE owner_uid = auth.uid())
+  );
+
+CREATE POLICY "session_memory_update" ON session_memory
+  FOR UPDATE USING (
+    session_id IN (SELECT id FROM sessions WHERE owner_uid = auth.uid())
+  );
+
+CREATE POLICY "session_memory_delete" ON session_memory
+  FOR DELETE USING (
+    session_id IN (SELECT id FROM sessions WHERE owner_uid = auth.uid())
+  );
