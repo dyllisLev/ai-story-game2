@@ -1,6 +1,9 @@
 .game-text {
   margin-bottom: 16px;
   white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .game-text.narrator { color: var(--text); }
@@ -95,4 +98,11 @@
 
 /* KaTeX overrides for dark theme */
 .game-text .katex { font-size: 1.1em; }
-.game-text .katex-display { margin: 8px 0; }
+.game-text .katex-display {
+  margin: 8px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.game-text .katex-html {
+  overflow-wrap: break-word;
+}
