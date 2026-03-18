@@ -3,13 +3,6 @@
 
 export const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
-export const SAFETY_SETTINGS = [
-  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-];
-
 /**
  * Fetches available Gemini models and populates a select element.
  * @param {string} apiKey - Gemini API key
@@ -60,7 +53,7 @@ export async function fetchModels(apiKey, selectElement, options = {}) {
  * @param {HTMLElement} statusElement - Element to show cache status
  * @returns {Promise<{name: string}|null>} - Cache object with name, or null on failure
  */
-export async function createCache(apiKey, model, promptText, statusElement) {
+export async function createCache(apiKey, model, promptText, statusElement, cacheTtl) {
   statusElement.textContent = '캐시 생성 중...';
   statusElement.className = 'cache-status';
 
@@ -71,7 +64,7 @@ export async function createCache(apiKey, model, promptText, statusElement) {
       body: JSON.stringify({
         model: `models/${model}`,
         systemInstruction: { parts: [{ text: promptText }] },
-        ttl: '3600s',
+        ttl: cacheTtl,
       }),
     });
 
