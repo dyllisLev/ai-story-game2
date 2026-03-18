@@ -15,7 +15,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // 스토리: 인증된 사용자만 생성, 소유자만 수정 (+ 암호 해시 일치)
+    // 스토리: 인증된 사용자만 생성, 소유자만 수정/삭제 (+ 암호 해시 일치)
     match /stories/{storyId} {
       allow read: if true;
       allow create: if request.auth != null
@@ -25,13 +25,19 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && resource.data.ownerUid == request.auth.uid
                     && request.resource.data.passwordHash == resource.data.passwordHash;
-      allow delete: if false;
+      allow delete: if request.auth != null
+                    && resource.data.ownerUid == request.auth.uid;
     }
 
-    // 프리셋: 읽기만 허용
+    // 프리셋: 누구나 읽기, 인증된 사용자만 쓰기
     match /presets/{presetId} {
       allow read: if true;
-      allow create, update, delete: if false;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // 관리자 설정: 인증된 사용자만 읽기/쓰기
+    match /config/{docId} {
+      allow read, write: if request.auth != null;
     }
   }
 }
