@@ -5,349 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Story Game</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.css" crossorigin="anonymous">
-  <style>
-    :root {
-      --bg-dark: #0d1117;
-      --bg-panel: #161b22;
-      --bg-input: #1c2128;
-      --border: #30363d;
-      --text: #e6edf3;
-      --text-muted: #8b949e;
-      --accent: #e94560;
-      --accent-hover: #ff6b81;
-      --cyan: #53d8fb;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg-dark);
-      color: var(--text);
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    .container {
-      display: flex;
-      height: 100vh;
-      gap: 1px;
-      background: var(--border);
-    }
-
-    .panel {
-      background: var(--bg-panel);
-      padding: 16px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .panel-settings { flex: 1; min-width: 280px; }
-    .panel-prompt { flex: 1; min-width: 280px; }
-    .panel-game { flex: 1.2; min-width: 320px; }
-
-    .panel-title {
-      color: var(--accent);
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .form-group { margin-bottom: 12px; }
-
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    input[type="text"],
-    input[type="password"],
-    textarea,
-    select {
-      width: 100%;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 10px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: inherit;
-      resize: vertical;
-    }
-
-    input:focus, textarea:focus, select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    select { cursor: pointer; }
-    select:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .btn {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: white;
-      width: 100%;
-      margin-top: 8px;
-    }
-
-    .btn-primary:hover { background: var(--accent-hover); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .btn-secondary {
-      background: var(--bg-input);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      flex: 1;
-    }
-
-    .btn-secondary:hover { color: var(--text); border-color: var(--text-muted); }
-
-    .btn-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .prompt-preview {
-      flex: 1;
-      background: var(--bg-input);
-      border-radius: 6px;
-      padding: 12px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 12px;
-      line-height: 1.8;
-      color: var(--text-muted);
-      white-space: pre-wrap;
-      overflow-y: auto;
-    }
-
-    .prompt-section { color: var(--cyan); }
-    .prompt-system { color: var(--accent); }
-
-    .token-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 10px;
-      margin-bottom: 8px;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 11px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      color: var(--text-muted);
-    }
-
-    .token-bar #costInfo {
-      color: #2ea043;
-    }
-
-    .game-output {
-      flex: 1;
-      overflow-y: auto;
-      padding-right: 8px;
-      font-size: 14px;
-      line-height: 1.8;
-    }
-
-    .game-placeholder {
-      color: var(--text-muted);
-      text-align: center;
-      margin-top: 40%;
-    }
-
-    .game-text {
-      margin-bottom: 16px;
-      white-space: pre-wrap;
-    }
-
-    .game-text.narrator { color: var(--text); }
-    .game-text.narrator.markdown-rendered { white-space: normal; }
-
-    .game-text h1, .game-text h2, .game-text h3 {
-      margin: 12px 0 6px;
-      color: var(--cyan);
-    }
-    .game-text h1 { font-size: 18px; }
-    .game-text h2 { font-size: 16px; }
-    .game-text h3 { font-size: 14px; }
-
-    .game-text strong { color: var(--accent); font-weight: 700; }
-    .game-text em { color: var(--text-muted); font-style: italic; }
-
-    .game-text code {
-      background: var(--bg-input);
-      padding: 2px 5px;
-      border-radius: 3px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 12px;
-    }
-
-    .game-text pre {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px;
-      margin: 8px 0;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 12px;
-      line-height: 1.6;
-    }
-
-    .game-text pre code {
-      background: none;
-      padding: 0;
-    }
-
-    .game-text ul, .game-text ol {
-      margin: 6px 0;
-      padding-left: 20px;
-    }
-
-    .game-text li { margin: 2px 0; }
-
-    .game-text hr {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 12px 0;
-    }
-
-    .game-text p {
-      margin: 0 0 0.5em;
-    }
-
-    .game-text p:last-child { margin-bottom: 0; }
-
-    .game-text blockquote {
-      border-left: 3px solid var(--accent);
-      padding-left: 12px;
-      margin: 8px 0;
-      color: var(--text-muted);
-    }
-
-    .game-text table {
-      border-collapse: collapse;
-      margin: 8px 0;
-      width: 100%;
-    }
-
-    .game-text th, .game-text td {
-      border: 1px solid var(--border);
-      padding: 6px 10px;
-      text-align: left;
-      font-size: 13px;
-    }
-
-    .game-text th {
-      background: var(--bg-input);
-      color: var(--cyan);
-    }
-    .game-text.user-action {
-      color: var(--cyan);
-      padding-left: 12px;
-      border-left: 2px solid var(--cyan);
-    }
-
-    /* KaTeX overrides for dark theme */
-    .game-text .katex { font-size: 1.1em; }
-    .game-text .katex-display { margin: 8px 0; }
-
-    .game-input-area {
-      display: flex;
-      gap: 8px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-      margin-top: 12px;
-    }
-
-    .game-input-area input { flex: 1; }
-
-    .game-input-area .btn {
-      width: auto;
-      margin-top: 0;
-    }
-
-    .loading::after {
-      content: '⏳ 생성 중...';
-      display: block;
-      color: var(--text-muted);
-      font-size: 12px;
-      margin-top: 8px;
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 1; }
-    }
-
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .checkbox-group label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      color: var(--text);
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      width: auto;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    .cache-status {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .cache-status.active {
-      color: #2ea043;
-    }
-
-    /* --- Light Theme --- */
-    body.light-theme {
-      --bg-dark: #ffffff;
-      --bg-panel: #f6f8fa;
-      --bg-input: #f0f2f5;
-      --border: #d0d7de;
-      --text: #1f2328;
-      --text-muted: #656d76;
-    }
-
-    @media (max-width: 768px) {
-      body { height: auto; overflow: auto; }
-      .container { flex-direction: column; height: auto; min-height: auto; gap: 0; }
-      .panel { min-width: auto; max-height: none; overflow-y: visible; }
-      .panel-prompt { display: none; }
-      .panel-game { display: none; }
-      .btn { min-height: 44px; }
-      textarea { min-height: 100px; }
-    }
-  </style>
+  <link rel="stylesheet" href="styles/theme.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/markdown.css">
+  <link rel="stylesheet" href="styles/editor.css">
 </head>
 <body>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.js" crossorigin="anonymous"></script>
@@ -450,115 +111,12 @@
   </div>
 
   <script type="module">
-    // --- Firebase ---
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, where, serverTimestamp }
-      from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
-    import { getAuth, signInAnonymously }
-      from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js';
-
-    const FIREBASE_CONFIG = {
-      apiKey: "AIzaSyAaO9dQmykNuiaf23jh_QJVJFBZn4HsMZw",
-      authDomain: "ai-story-game-5278.firebaseapp.com",
-      projectId: "ai-story-game-5278",
-      storageBucket: "ai-story-game-5278.firebasestorage.app",
-      messagingSenderId: "571520885404",
-      appId: "1:571520885404:web:cfc13ab40dd9a81edc4359"
-    };
-
-    let db = null;
-    let currentUser = null;
-    try {
-      if (FIREBASE_CONFIG.apiKey) {
-        const app = initializeApp(FIREBASE_CONFIG);
-        db = getFirestore(app);
-        const auth = getAuth(app);
-        const userCredential = await signInAnonymously(auth);
-        currentUser = userCredential.user;
-      }
-    } catch (e) {
-      console.warn('Firebase init failed:', e);
-    }
-
-    // --- Password Hashing (PBKDF2 + salt) ---
-    async function hashPassword(password) {
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const keyMaterial = await crypto.subtle.importKey(
-        'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']
-      );
-      const bits = await crypto.subtle.deriveBits(
-        { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
-        keyMaterial, 256
-      );
-      const hashHex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
-      const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-      return `${saltHex}:${hashHex}`;
-    }
-
-    async function verifyPassword(password, storedHash) {
-      const [saltHex, hashHex] = storedHash.split(':');
-      if (!saltHex || !hashHex) {
-        // Legacy SHA-256 (no salt) — backward compatible
-        const legacy = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
-        return Array.from(new Uint8Array(legacy)).map(b => b.toString(16).padStart(2, '0')).join('') === storedHash;
-      }
-      const salt = new Uint8Array(saltHex.match(/.{2}/g).map(b => parseInt(b, 16)));
-      const keyMaterial = await crypto.subtle.importKey(
-        'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']
-      );
-      const bits = await crypto.subtle.deriveBits(
-        { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
-        keyMaterial, 256
-      );
-      return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('') === hashHex;
-    }
-
-    // --- Story Management ---
-    async function saveStoryToFirestore(storyData, passwordHash) {
-      if (!db) return null;
-      const storyId = crypto.randomUUID();
-      try {
-        const isPublic = storyData.isPublic !== undefined ? storyData.isPublic : true;
-        await setDoc(doc(db, 'stories', storyId), {
-          ...storyData,
-          passwordHash: passwordHash || null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          isPublic,
-          ownerUid: currentUser?.uid || null,
-        });
-        return storyId;
-      } catch (e) {
-        console.error('Story save failed:', e);
-        return null;
-      }
-    }
-
-    async function loadStoryFromFirestore(storyId) {
-      if (!db) return null;
-      try {
-        const snap = await getDoc(doc(db, 'stories', storyId));
-        return snap.exists() ? snap.data() : null;
-      } catch (e) {
-        console.error('Story load failed:', e);
-        return null;
-      }
-    }
-
-    async function updateStoryInFirestore(storyId, storyData, passwordHash) {
-      if (!db) return false;
-      try {
-        await updateDoc(doc(db, 'stories', storyId), {
-          ...storyData,
-          passwordHash,
-          updatedAt: serverTimestamp(),
-        });
-        return true;
-      } catch (e) {
-        console.error('Story update failed:', e);
-        return false;
-      }
-    }
+    import { db } from './js/firebase-config.js';
+    import { hashPassword, verifyPassword } from './js/crypto.js';
+    import { saveStoryToFirestore, loadStoryFromFirestore, updateStoryInFirestore, loadPublicPresets } from './js/firestore-ops.js';
+    import { renderMarkdown } from './js/markdown-renderer.js';
+    import { updateTokenDisplay, resetTokens } from './js/token-tracker.js';
+    import { initTheme } from './js/theme.js';
 
     // --- DOM References ---
     const $ = id => document.getElementById(id);
@@ -588,69 +146,6 @@
       tokenInfo: $('tokenInfo'),
       costInfo: $('costInfo'),
     };
-
-    // --- Token & Cost Tracking ---
-    const MODEL_PRICING = {
-      // per 1M tokens [input, output] — https://ai.google.dev/gemini-api/docs/pricing
-      // Gemini 3.x
-      'gemini-3.1-pro':        [2.00, 12.00],
-      'gemini-3.1-flash-lite': [0.25, 1.50],
-      'gemini-3-flash':        [0.50, 3.00],
-      // Gemini 2.5
-      'gemini-2.5-pro':        [1.25, 10.00],
-      'gemini-2.5-flash-lite': [0.10, 0.40],
-      'gemini-2.5-flash':      [0.30, 2.50],
-      // Gemini 2.0
-      'gemini-2.0-flash-lite': [0.075, 0.30],
-      'gemini-2.0-flash':      [0.10, 0.40],
-      // Legacy
-      'gemini-1.5-pro':        [1.25, 5.00],
-      'gemini-1.5-flash-8b':   [0.0375, 0.15],
-      'gemini-1.5-flash':      [0.075, 0.30],
-    };
-
-    let totalInputTokens = 0;
-    let totalOutputTokens = 0;
-    let totalCost = 0;
-
-    function getModelPricing(modelId) {
-      // Match model ID to pricing (e.g. "gemini-2.5-flash-preview-05-20" → "gemini-2.5-flash")
-      for (const key of Object.keys(MODEL_PRICING)) {
-        if (modelId.startsWith(key)) return MODEL_PRICING[key];
-      }
-      return null;
-    }
-
-    function updateTokenDisplay(usageMetadata) {
-      if (!usageMetadata) return;
-      const promptTokens = usageMetadata.promptTokenCount || 0;
-      const candidateTokens = usageMetadata.candidatesTokenCount || 0;
-
-      totalInputTokens += promptTokens;
-      totalOutputTokens += candidateTokens;
-
-      // Calculate cost
-      const modelId = els.modelSelect.value;
-      const pricing = getModelPricing(modelId);
-      if (pricing) {
-        totalCost += (promptTokens / 1_000_000) * pricing[0]
-                   + (candidateTokens / 1_000_000) * pricing[1];
-      }
-
-      const totalTokens = totalInputTokens + totalOutputTokens;
-      els.tokenInfo.textContent = `토큰: ${totalTokens.toLocaleString()} (↑${totalInputTokens.toLocaleString()} ↓${totalOutputTokens.toLocaleString()})`;
-      els.costInfo.textContent = pricing
-        ? `$${totalCost.toFixed(6)}`
-        : `$-.-- (가격 정보 없음)`;
-    }
-
-    function resetTokens() {
-      totalInputTokens = 0;
-      totalOutputTokens = 0;
-      totalCost = 0;
-      els.tokenInfo.textContent = '토큰: 0';
-      els.costInfo.textContent = '$0.000000';
-    }
 
     // --- Prompt Builder ---
     function buildPrompt() {
@@ -770,7 +265,7 @@
         systemRules: els.systemRules.value,
         useLatex: els.useLatex.checked,
         useCache: els.useCache.checked,
-        isPublic: $('isPublic').checked,
+        isPublic: els.isPublic.checked,
       };
     }
 
@@ -782,7 +277,7 @@
       if ('systemRules' in data) els.systemRules.value = data.systemRules || '';
       if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
       if ('useCache' in data) els.useCache.checked = !!data.useCache;
-      if ('isPublic' in data) $('isPublic').checked = data.isPublic !== false;
+      if ('isPublic' in data) els.isPublic.checked = data.isPublic !== false;
       if ('worldSetting' in data) els.worldSetting.value = data.worldSetting || '';
       if ('story' in data) els.story.value = data.story || '';
       if ('characterName' in data) els.characterName.value = data.characterName || '';
@@ -985,47 +480,11 @@
     let conversationHistory = [];
     let isGenerating = false;
 
-    // --- Markdown Parser (marked.js) ---
+    // --- Markdown Parser ---
     marked.setOptions({
-      breaks: true,   // \n → <br>
-      gfm: true,      // GitHub Flavored Markdown (tables, etc.)
+      breaks: true,
+      gfm: true,
     });
-
-    function renderMarkdown(text) {
-      // 1) Extract LaTeX BEFORE marked.js (prevents &quot; and other HTML entity corruption)
-      const placeholders = [];
-      let processed = text;
-
-      // Block LaTeX: $$...$$
-      processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
-        const id = `%%LATEX_${placeholders.length}%%`;
-        try {
-          placeholders.push(katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }));
-        } catch (e) { placeholders.push(`<code>${tex}</code>`); }
-        return id;
-      });
-
-      // Inline LaTeX: $...$
-      processed = processed.replace(/\$([^\$\n]+?)\$/g, (_, tex) => {
-        const id = `%%LATEX_${placeholders.length}%%`;
-        try {
-          placeholders.push(katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }));
-        } catch (e) { placeholders.push(`<code>${tex}</code>`); }
-        return id;
-      });
-
-      // 2) Run marked.js on LaTeX-free text
-      let html = DOMPurify.sanitize(marked.parse(processed), {
-        ADD_TAGS: ['annotation', 'semantics', 'math', 'mrow', 'msup', 'munder', 'mover', 'mfrac', 'msqrt', 'mtable', 'mtr', 'mtd', 'mtext', 'mn', 'mo', 'mi', 'mspace', 'mpadded', 'mstyle', 'menclose'],
-        ADD_ATTR: ['encoding', 'class', 'displaystyle', 'scriptlevel', 'mathvariant', 'fence', 'separator', 'stretchy', 'symmetric', 'maxsize', 'minsize', 'largeop', 'movablelimits', 'accent', 'lspace', 'rspace', 'linethickness', 'columnalign', 'rowalign', 'columnlines', 'rowlines', 'frame', 'framespacing', 'equalrows', 'equalcolumns', 'side', 'minlabelspacing'],
-        ALLOW_DATA_ATTR: false,
-      });
-
-      // 3) Re-insert rendered LaTeX
-      html = html.replace(/%%LATEX_(\d+)%%/g, (_, i) => placeholders[+i]);
-
-      return html;
-    }
 
     function appendToGame(text, className) {
       const placeholder = els.gameOutput.querySelector('.game-placeholder');
@@ -1129,7 +588,7 @@
         els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
 
         // Update token & cost display
-        if (lastUsageMetadata) updateTokenDisplay(lastUsageMetadata);
+        if (lastUsageMetadata) updateTokenDisplay(lastUsageMetadata, model, els.tokenInfo, els.costInfo);
 
         conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
       } catch (err) {
@@ -1155,7 +614,7 @@
       if (!model) { alert('모델을 선택해주세요.'); return; }
       conversationHistory = [];
       els.gameOutput.innerHTML = '';
-      resetTokens();
+      resetTokens(els.tokenInfo, els.costInfo);
       els.gameInput.disabled = false;
       els.btnSend.disabled = false;
 
@@ -1199,18 +658,6 @@
     });
 
     // --- Preset System ---
-    async function loadPublicPresets() {
-      if (!db) return [];
-      try {
-        const q = query(collection(db, 'presets'), where('isDefault', '==', true));
-        const snap = await getDocs(q);
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (e) {
-        console.error('Preset load failed:', e);
-        return [];
-      }
-    }
-
     async function initPresets() {
       try {
         const res = await fetch('presets/default.json');
@@ -1280,20 +727,8 @@
       updateSaveButtonText();
     })();
 
-    // --- Theme (shared with play.html via localStorage) ---
-    (function() {
-      const theme = localStorage.getItem('ai-story-game-theme') || 'system';
-      if (theme === 'light') {
-        document.body.classList.add('light-theme');
-      } else if (theme === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches) {
-        document.body.classList.add('light-theme');
-      }
-      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-        if (localStorage.getItem('ai-story-game-theme') === 'system') {
-          document.body.classList.toggle('light-theme', window.matchMedia('(prefers-color-scheme: light)').matches);
-        }
-      });
-    })();
+    // --- Theme ---
+    initTheme();
   </script>
 </body>
 </html>
