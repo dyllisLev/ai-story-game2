@@ -37,13 +37,17 @@ async function handleApiConfig(env) {
   let promptConfig = null;
   let gameplayConfig = null;
 
+  // RLS config_select_safe requires auth.uid() IS NOT NULL,
+  // so we use the service key (bypasses RLS) for server-side reads
+  const serviceKey = env.SUPABASE_SERVICE_KEY || anonKey;
+
   try {
     const configRes = await fetch(
       `${url}/rest/v1/config?id=in.(prompt_config,gameplay_config)&select=id,value`,
       {
         headers: {
-          'Authorization': `Bearer ${anonKey}`,
-          'apikey': anonKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
         },
       }
     );
