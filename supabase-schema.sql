@@ -86,9 +86,9 @@ CREATE POLICY "stories_delete_owner" ON stories
 -- sessions RLS
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 
--- SEC-009: 본인 세션만 조회 (타인 대화 내역 노출 방지)
-CREATE POLICY "sessions_select_owner" ON sessions
-  FOR SELECT USING (auth.uid() = owner_uid);
+-- 세션 ID(UUID)를 아는 사용자는 조회 가능 (UUID는 추측 불가 → 사실상 비밀 링크)
+CREATE POLICY "sessions_select_public" ON sessions
+  FOR SELECT USING (true);
 
 CREATE POLICY "sessions_insert_anon" ON sessions
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);

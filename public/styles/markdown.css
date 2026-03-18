@@ -96,24 +96,12 @@
   border-left: 2px solid var(--cyan);
 }
 
-/* KaTeX overrides — allow wrapping for text-styled LaTeX (dialogue) */
-.game-text .katex {
-  font-size: 1.1em;
-  white-space: normal !important;
-  line-height: 1.8;
-}
-.game-text .katex .colorbox,
-.game-text .katex .fcolorbox {
-  white-space: normal !important;
-  display: inline !important;
-}
-.game-text .katex .mord.text,
-.game-text .katex .mord.textsf,
-.game-text .katex .mord.textbf {
-  white-space: normal !important;
-}
-.game-text .katex-display {
-  margin: 8px 0;
+/* KaTeX overrides for dark theme */
+.game-text .katex { font-size: 1.1em; }
+.game-text .katex-display { margin: 8px 0; }
+.game-text .katex-wrap {
+  display: inline-block;
+  max-width: 100%;
   overflow-x: auto;
-  overflow-y: hidden;
+  vertical-align: top;
 }

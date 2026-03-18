@@ -9,7 +9,7 @@ export function renderMarkdown(text) {
   processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
     const id = `%%LATEX_${placeholders.length}%%`;
     try {
-      placeholders.push(katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }));
+      placeholders.push(`<span class="katex-wrap">${katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false })}</span>`);
     } catch (e) { placeholders.push(`<code>${tex}</code>`); }
     return id;
   });
@@ -18,7 +18,7 @@ export function renderMarkdown(text) {
   processed = processed.replace(/\$([^\$]+?)\$/g, (_, tex) => {
     const id = `%%LATEX_${placeholders.length}%%`;
     try {
-      placeholders.push(katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }));
+      placeholders.push(`<span class="katex-wrap">${katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false })}</span>`);
     } catch (e) { placeholders.push(`<code>${tex}</code>`); }
     return id;
   });
