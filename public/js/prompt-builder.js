@@ -41,3 +41,35 @@ export function buildPrompt(fields, options, promptConfig) {
 
   return prompt;
 }
+
+/**
+ * 메모리 데이터를 시스템 프롬프트용 텍스트로 변환
+ * @param {object} memory - { shortTerm, characters, goals, longTerm }
+ * @returns {string} - 시스템 프롬프트에 추가할 [메모리] 섹션
+ */
+export function buildMemoryPrompt(memory) {
+  if (!memory) return '';
+
+  const sections = [];
+
+  if (memory.longTerm && memory.longTerm.length > 0) {
+    const items = memory.longTerm.map(e => `- ${e.title}: ${e.content}`).join('\n');
+    sections.push(`## 장기기억\n${items}`);
+  }
+
+  if (memory.shortTerm && memory.shortTerm.length > 0) {
+    const items = memory.shortTerm.map(e => `- ${e.title}: ${e.content}`).join('\n');
+    sections.push(`## 단기기억\n${items}`);
+  }
+
+  if (memory.characters && memory.characters.length > 0) {
+    const items = memory.characters.map(c => `- ${c.name} (${c.role}): ${c.description}`).join('\n');
+    sections.push(`## 등장인물 현황\n${items}`);
+  }
+
+  if (memory.goals && memory.goals.trim()) {
+    sections.push(`## 현재 목표\n${memory.goals}`);
+  }
+
+  return sections.length > 0 ? `\n\n[메모리]\n${sections.join('\n\n')}` : '';
+}
