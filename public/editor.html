@@ -444,8 +444,16 @@
       apiKeyTimer = setTimeout(() => fetchModels(els.apiKey.value.trim()), 800);
     });
 
-    // Load saved settings on page load
-    loadFromLocalStorage();
+    // Load only API key on fresh page (story fields start empty)
+    // Full restore happens only via URL param (?storyId=...)
+    const savedRaw = localStorage.getItem(STORAGE_KEY);
+    if (savedRaw) {
+      try {
+        const saved = JSON.parse(savedRaw);
+        if (saved.apiKey) els.apiKey.value = saved.apiKey;
+        if (saved.model) els.modelSelect.value = saved.model;
+      } catch (e) {}
+    }
     if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
 
     // --- Cache ---
