@@ -720,18 +720,6 @@
 
     // --- Preset System ---
     async function initPresets() {
-      try {
-        const res = await fetch('presets/default.json');
-        if (res.ok) {
-          const data = await res.json();
-          const opt = document.createElement('option');
-          opt.value = '__default__';
-          opt.textContent = data.title || '기본 세계관';
-          opt.dataset.preset = JSON.stringify(data);
-          $('presetSelect').appendChild(opt);
-        }
-      } catch {}
-
       const presets = await loadPublicPresets();
       for (const p of presets) {
         const opt = document.createElement('option');
