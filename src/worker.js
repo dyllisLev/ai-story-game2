@@ -22,8 +22,19 @@ function safeCompare(a, b) {
   return mismatch === 0;
 }
 
-// --- /api/config: Supabase 설정 제공 ---
+// --- Config 캐시 키 (Cache API용 합성 URL, 실제 엔드포인트 아님) ---
+const CONFIG_CACHE_KEY = 'https://ai-story-game-internal/api/config';
+const CONFIG_CACHE_TTL = 300; // 5분
+
+// --- /api/config: Supabase 설정 제공 (Cache API 캐싱) ---
 async function handleApiConfig(env) {
+  // 캐시 확인
+  const cache = caches.default;
+  const cacheKey = new Request(CONFIG_CACHE_KEY);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
+  // 캐시 미스 → Supabase에서 조회
   const url = env.SUPABASE_URL;
   const anonKey = env.SUPABASE_ANON_KEY;
 
@@ -37,8 +48,6 @@ async function handleApiConfig(env) {
   let promptConfig = null;
   let gameplayConfig = null;
 
-  // RLS config_select_safe requires auth.uid() IS NOT NULL,
-  // so we use the service key (bypasses RLS) for server-side reads
   const serviceKey = env.SUPABASE_SERVICE_KEY || anonKey;
 
   try {
@@ -69,18 +78,30 @@ async function handleApiConfig(env) {
       throw new Error(`Missing config: ${missing.join(', ')}`);
     }
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
+    console.error('[handleApiConfig]', e);
+    return new Response(JSON.stringify({ error: 'Configuration unavailable' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  return new Response(JSON.stringify({ url, anonKey, promptConfig, gameplayConfig }), {
+  const response = new Response(JSON.stringify({ url, anonKey, promptConfig, gameplayConfig }), {
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=300',
+      'Cache-Control': `private, max-age=${CONFIG_CACHE_TTL}`,
     },
   });
+
+  // 캐시에 저장
+  await cache.put(cacheKey, response.clone());
+
+  return response;
+}
+
+// --- Config 캐시 무효화 ---
+async function invalidateConfigCache() {
+  const cache = caches.default;
+  await cache.delete(new Request(CONFIG_CACHE_KEY));
 }
 
 // --- PUT /api/config: 관리자 설정 업데이트 ---
@@ -117,41 +138,35 @@ async function handleApiConfigUpdate(request, env) {
   const supabaseUrl = env.SUPABASE_URL;
 
   try {
-    const res1 = await fetch(
-      `${supabaseUrl}/rest/v1/config?id=eq.prompt_config`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-          'apikey': serviceKey,
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify({ value: promptConfig }),
-      }
-    );
-    if (!res1.ok) throw new Error(`prompt_config update failed: ${res1.status}`);
+    const patchHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${serviceKey}`,
+      'apikey': serviceKey,
+      'Prefer': 'return=minimal',
+    };
 
-    const res2 = await fetch(
-      `${supabaseUrl}/rest/v1/config?id=eq.gameplay_config`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-          'apikey': serviceKey,
-          'Prefer': 'return=minimal',
-        },
+    const [res1, res2] = await Promise.all([
+      fetch(`${supabaseUrl}/rest/v1/config?id=eq.prompt_config`, {
+        method: 'PATCH', headers: patchHeaders,
+        body: JSON.stringify({ value: promptConfig }),
+      }),
+      fetch(`${supabaseUrl}/rest/v1/config?id=eq.gameplay_config`, {
+        method: 'PATCH', headers: patchHeaders,
         body: JSON.stringify({ value: gameplayConfig }),
-      }
-    );
+      }),
+    ]);
+    if (!res1.ok) throw new Error(`prompt_config update failed: ${res1.status}`);
     if (!res2.ok) throw new Error(`gameplay_config update failed: ${res2.status}`);
+
+    // 설정 변경 시 캐시 무효화
+    await invalidateConfigCache();
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
+    console.error('[handleApiConfigUpdate]', e);
+    return new Response(JSON.stringify({ error: 'Config update failed' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

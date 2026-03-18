@@ -29,13 +29,28 @@ export async function saveStory(storyData, passwordHash) {
 
 export async function loadStory(storyId) {
   try {
+    // SEC-012: stories_safe VIEW 사용 (password_hash 노출 방지, 공개 스토리만)
     const { data, error } = await supabase
-      .from('stories')
+      .from('stories_safe')
       .select('*')
       .eq('id', storyId)
-      .single();
+      .maybeSingle();
     if (error) throw error;
-    return data ? toCamelCase(data) : null;
+    if (data) return toCamelCase(data);
+
+    // 비공개 스토리는 VIEW에 없으므로 stories 테이블에서 직접 조회 (소유자만 RLS 통과)
+    const [storyRes, salt] = await Promise.all([
+      supabase.from('stories')
+        .select('id, title, world_setting, story, character_name, character_setting, characters, user_note, system_rules, use_latex, is_public, owner_uid, created_at, updated_at')
+        .eq('id', storyId)
+        .maybeSingle(),
+      getStorySalt(storyId),
+    ]);
+    if (storyRes.error) throw storyRes.error;
+    if (!storyRes.data) return null;
+    const result = toCamelCase(storyRes.data);
+    result.hasPassword = !!salt;
+    return result;
   } catch (e) {
     console.error('Story load failed:', e);
     return null;
@@ -93,6 +108,32 @@ export async function loadPublicPresets() {
   }
 }
 
+// SEC-012: 서버측 암호 검증 (password_hash 노출 없이)
+export async function getStorySalt(storyId) {
+  try {
+    const { data, error } = await supabase.rpc('get_story_salt', { p_story_id: storyId });
+    if (error) throw error;
+    return data; // salt hex string or null
+  } catch (e) {
+    console.error('Get story salt failed:', e);
+    return null;
+  }
+}
+
+export async function verifyStoryPassword(storyId, computedHash) {
+  try {
+    const { data, error } = await supabase.rpc('verify_story_password', {
+      p_story_id: storyId,
+      p_input_hash: computedHash,
+    });
+    if (error) throw error;
+    return !!data;
+  } catch (e) {
+    console.error('Verify story password failed:', e);
+    return false;
+  }
+}
+
 // snake_case DB 컬럼 → camelCase 프론트엔드 포맷 변환
 function toCamelCase(row) {
   return {
@@ -106,7 +147,7 @@ function toCamelCase(row) {
     systemRules: row.system_rules,
     useLatex: row.use_latex,
     isPublic: row.is_public,
-    passwordHash: row.password_hash,
+    hasPassword: row.has_password ?? false,
     ownerUid: row.owner_uid,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

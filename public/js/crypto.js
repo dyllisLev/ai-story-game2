@@ -1,31 +1,34 @@
-export async function hashPassword(password) {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
-    keyMaterial, 256
-  );
-  const hashHex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
-  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-  return `${saltHex}:${hashHex}`;
+const PBKDF2_ITERATIONS = 210000;
+
+function bytesToHex(buffer) {
+  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function verifyPassword(password, storedHash) {
-  const [saltHex, hashHex] = storedHash.split(':');
-  if (!saltHex || !hashHex) {
-    // Legacy SHA-256 (no salt) — backward compatible
-    const legacy = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
-    return Array.from(new Uint8Array(legacy)).map(b => b.toString(16).padStart(2, '0')).join('') === storedHash;
+function hexToBytes(hex) {
+  if (!hex || hex.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(hex)) {
+    throw new TypeError(`Invalid hex string`);
   }
-  const salt = new Uint8Array(saltHex.match(/.{2}/g).map(b => parseInt(b, 16)));
+  return new Uint8Array(hex.match(/.{2}/g).map(b => parseInt(b, 16)));
+}
+
+async function pbkdf2Derive(password, salt) {
   const keyMaterial = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITERATIONS },
     keyMaterial, 256
   );
-  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('') === hashHex;
+  return bytesToHex(bits);
+}
+
+export async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hashHex = await pbkdf2Derive(password, salt);
+  return `${bytesToHex(salt)}:${hashHex}`;
+}
+
+export async function computeHashWithSalt(password, saltHex) {
+  const hashHex = await pbkdf2Derive(password, hexToBytes(saltHex));
+  return `${saltHex}:${hashHex}`;
 }

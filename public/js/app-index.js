@@ -13,8 +13,9 @@ async function loadStories() {
   }
 
   try {
+    // SEC-012: stories_safe VIEW 사용 (password_hash 노출 방지)
     const { data: rows, error } = await supabase
-      .from('stories')
+      .from('stories_safe')
       .select('*')
       .eq('is_public', true)
       .order('created_at', { ascending: false })
@@ -57,7 +58,7 @@ async function loadStories() {
       const preview = story.worldSetting || story.story || '';
       const previewClean = preview.replace(/[#\n\\n]/g, ' ').trim().slice(0, 150);
 
-      const hasPassword = !!story.passwordHash;
+      const hasPassword = !!story.hasPassword;
       const createdDate = story.createdAt?.toDate?.()
         ? story.createdAt.toDate().toLocaleDateString('ko-KR')
         : '';
