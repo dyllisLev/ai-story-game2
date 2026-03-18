@@ -1,12 +1,17 @@
-import { supabase } from './supabase-config.js';
-import { hashPassword, verifyPassword } from './crypto.js';
-import { saveStory, loadStory, updateStory, deleteStory, loadPublicPresets } from './supabase-ops.js';
+import { supabase, promptConfig, gameplayConfig } from './supabase-config.js';
+import { hashPassword, computeHashWithSalt } from './crypto.js';
+import { saveStory, loadStory, updateStory, deleteStory, loadPublicPresets, getStorySalt, verifyStoryPassword } from './supabase-ops.js';
 import { renderMarkdown } from './markdown-renderer.js';
 import { updateTokenDisplay, resetTokens } from './token-tracker.js';
 import { escapeHtml } from './utils.js';
 import { initTheme } from './theme.js';
 import { buildPrompt } from './prompt-builder.js';
-import { SAFETY_SETTINGS, fetchModels as _fetchModels, createCache as _createCache, clearCache as _clearCache, streamGenerate } from './gemini-api.js';
+import { fetchModels as _fetchModels, createCache as _createCache, clearCache as _clearCache, streamGenerate } from './gemini-api.js';
+
+if (!promptConfig || !gameplayConfig) {
+  document.body.innerHTML = '<div style="padding:40px;color:#e94560;font-size:16px;">앱 설정을 불러올 수 없습니다. 관리자에게 문의하세요.</div>';
+  throw new Error('앱 설정을 불러올 수 없습니다.');
+}
 
 // --- DOM References ---
 const $ = id => document.getElementById(id);
@@ -40,15 +45,15 @@ const els = {
 };
 
 // --- Narrative Length ---
-let narrativeLength = 3;
+let narrativeLength = gameplayConfig.default_narrative_length;
 function updateNarrativeDisplay() {
   els.narrativeLengthDisplay.textContent = narrativeLength + '문단';
 }
 $('btnNarrDec').addEventListener('click', () => {
-  if (narrativeLength > 1) { narrativeLength--; updateNarrativeDisplay(); }
+  if (narrativeLength > gameplayConfig.narrative_length_min) { narrativeLength--; updateNarrativeDisplay(); }
 });
 $('btnNarrInc').addEventListener('click', () => {
-  if (narrativeLength < 10) { narrativeLength++; updateNarrativeDisplay(); }
+  if (narrativeLength < gameplayConfig.narrative_length_max) { narrativeLength++; updateNarrativeDisplay(); }
 });
 
 // --- Prompt Builder (uses shared module) ---
@@ -61,7 +66,7 @@ function getPrompt() {
     characters: els.characters.value,
     userNote: els.userNote.value,
     systemRules: els.systemRules.value,
-  }, { useLatex: els.useLatex.checked, narrativeLength });
+  }, { useLatex: els.useLatex.checked, narrativeLength }, promptConfig);
 }
 
 function updatePromptPreview() {
@@ -204,17 +209,22 @@ els.btnLoad.addEventListener('click', async () => {
   const existing = await loadStory(storyId);
   if (!existing) { alert('스토리를 찾을 수 없습니다.'); return; }
 
-  if (!existing.passwordHash) { alert('이 스토리는 암호가 설정되지 않아 편집할 수 없습니다.'); return; }
+  if (!existing.hasPassword) { alert('이 스토리는 암호가 설정되지 않아 편집할 수 없습니다.'); return; }
   const password = prompt('암호를 입력하세요:');
   if (!password) return;
-  if (!(await verifyPassword(password, existing.passwordHash))) {
+
+  // SEC-012: 서버측 암호 검증
+  const salt = await getStorySalt(storyId);
+  if (!salt) { alert('암호 검증에 실패했습니다.'); return; }
+  const computedHash = await computeHashWithSalt(password, salt);
+  if (!(await verifyStoryPassword(storyId, computedHash))) {
     alert('암호가 일치하지 않습니다.');
     return;
   }
 
   loadAndApplyStory(existing);
   currentStoryId = storyId;
-  currentPasswordHash = existing.passwordHash;
+  currentPasswordHash = computedHash;
   updateSaveButtonText();
   alert('스토리를 불러왔습니다.');
 });
@@ -290,7 +300,7 @@ if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
 let cachedContentName = null;
 
 async function createCache(apiKey, model) {
-  const result = await _createCache(apiKey, model, getPrompt(), els.cacheStatus);
+  const result = await _createCache(apiKey, model, getPrompt(), els.cacheStatus, promptConfig.cache_ttl);
   if (result) {
     cachedContentName = result.name;
     return true;
@@ -314,7 +324,7 @@ els.useCache.addEventListener('change', () => {
 });
 
 // --- Game State ---
-const MAX_HISTORY = 20;
+const MAX_HISTORY = gameplayConfig.max_history;
 let conversationHistory = [];
 let isGenerating = false;
 
@@ -356,8 +366,8 @@ async function sendToGemini(userMessage) {
 
   try {
     const body = cachedContentName
-      ? { cachedContent: cachedContentName, contents: conversationHistory, safetySettings: SAFETY_SETTINGS }
-      : { system_instruction: { parts: [{ text: getPrompt() }] }, contents: conversationHistory, safetySettings: SAFETY_SETTINGS };
+      ? { cachedContent: cachedContentName, contents: conversationHistory, safetySettings: promptConfig.safety_settings }
+      : { system_instruction: { parts: [{ text: getPrompt() }] }, contents: conversationHistory, safetySettings: promptConfig.safety_settings };
 
     let renderTimer = null;
     const { text: fullResponse, usageMetadata } = await streamGenerate({
@@ -414,7 +424,7 @@ els.btnStart.addEventListener('click', async () => {
     }
   }
 
-  sendToGemini('게임을 시작해줘');
+  sendToGemini(promptConfig.game_start_message);
 });
 
 els.btnSend.addEventListener('click', () => {
@@ -463,7 +473,12 @@ $('btnDelete').addEventListener('click', async () => {
 
   const password = prompt('삭제하려면 암호를 입력하세요:');
   if (!password) return;
-  if (!(await verifyPassword(password, currentPasswordHash))) {
+
+  // SEC-012: 서버측 암호 검증
+  const delSalt = await getStorySalt(currentStoryId);
+  if (!delSalt) { alert('암호 검증에 실패했습니다.'); return; }
+  const delHash = await computeHashWithSalt(password, delSalt);
+  if (!(await verifyStoryPassword(currentStoryId, delHash))) {
     alert('암호가 일치하지 않습니다.');
     return;
   }
@@ -513,7 +528,7 @@ initPresets();
   const data = await loadStory(storyId);
   if (!data) { alert('스토리를 찾을 수 없습니다.'); return; }
 
-  if (!data.passwordHash) {
+  if (!data.hasPassword) {
     loadAndApplyStory(data);
     alert('암호가 없는 스토리입니다. 읽기 전용으로 로드되었습니다.');
     return;
@@ -524,7 +539,16 @@ initPresets();
     loadAndApplyStory(data);
     return;
   }
-  if (!(await verifyPassword(password, data.passwordHash))) {
+
+  // SEC-012: 서버측 암호 검증
+  const salt = await getStorySalt(storyId);
+  if (!salt) {
+    alert('암호 검증에 실패했습니다. 읽기 전용으로 로드됩니다.');
+    loadAndApplyStory(data);
+    return;
+  }
+  const computedHash = await computeHashWithSalt(password, salt);
+  if (!(await verifyStoryPassword(storyId, computedHash))) {
     alert('암호가 일치하지 않습니다. 읽기 전용으로 로드됩니다.');
     loadAndApplyStory(data);
     return;
@@ -532,7 +556,7 @@ initPresets();
 
   loadAndApplyStory(data);
   currentStoryId = storyId;
-  currentPasswordHash = data.passwordHash;
+  currentPasswordHash = computedHash;
   updateSaveButtonText();
 })();
 
