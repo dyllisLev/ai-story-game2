@@ -7,6 +7,8 @@ const FALLBACK_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let supabaseUrl = FALLBACK_URL;
 let supabaseAnonKey = FALLBACK_ANON_KEY;
+let promptConfig = null;
+let gameplayConfig = null;
 
 try {
   const res = await fetch('/api/config');
@@ -14,6 +16,8 @@ try {
     const config = await res.json();
     supabaseUrl = config.url;
     supabaseAnonKey = config.anonKey;
+    promptConfig = config.promptConfig || null;
+    gameplayConfig = config.gameplayConfig || null;
   }
 } catch (e) {
   // /api/config 없음 (로컬 개발) → 폴백 사용
@@ -36,4 +40,4 @@ try {
   console.warn('Supabase auth failed:', e);
 }
 
-export { supabase, currentUser };
+export { supabase, currentUser, promptConfig, gameplayConfig };
