@@ -289,6 +289,154 @@
       line-height: 1;
     }
     .modal-close:hover { color: var(--text); }
+    /* --- Memory Modal --- */
+    .memory-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 16px 20px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .memory-tab {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .memory-tab.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+    .memory-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+    }
+    .memory-count {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .memory-content {
+      padding: 0 20px 16px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .memory-empty {
+      color: var(--text-muted);
+      font-size: 13px;
+      padding: 20px 0;
+      text-align: center;
+    }
+    .memory-accordion {
+      border-bottom: 1px solid var(--border);
+      padding: 12px 0;
+    }
+    .memory-accordion-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .memory-accordion-arrow {
+      font-size: 10px;
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+    .memory-accordion.open .memory-accordion-arrow {
+      transform: rotate(90deg);
+    }
+    .memory-accordion-body {
+      display: none;
+      padding: 8px 0 0 18px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .memory-accordion.open .memory-accordion-body {
+      display: block;
+    }
+    .memory-card {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .memory-card:last-child { border-bottom: none; }
+    .memory-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 8px;
+    }
+    .memory-card-content {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+      margin: 0;
+    }
+    .memory-goals-textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.6;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .memory-edit-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .memory-edit-title {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+    .memory-edit-content {
+      width: 100%;
+      min-height: 80px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      resize: vertical;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+    .btn-danger { background: #e94560; color: #fff; border: none; }
+    .btn-danger:hover { background: #c73e54; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .menu-badge.generating { background: #f0ad4e; color: #000; }
+    .menu-badge.failed { background: #e94560; color: #fff; cursor: pointer; }
+    .memory-retry-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0 4px;
+    }
+    .memory-retry-btn:hover { color: var(--text); }
 
     .modal-body {
       padding: 20px;
@@ -773,8 +921,9 @@
         </div>
         <div class="side-menu-item" id="menuSummary">
           <span class="menu-icon">&#128221;</span>
-          <span class="menu-label">이야기 요약</span>
+          <span class="menu-label">요약 메모리</span>
           <span class="menu-badge empty" id="badgeSummary">없음</span>
+          <button class="memory-retry-btn" id="menuSummaryRetry" style="display:none;" title="메모리 생성 재시도">&#8635;</button>
         </div>
       </div>
       <div class="side-divider"></div>
@@ -863,6 +1012,32 @@
     </div>
   </div>
 
+  <!-- Modal: Memory -->
+  <div class="modal-overlay" id="modalMemory">
+    <div class="modal" style="width: 600px;">
+      <div class="modal-header">
+        <h3>요약 메모리</h3>
+        <button class="modal-close" data-close="modalMemory">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <div class="memory-tabs">
+          <button class="memory-tab active" data-type="long_term">장기 기억</button>
+          <button class="memory-tab" data-type="short_term">단기 기억</button>
+          <button class="memory-tab" data-type="characters">관계도</button>
+          <button class="memory-tab" data-type="goals">목표</button>
+        </div>
+        <div class="memory-toolbar">
+          <span class="memory-count" id="memoryCount">총 0개</span>
+        </div>
+        <div class="memory-content" id="memoryContent">
+          <p class="memory-empty">메모리가 없습니다.</p>
+        </div>
+      </div>
+      <div class="modal-footer" id="memoryFooter">
+        <button class="btn btn-primary" data-close="modalMemory">확인</button>
+      </div>
+    </div>
+  </div>
   <!-- Modal: User Note -->
   <div class="modal-overlay" id="modalUserNote">
     <div class="modal">
