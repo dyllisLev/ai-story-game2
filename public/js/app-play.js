@@ -580,11 +580,64 @@ els.btnRegenerate.addEventListener('click', () => {
 });
 
 els.gameInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === 'Enter' && (e.metaKey || e.altKey)) {
     e.preventDefault();
     els.btnSend.click();
   }
 });
+
+// --- Resize Handle for Input Area ---
+{
+  const handle = document.getElementById('resizeHandle');
+  const textarea = els.gameInput;
+  const minHeight = 63; // 3 rows: ~14px * 1.5 line-height * 3
+  let startY, startHeight, maxHeight;
+
+  function applyResize(clientY) {
+    const delta = startY - clientY;
+    const h = Math.min(Math.max(startHeight + delta, minHeight), maxHeight);
+    textarea.style.height = h + 'px';
+  }
+
+  function initDrag(clientY) {
+    startY = clientY;
+    startHeight = textarea.offsetHeight;
+    maxHeight = window.innerHeight * 0.6;
+  }
+
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    initDrag(e.clientY);
+    document.addEventListener('mousemove', onMouseDrag);
+    document.addEventListener('mouseup', onStop);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ns-resize';
+  });
+
+  handle.addEventListener('touchstart', (e) => {
+    initDrag(e.touches[0].clientY);
+    document.addEventListener('touchmove', onTouchDrag, { passive: false });
+    document.addEventListener('touchend', onStop);
+  }, { passive: true });
+
+  function onMouseDrag(e) {
+    applyResize(e.clientY);
+  }
+
+  function onTouchDrag(e) {
+    e.preventDefault();
+    applyResize(e.touches[0].clientY);
+  }
+
+  function onStop() {
+    document.removeEventListener('mousemove', onMouseDrag);
+    document.removeEventListener('mouseup', onStop);
+    document.removeEventListener('touchmove', onTouchDrag);
+    document.removeEventListener('touchend', onStop);
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }
+}
 
 // --- Side Panel Toggle ---
 $('btnTogglePanel').addEventListener('click', () => {

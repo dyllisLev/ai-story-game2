@@ -141,7 +141,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 16px 24px;
+      position: relative;
       overflow: hidden;
     }
 
@@ -343,7 +343,7 @@
     .game-output {
       flex: 1;
       overflow-y: auto;
-      padding-right: 8px;
+      padding: 16px 24px 16px 24px;
       font-size: 14px;
       line-height: 1.8;
     }
@@ -453,13 +453,46 @@
     .game-input-area {
       display: flex;
       gap: 8px;
-      padding-top: 12px;
+      padding: 12px 24px;
       border-top: 1px solid var(--border);
-      margin-top: 12px;
       flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+      background: var(--bg-dark);
+      align-items: flex-end;
     }
 
-    .game-input-area input {
+    .game-input-area .textarea-wrapper {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .game-input-area .resize-handle {
+      height: 6px;
+      cursor: ns-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .game-input-area .resize-handle::after {
+      content: '';
+      width: 32px;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--border);
+      transition: background 0.2s;
+    }
+
+    .game-input-area .resize-handle:hover::after {
+      background: var(--text-muted);
+    }
+
+    .game-input-area textarea {
       flex: 1;
       background: var(--bg-input);
       border: 1px solid var(--border);
@@ -468,16 +501,32 @@
       color: var(--text);
       font-size: 14px;
       font-family: inherit;
+      resize: none;
+      line-height: 1.5;
+      overflow-y: auto;
     }
 
-    .game-input-area input:focus {
+    .game-input-area textarea:focus {
       outline: none;
       border-color: var(--accent);
+    }
+
+    .game-input-area .input-hint {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+      padding-top: 2px;
+      opacity: 0.6;
     }
 
     .game-input-area .btn {
       padding: 10px 20px;
       font-size: 13px;
+      align-self: flex-end;
+    }
+
+    .game-input-area .btn-icon {
+      align-self: flex-end;
     }
 
     .loading::after {
@@ -589,12 +638,12 @@
       .game-output { flex: 1; overflow-y: auto; min-height: 0; }
       .game-input-area {
         flex-shrink: 0;
-        padding: 8px 0;
-        margin-top: 0;
+        padding: 8px 12px;
         border-top: 1px solid var(--border);
       }
-      .game-input-area input { font-size: 16px; padding: 10px; }
+      .game-input-area textarea { font-size: 16px; padding: 10px; }
       .game-input-area .btn { padding: 10px 16px; }
+      .game-input-area .input-hint { display: none; }
 
       /* Side panel: full overlay */
       .side-panel { position: fixed; right: 0; top: 0; bottom: 0; z-index: 50; width: 280px; }
@@ -663,7 +712,11 @@
         </p>
       </div>
       <div class="game-input-area">
-        <input type="text" id="gameInput" placeholder="행동을 입력하세요..." disabled>
+        <div class="textarea-wrapper">
+          <div class="resize-handle" id="resizeHandle"></div>
+          <textarea id="gameInput" rows="3" placeholder="행동을 입력하세요..." disabled></textarea>
+          <div class="input-hint">⌘+Enter 또는 Alt+Enter로 전송</div>
+        </div>
         <button id="btnRegenerate" class="btn-icon" title="마지막 응답 재생성" disabled style="font-size:16px;">&#x21bb;</button>
         <button id="btnSend" class="btn btn-primary" disabled>전송</button>
       </div>
