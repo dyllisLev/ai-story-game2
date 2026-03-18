@@ -6,6 +6,7 @@
  *   SUPABASE_ANON_KEY  - Supabase anon key (암호화 권장)
  *   ADMIN_USER         - 관리자 페이지 아이디
  *   ADMIN_PASS         - 관리자 페이지 비밀번호 (암호화 필수)
+ *   SUPABASE_SERVICE_KEY - Supabase service_role key (관리자 설정 저장용, 암호화 필수)
  */
 
 // --- Constant-time 문자열 비교 (타이밍 공격 방지) ---
@@ -22,7 +23,7 @@ function safeCompare(a, b) {
 }
 
 // --- /api/config: Supabase 설정 제공 ---
-function handleApiConfig(env) {
+async function handleApiConfig(env) {
   const url = env.SUPABASE_URL;
   const anonKey = env.SUPABASE_ANON_KEY;
 
@@ -33,12 +34,124 @@ function handleApiConfig(env) {
     });
   }
 
-  return new Response(JSON.stringify({ url, anonKey }), {
+  let promptConfig = null;
+  let gameplayConfig = null;
+
+  try {
+    const configRes = await fetch(
+      `${url}/rest/v1/config?id=in.(prompt_config,gameplay_config)&select=id,value`,
+      {
+        headers: {
+          'Authorization': `Bearer ${anonKey}`,
+          'apikey': anonKey,
+        },
+      }
+    );
+
+    if (!configRes.ok) {
+      throw new Error(`Supabase API error: ${configRes.status}`);
+    }
+
+    const rows = await configRes.json();
+    for (const row of rows) {
+      if (row.id === 'prompt_config') promptConfig = row.value;
+      else if (row.id === 'gameplay_config') gameplayConfig = row.value;
+    }
+
+    if (!promptConfig || !gameplayConfig) {
+      const missing = [];
+      if (!promptConfig) missing.push('prompt_config');
+      if (!gameplayConfig) missing.push('gameplay_config');
+      throw new Error(`Missing config: ${missing.join(', ')}`);
+    }
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  return new Response(JSON.stringify({ url, anonKey, promptConfig, gameplayConfig }), {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'public, max-age=300',
     },
   });
+}
+
+// --- PUT /api/config: 관리자 설정 업데이트 ---
+async function handleApiConfigUpdate(request, env) {
+  const authResult = handleAdminAuth(request, env);
+  if (authResult) return authResult;
+
+  const serviceKey = env.SUPABASE_SERVICE_KEY;
+  if (!serviceKey) {
+    return new Response(JSON.stringify({ error: 'Service key not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { promptConfig, gameplayConfig } = body;
+  if (!promptConfig || !gameplayConfig) {
+    return new Response(JSON.stringify({ error: 'Missing promptConfig or gameplayConfig' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const supabaseUrl = env.SUPABASE_URL;
+
+  try {
+    const res1 = await fetch(
+      `${supabaseUrl}/rest/v1/config?id=eq.prompt_config`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ value: promptConfig }),
+      }
+    );
+    if (!res1.ok) throw new Error(`prompt_config update failed: ${res1.status}`);
+
+    const res2 = await fetch(
+      `${supabaseUrl}/rest/v1/config?id=eq.gameplay_config`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ value: gameplayConfig }),
+      }
+    );
+    if (!res2.ok) throw new Error(`gameplay_config update failed: ${res2.status}`);
+
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
 
 // --- /base_story_admin*: Basic Auth 보호 ---
@@ -100,7 +213,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // /api/config → Supabase 설정 반환
+    // PUT /api/config → 관리자 설정 업데이트
+    if (url.pathname === '/api/config' && request.method === 'PUT') {
+      return handleApiConfigUpdate(request, env);
+    }
+
+    // GET /api/config → Supabase 설정 반환
     if (url.pathname === '/api/config') {
       return handleApiConfig(env);
     }
