@@ -1,8 +1,14 @@
 // --- Supabase ---
-import { supabase, currentUser } from './supabase-config.js';
+import { supabase, currentUser, promptConfig, gameplayConfig } from './supabase-config.js';
 import { buildPrompt } from './prompt-builder.js';
 import { renderMarkdown } from './markdown-renderer.js';
-import { SAFETY_SETTINGS, fetchModels as _fetchModels, createCache as _createCache, clearCache as _clearCache, streamGenerate, generate } from './gemini-api.js';
+import { fetchModels as _fetchModels, createCache as _createCache, clearCache as _clearCache, streamGenerate, generate } from './gemini-api.js';
+import { updateTokenDisplay, resetTokens } from './token-tracker.js';
+
+if (!promptConfig || !gameplayConfig) {
+  document.body.innerHTML = '<div style="padding:40px;color:#e94560;font-size:16px;">앱 설정을 불러올 수 없습니다. 관리자에게 문의하세요.</div>';
+  throw new Error('앱 설정을 불러올 수 없습니다.');
+}
 
 // --- DOM References ---
 const $ = id => document.getElementById(id);
@@ -31,7 +37,7 @@ const els = {
 };
 
 // --- Narrative Length (declared early for use in applySettings/buildPrompt) ---
-let narrativeLength = 3;
+let narrativeLength = gameplayConfig.default_narrative_length;
 function updateNarrativeDisplay() {
   els.narrativeLengthDisplay.textContent = narrativeLength + '문단';
 }
@@ -39,13 +45,13 @@ function updateNarrativeDisplay() {
 // --- Session Management ---
 const SESSION_LIST_KEY = 'ai-story-game-sessions';
 const SESSION_DATA_PREFIX = 'ai-story-session-';
-const MAX_SESSION_LIST = 50;
+const MAX_SESSION_LIST = gameplayConfig.max_session_list;
 
 let currentSessionId = null;
 let currentStoryId = null;
 let storySummary = '';
 let summaryUpToIndex = 0;
-const SLIDING_WINDOW_SIZE = 20;
+const SLIDING_WINDOW_SIZE = gameplayConfig.sliding_window_size;
 let isDirty = false;
 let saveStatus = 'idle';
 let autoSaveInterval = null;
@@ -120,8 +126,8 @@ async function generateSummary() {
   if (toSummarize.length === 0) return;
 
   const summaryPrompt = storySummary
-    ? `기존 요약:\n${storySummary}\n\n아래 새로운 대화를 기존 요약에 통합하여 업데이트해주세요.`
-    : '아래 대화 내용을 핵심 줄거리, 중요 사건, 캐릭터 상태 변화 중심으로 요약해주세요.';
+    ? promptConfig.summary_request_update.replace('{summary}', storySummary)
+    : promptConfig.summary_request_new;
 
   const messages = toSummarize.map(m => `${m.role === 'user' ? '사용자' : 'AI'}: ${m.parts[0].text}`).join('\n\n');
 
@@ -130,7 +136,7 @@ async function generateSummary() {
       apiKey, model,
       body: {
         contents: [{ role: 'user', parts: [{ text: `${summaryPrompt}\n\n---\n${messages}` }] }],
-        systemInstruction: { parts: [{ text: '당신은 이야기 요약 전문가입니다. 핵심 줄거리, 캐릭터 상태, 중요 사건을 간결하게 요약하세요. 500자 이내.' }] },
+        systemInstruction: { parts: [{ text: promptConfig.summary_system_instruction.replace('{max_chars}', String(gameplayConfig.summary_max_chars)) }] },
       },
     });
     storySummary = result.text || storySummary;
@@ -252,7 +258,7 @@ function startAutoSave() {
   stopAutoSave();
   autoSaveInterval = setInterval(() => {
     if (isDirty && currentSessionId) saveToCloud();
-  }, 5 * 60 * 1000);
+  }, gameplayConfig.auto_save_interval_ms);
 }
 
 function stopAutoSave() {
@@ -274,68 +280,12 @@ let settingsData = {
   systemRules: '',
 };
 
-// --- Token & Cost Tracking ---
-const MODEL_PRICING = {
-  'gemini-3.1-pro':        [2.00, 12.00],
-  'gemini-3.1-flash-lite': [0.25, 1.50],
-  'gemini-3-flash':        [0.50, 3.00],
-  'gemini-2.5-pro':        [1.25, 10.00],
-  'gemini-2.5-flash-lite': [0.10, 0.40],
-  'gemini-2.5-flash':      [0.30, 2.50],
-  'gemini-2.0-flash-lite': [0.075, 0.30],
-  'gemini-2.0-flash':      [0.10, 0.40],
-  'gemini-1.5-pro':        [1.25, 5.00],
-  'gemini-1.5-flash-8b':   [0.0375, 0.15],
-  'gemini-1.5-flash':      [0.075, 0.30],
-};
-
-let totalInputTokens = 0;
-let totalOutputTokens = 0;
-let totalCost = 0;
-
-function getModelPricing(modelId) {
-  for (const key of Object.keys(MODEL_PRICING)) {
-    if (modelId.startsWith(key)) return MODEL_PRICING[key];
-  }
-  return null;
-}
-
-function updateTokenDisplay(usageMetadata) {
-  if (!usageMetadata) return;
-  const promptTokens = usageMetadata.promptTokenCount || 0;
-  const candidateTokens = usageMetadata.candidatesTokenCount || 0;
-
-  totalInputTokens += promptTokens;
-  totalOutputTokens += candidateTokens;
-
-  const modelId = els.modelSelect.value;
-  const pricing = getModelPricing(modelId);
-  if (pricing) {
-    totalCost += (promptTokens / 1_000_000) * pricing[0]
-               + (candidateTokens / 1_000_000) * pricing[1];
-  }
-
-  const totalTokens = totalInputTokens + totalOutputTokens;
-  els.tokenInfo.textContent = `토큰: ${totalTokens.toLocaleString()} (↑${totalInputTokens.toLocaleString()} ↓${totalOutputTokens.toLocaleString()})`;
-  els.costInfo.textContent = pricing
-    ? `$${totalCost.toFixed(6)}`
-    : `$-.-- (가격 정보 없음)`;
-}
-
-function resetTokens() {
-  totalInputTokens = 0;
-  totalOutputTokens = 0;
-  totalCost = 0;
-  els.tokenInfo.textContent = '토큰: 0';
-  els.costInfo.textContent = '$0.000000';
-}
-
 // --- Prompt Builder (uses shared module) ---
 function getPrompt() {
   return buildPrompt(settingsData, {
     useLatex: els.useLatex.checked,
     narrativeLength,
-  });
+  }, promptConfig);
 }
 
 // --- Settings Load ---
@@ -359,7 +309,7 @@ function applySettings(data, source) {
   settingsData.systemRules = data.systemRules || '';
 
   if ('narrativeLength' in data) {
-    narrativeLength = Math.max(1, Math.min(10, data.narrativeLength));
+    narrativeLength = Math.max(gameplayConfig.narrative_length_min, Math.min(gameplayConfig.narrative_length_max, data.narrativeLength));
     updateNarrativeDisplay();
   }
 
@@ -458,7 +408,7 @@ els.fileInput.addEventListener('change', (e) => {
 let cachedContentName = null;
 
 async function createCache(apiKey, model) {
-  const result = await _createCache(apiKey, model, getPrompt(), els.cacheStatus);
+  const result = await _createCache(apiKey, model, getPrompt(), els.cacheStatus, promptConfig.cache_ttl);
   if (result) {
     cachedContentName = result.name;
     return true;
@@ -496,8 +446,8 @@ async function sendToGemini(userMessage) {
     return;
   }
 
-  if (conversationHistory.length >= 500) {
-    alert('이 세션은 메시지 한도(500)에 도달했습니다. 새 게임을 시작해주세요.');
+  if (conversationHistory.length >= gameplayConfig.message_limit) {
+    alert(`이 세션은 메시지 한도(${gameplayConfig.message_limit})에 도달했습니다. 새 게임을 시작해주세요.`);
     return;
   }
 
@@ -525,8 +475,8 @@ async function sendToGemini(userMessage) {
     }
 
     const body = cachedContentName
-      ? { cachedContent: cachedContentName, contents: recentMessages, safetySettings: SAFETY_SETTINGS }
-      : { system_instruction: { parts: [{ text: systemPrompt }] }, contents: recentMessages, safetySettings: SAFETY_SETTINGS };
+      ? { cachedContent: cachedContentName, contents: recentMessages, safetySettings: promptConfig.safety_settings }
+      : { system_instruction: { parts: [{ text: systemPrompt }] }, contents: recentMessages, safetySettings: promptConfig.safety_settings };
 
     let renderTimer = null;
     const { text: fullResponse, usageMetadata } = await streamGenerate({
@@ -546,12 +496,12 @@ async function sendToGemini(userMessage) {
     responseDiv.classList.add('markdown-rendered');
     els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
 
-    if (usageMetadata) updateTokenDisplay(usageMetadata);
+    if (usageMetadata) updateTokenDisplay(usageMetadata, els.modelSelect.value, els.tokenInfo, els.costInfo);
 
     conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
     markDirty();
     updateTurnCount();
-    if (conversationHistory.length > SLIDING_WINDOW_SIZE + 10) {
+    if (conversationHistory.length > SLIDING_WINDOW_SIZE + gameplayConfig.summary_trigger_offset) {
       generateSummary();
     }
   } catch (err) {
@@ -582,7 +532,7 @@ els.btnStart.addEventListener('click', async () => {
   currentSessionId = crypto.randomUUID();
   conversationHistory = [];
   els.gameOutput.innerHTML = '';
-  resetTokens();
+  resetTokens(els.tokenInfo, els.costInfo);
   els.gameInput.disabled = false;
   els.btnSend.disabled = false;
 
@@ -601,7 +551,7 @@ els.btnStart.addEventListener('click', async () => {
     if (!ok) alert('캐시 생성에 실패했습니다. 캐시 없이 진행합니다.');
   }
 
-  sendToGemini('게임을 시작해줘');
+  sendToGemini(promptConfig.game_start_message);
 });
 
 els.btnSend.addEventListener('click', () => {
@@ -749,7 +699,7 @@ $('btnFontInc').addEventListener('click', () => {
 
 // --- Narrative Length Buttons ---
 $('btnNarrDec').addEventListener('click', () => {
-  if (narrativeLength > 1) {
+  if (narrativeLength > gameplayConfig.narrative_length_min) {
     narrativeLength--;
     updateNarrativeDisplay();
     markDirty();
@@ -757,7 +707,7 @@ $('btnNarrDec').addEventListener('click', () => {
 });
 
 $('btnNarrInc').addEventListener('click', () => {
-  if (narrativeLength < 10) {
+  if (narrativeLength < gameplayConfig.narrative_length_max) {
     narrativeLength++;
     updateNarrativeDisplay();
     markDirty();
@@ -820,8 +770,9 @@ async function loadStoryList() {
   if (!supabase) return;
   const select = $('storySelect');
   try {
+    // SEC-012: stories_safe VIEW 사용 (password_hash 노출 방지)
     const { data: rows, error } = await supabase
-      .from('stories')
+      .from('stories_safe')
       .select('id, title, created_at')
       .order('created_at', { ascending: false })
       .limit(50);
@@ -841,7 +792,8 @@ async function loadStoryList() {
 async function loadStory(storyId) {
   if (!supabase) return null;
   try {
-    const { data, error } = await supabase.from('stories').select('*').eq('id', storyId).single();
+    // SEC-012: stories_safe VIEW 사용 (password_hash 노출 방지)
+    const { data, error } = await supabase.from('stories_safe').select('*').eq('id', storyId).single();
     if (error) throw error;
     return data ? {
       title: data.title,
@@ -854,7 +806,7 @@ async function loadStory(storyId) {
       systemRules: data.system_rules,
       useLatex: data.use_latex,
       isPublic: data.is_public,
-      passwordHash: data.password_hash,
+      hasPassword: data.has_password,
     } : null;
   } catch (e) {
     console.error('Story load failed:', e);
@@ -927,7 +879,7 @@ function updateTurnCount() {
   const msgCount = conversationHistory.length;
   const exchanges = Math.floor(msgCount / 2);
   el.textContent = exchanges > 0 ? `${exchanges}턴 (${msgCount}메시지)` : '';
-  el.className = 'turn-count' + (msgCount >= 500 ? ' danger' : msgCount >= 300 ? ' warning' : '');
+  el.className = 'turn-count' + (msgCount >= gameplayConfig.message_limit ? ' danger' : msgCount >= gameplayConfig.message_warning_threshold ? ' warning' : '');
 }
 
 $('sessionIdDisplay').addEventListener('click', () => {
@@ -981,7 +933,7 @@ async function loadSession(sessionId) {
     if ('useLatex' in data.preset) els.useLatex.checked = !!data.preset.useLatex;
     if ('useCache' in data.preset) els.useCache.checked = !!data.preset.useCache;
     if ('narrativeLength' in data.preset) {
-      narrativeLength = Math.max(1, Math.min(10, data.preset.narrativeLength));
+      narrativeLength = Math.max(gameplayConfig.narrative_length_min, Math.min(gameplayConfig.narrative_length_max, data.preset.narrativeLength));
       updateNarrativeDisplay();
     }
     updateBadges();
