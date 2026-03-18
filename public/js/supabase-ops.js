@@ -134,6 +134,64 @@ export async function verifyStoryPassword(storyId, computedHash) {
   }
 }
 
+// --- Session Memory ---
+
+/**
+ * 세션 메모리 4개 카테고리를 한 번에 UPSERT
+ * @param {string} sessionId
+ * @param {object} memory - { shortTerm, characters, goals, longTerm }
+ */
+export async function upsertSessionMemory(sessionId, memory) {
+  if (!supabase) return false;
+  try {
+    const rows = [
+      { session_id: sessionId, type: 'short_term', content: memory.shortTerm || [] },
+      { session_id: sessionId, type: 'characters', content: memory.characters || [] },
+      { session_id: sessionId, type: 'goals', content: memory.goals || '' },
+      { session_id: sessionId, type: 'long_term', content: memory.longTerm || [] },
+    ];
+    const { error } = await supabase
+      .from('session_memory')
+      .upsert(rows, { onConflict: 'session_id,type' });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('Session memory upsert failed:', e);
+    return false;
+  }
+}
+
+/**
+ * 세션 메모리 로드
+ * @param {string} sessionId
+ * @returns {object|null} - { shortTerm, characters, goals, longTerm } or null
+ */
+export async function loadSessionMemory(sessionId) {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('session_memory')
+      .select('type, content')
+      .eq('session_id', sessionId);
+    if (error) throw error;
+    if (!data || data.length === 0) return null;
+
+    const memory = { shortTerm: [], characters: [], goals: '', longTerm: [] };
+    for (const row of data) {
+      switch (row.type) {
+        case 'short_term': memory.shortTerm = row.content; break;
+        case 'characters': memory.characters = row.content; break;
+        case 'goals': memory.goals = row.content; break;
+        case 'long_term': memory.longTerm = row.content; break;
+      }
+    }
+    return memory;
+  } catch (e) {
+    console.error('Session memory load failed:', e);
+    return null;
+  }
+}
+
 // snake_case DB 컬럼 → camelCase 프론트엔드 포맷 변환
 function toCamelCase(row) {
   return {
