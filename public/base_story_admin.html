@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>프리셋 관리 (Admin)</title>
+  <link rel="stylesheet" href="styles/theme.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <style>
+    body {
+      height: auto;
+      overflow: auto;
+      padding: 0;
+    }
+
+    .admin-wrap {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .admin-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .admin-header .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logged-in-badge {
+      font-size: 11px;
+      color: #3fb950;
+      background: rgba(63, 185, 80, 0.12);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+      border-radius: 4px;
+      padding: 3px 8px;
+    }
+
+    .btn-logout {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    .btn-logout:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    /* Auth overlay */
+    #authOverlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-dark);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .auth-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .auth-box h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .auth-box p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .auth-box .form-group {
+      margin-bottom: 16px;
+    }
+
+    .auth-error {
+      font-size: 12px;
+      color: var(--accent);
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* Section titles */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    /* Preset list */
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+
+    .preset-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      gap: 12px;
+    }
+
+    .preset-item:hover {
+      border-color: var(--text-muted);
+    }
+
+    .preset-item.active {
+      border-color: var(--accent);
+    }
+
+    .preset-item-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .preset-item-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .badge-default {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--cyan);
+      background: rgba(83, 216, 251, 0.12);
+      border: 1px solid rgba(83, 216, 251, 0.3);
+      border-radius: 4px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+
+    .preset-item-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-icon {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-icon:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .btn-icon.danger:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .preset-empty {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      background: var(--bg-panel);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+
+    /* Form */
+    .form-section {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .form-section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-section-title .form-mode-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .form-mode-badge.new {
+      background: rgba(63, 185, 80, 0.15);
+      color: #3fb950;
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+
+    .form-mode-badge.edit {
+      background: rgba(83, 216, 251, 0.12);
+      color: var(--cyan);
+      border: 1px solid rgba(83, 216, 251, 0.3);
+    }
+
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      accent-color: var(--accent);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .form-actions .btn-primary {
+      flex: 1;
+      margin-top: 0;
+    }
+
+    .btn-danger {
+      padding: 10px 16px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: none;
+      color: var(--accent);
+      transition: background 0.2s;
+    }
+
+    .btn-danger:hover {
+      background: rgba(233, 69, 96, 0.12);
+    }
+
+    .btn-ghost {
+      padding: 10px 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: none;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .btn-new-preset {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 10px;
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-new-preset:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--text);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 200;
+      white-space: nowrap;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #toast.success { border-color: rgba(63, 185, 80, 0.5); }
+    #toast.error { border-color: rgba(233, 69, 96, 0.5); color: var(--accent); }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 600px) {
+      .preset-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .preset-item-actions {
+        align-self: flex-end;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Auth overlay -->
+  <div id="authOverlay">
+    <div class="auth-box">
+      <h2 id="authTitle">관리자 로그인</h2>
+      <p id="authDesc">프리셋 관리 페이지에 접근하려면 관리자 암호를 입력하세요.</p>
+      <div class="form-group">
+        <label for="authPassword" id="authPasswordLabel">암호</label>
+        <input type="password" id="authPassword" placeholder="관리자 암호 입력" autocomplete="current-password">
+      </div>
+      <div class="form-group" id="authConfirmGroup" style="display:none;">
+        <label for="authPasswordConfirm">암호 확인</label>
+        <input type="password" id="authPasswordConfirm" placeholder="암호 다시 입력">
+      </div>
+      <button class="btn btn-primary" id="authSubmit">확인</button>
+      <div class="auth-error" id="authError"></div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="admin-wrap" id="mainContent" style="display:none;">
+    <div class="admin-header">
+      <h1>프리셋 관리</h1>
+      <div class="header-meta">
+        <span class="logged-in-badge">관리자</span>
+        <button class="btn-logout" id="btnLogout">로그아웃</button>
+      </div>
+    </div>
+
+    <!-- Preset list -->
+    <div class="section-title">프리셋 목록</div>
+    <button class="btn-new-preset" id="btnNewPreset">+ 새 프리셋 추가</button>
+    <div class="preset-list" id="presetList">
+      <div class="preset-empty">불러오는 중... <span class="spinner"></span></div>
+    </div>
+
+    <!-- Preset form -->
+    <div class="form-section" id="formSection" style="display:none;">
+      <div class="form-section-title">
+        <span id="formTitle">프리셋 편집</span>
+        <span class="form-mode-badge" id="formModeBadge"></span>
+      </div>
+
+      <input type="hidden" id="editingPresetId">
+
+      <div class="form-group">
+        <label for="fieldTitle">제목 *</label>
+        <input type="text" id="fieldTitle" placeholder="프리셋 제목 (예: 무협 강호 모험)">
+      </div>
+
+      <div class="form-group checkbox-group">
+        <label>
+          <input type="checkbox" id="fieldIsDefault">
+          에디터 드롭다운에 표시 (isDefault)
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="fieldSystemRules">시스템 규칙</label>
+        <textarea id="fieldSystemRules" rows="4" placeholder="AI 출력 규칙, 금지사항, 대사 형식 등..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="fieldWorldSetting">세계관</label>
+        <textarea id="fieldWorldSetting" rows="4" placeholder="게임의 세계관을 설명하세요..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="fieldStory">스토리</label>
+        <textarea id="fieldStory" rows="4" placeholder="메인 스토리/줄거리..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="fieldCharacters">등장인물</label>
+        <textarea id="fieldCharacters" rows="4" placeholder="주요 NPC 정보 (이름, 성격, 역할 등)..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="fieldCharacterName">주인공 이름</label>
+        <input type="text" id="fieldCharacterName" placeholder="캐릭터 이름">
+      </div>
+
+      <div class="form-group">
+        <label for="fieldCharacterSetting">주인공 설정</label>
+        <textarea id="fieldCharacterSetting" rows="3" placeholder="캐릭터 배경/성격/능력..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="fieldUserNote">유저노트</label>
+        <textarea id="fieldUserNote" rows="3" placeholder="참고 메모 (분위기, 선호 장르 등)..."></textarea>
+      </div>
+
+      <div class="form-group checkbox-group">
+        <label>
+          <input type="checkbox" id="fieldUseLatex" checked>
+          LaTeX 연출 활성화 (useLatex)
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" id="btnSavePreset">저장</button>
+        <button class="btn-danger" id="btnDeletePreset" style="display:none;">삭제</button>
+        <button class="btn-ghost" id="btnCancelForm">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script type="module">
+    import { db, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection, serverTimestamp } from './js/firebase-config.js';
+    import { hashPassword, verifyPassword } from './js/crypto.js';
+    import { initTheme } from './js/theme.js';
+
+    initTheme();
+
+    // --- Toast ---
+    let toastTimer = null;
+    function showToast(msg, type = 'success') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = `show ${type}`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+    }
+
+    // --- DOM refs ---
+    const $ = id => document.getElementById(id);
+
+    // --- Auth state ---
+    let isAuthenticated = false;
+
+    async function checkAdminExists() {
+      if (!db) return null;
+      try {
+        const snap = await getDoc(doc(db, 'config', 'admin'));
+        return snap.exists() ? snap.data() : null;
+      } catch (e) {
+        console.error('Admin config read failed:', e);
+        return null;
+      }
+    }
+
+    async function initAuth() {
+      if (!db) {
+        $('authError').textContent = 'Firebase에 연결할 수 없습니다.';
+        return;
+      }
+
+      const adminDoc = await checkAdminExists();
+
+      if (!adminDoc || !adminDoc.passwordHash) {
+        // First-time setup
+        $('authTitle').textContent = '초기 관리자 암호 설정';
+        $('authDesc').textContent = '관리자 암호가 설정되어 있지 않습니다. 새 암호를 설정하세요.';
+        $('authPasswordLabel').textContent = '새 암호';
+        $('authPassword').placeholder = '새 관리자 암호 입력';
+        $('authConfirmGroup').style.display = '';
+        $('authSubmit').textContent = '암호 설정';
+        $('authSubmit').onclick = () => handleSetPassword();
+      } else {
+        $('authSubmit').onclick = () => handleLogin(adminDoc.passwordHash);
+        $('authPassword').addEventListener('keydown', e => {
+          if (e.key === 'Enter') handleLogin(adminDoc.passwordHash);
+        });
+      }
+
+      $('authPassword').focus();
+    }
+
+    async function handleLogin(passwordHash) {
+      const pw = $('authPassword').value;
+      if (!pw) { $('authError').textContent = '암호를 입력하세요.'; return; }
+
+      $('authSubmit').disabled = true;
+      $('authSubmit').innerHTML = '<span class="spinner"></span> 확인 중...';
+      $('authError').textContent = '';
+
+      const ok = await verifyPassword(pw, passwordHash);
+
+      if (ok) {
+        isAuthenticated = true;
+        $('authOverlay').style.display = 'none';
+        $('mainContent').style.display = '';
+        loadPresets();
+      } else {
+        $('authError').textContent = '암호가 일치하지 않습니다.';
+        $('authSubmit').disabled = false;
+        $('authSubmit').textContent = '확인';
+        $('authPassword').focus();
+        $('authPassword').select();
+      }
+    }
+
+    async function handleSetPassword() {
+      const pw = $('authPassword').value;
+      const pw2 = $('authPasswordConfirm').value;
+
+      if (!pw) { $('authError').textContent = '암호를 입력하세요.'; return; }
+      if (pw.length < 4) { $('authError').textContent = '암호는 4자 이상이어야 합니다.'; return; }
+      if (pw !== pw2) { $('authError').textContent = '암호가 일치하지 않습니다.'; return; }
+
+      $('authSubmit').disabled = true;
+      $('authSubmit').innerHTML = '<span class="spinner"></span> 저장 중...';
+      $('authError').textContent = '';
+
+      try {
+        const hash = await hashPassword(pw);
+        await setDoc(doc(db, 'config', 'admin'), {
+          passwordHash: hash,
+          createdAt: serverTimestamp(),
+        });
+        isAuthenticated = true;
+        $('authOverlay').style.display = 'none';
+        $('mainContent').style.display = '';
+        loadPresets();
+        showToast('관리자 암호가 설정되었습니다.');
+      } catch (e) {
+        $('authError').textContent = `저장 실패: ${e.message}`;
+        $('authSubmit').disabled = false;
+        $('authSubmit').textContent = '암호 설정';
+      }
+    }
+
+    // --- Logout ---
+    $('btnLogout').addEventListener('click', () => {
+      if (!confirm('로그아웃 하시겠습니까?')) return;
+      isAuthenticated = false;
+      hideForm();
+      $('mainContent').style.display = 'none';
+      $('authOverlay').style.display = 'flex';
+      $('authPassword').value = '';
+      $('authPasswordConfirm').value = '';
+      $('authError').textContent = '';
+      $('authSubmit').disabled = false;
+      $('authSubmit').textContent = '확인';
+    });
+
+    // --- Preset List ---
+    let presets = [];
+
+    async function loadPresets() {
+      const listEl = $('presetList');
+      listEl.innerHTML = '<div class="preset-empty">불러오는 중... <span class="spinner"></span></div>';
+
+      try {
+        const snap = await getDocs(collection(db, 'presets'));
+        presets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        presets.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+        renderPresetList();
+      } catch (e) {
+        listEl.innerHTML = `<div class="preset-empty" style="color:var(--accent)">불러오기 실패: ${e.message}</div>`;
+      }
+    }
+
+    function renderPresetList() {
+      const listEl = $('presetList');
+      const activeId = $('editingPresetId').value;
+
+      if (presets.length === 0) {
+        listEl.innerHTML = '<div class="preset-empty">프리셋이 없습니다. 새 프리셋을 추가하세요.</div>';
+        return;
+      }
+
+      listEl.innerHTML = '';
+      for (const p of presets) {
+        const item = document.createElement('div');
+        item.className = `preset-item${p.id === activeId ? ' active' : ''}`;
+        item.innerHTML = `
+          <div class="preset-item-left">
+            <span class="preset-item-title">${escapeHtml(p.title || '(제목 없음)')}</span>
+            ${p.isDefault ? '<span class="badge-default">기본</span>' : ''}
+          </div>
+          <div class="preset-item-actions">
+            <button class="btn-icon" data-id="${p.id}" data-action="edit">편집</button>
+            <button class="btn-icon danger" data-id="${p.id}" data-action="delete">삭제</button>
+          </div>
+        `;
+        listEl.appendChild(item);
+      }
+    }
+
+    // Delegated event listener — attached once, handles all preset list clicks
+    $('presetList').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      if (action === 'edit') {
+        const preset = presets.find(p => p.id === id);
+        if (preset) loadIntoForm(preset);
+      } else if (action === 'delete') {
+        confirmDelete(id);
+      }
+    });
+
+    // --- Form ---
+    function showForm(mode) {
+      $('formSection').style.display = '';
+      const badge = $('formModeBadge');
+      if (mode === 'new') {
+        $('formTitle').textContent = '새 프리셋';
+        badge.textContent = '추가';
+        badge.className = 'form-mode-badge new';
+        $('btnDeletePreset').style.display = 'none';
+      } else {
+        $('formTitle').textContent = '프리셋 편집';
+        badge.textContent = '편집';
+        badge.className = 'form-mode-badge edit';
+        $('btnDeletePreset').style.display = '';
+      }
+      $('formSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function hideForm() {
+      $('formSection').style.display = 'none';
+      $('editingPresetId').value = '';
+      clearForm();
+      renderPresetList();
+    }
+
+    function clearForm() {
+      $('fieldTitle').value = '';
+      $('fieldSystemRules').value = '';
+      $('fieldWorldSetting').value = '';
+      $('fieldStory').value = '';
+      $('fieldCharacters').value = '';
+      $('fieldCharacterName').value = '';
+      $('fieldCharacterSetting').value = '';
+      $('fieldUserNote').value = '';
+      $('fieldUseLatex').checked = true;
+      $('fieldIsDefault').checked = false;
+    }
+
+    function loadIntoForm(preset) {
+      $('editingPresetId').value = preset.id;
+      $('fieldTitle').value = preset.title || '';
+      $('fieldSystemRules').value = preset.systemRules || '';
+      $('fieldWorldSetting').value = preset.worldSetting || '';
+      $('fieldStory').value = preset.story || '';
+      $('fieldCharacters').value = preset.characters || '';
+      $('fieldCharacterName').value = preset.characterName || '';
+      $('fieldCharacterSetting').value = preset.characterSetting || '';
+      $('fieldUserNote').value = preset.userNote || '';
+      $('fieldUseLatex').checked = preset.useLatex !== false;
+      $('fieldIsDefault').checked = !!preset.isDefault;
+      showForm('edit');
+      renderPresetList();
+    }
+
+    function getFormData() {
+      return {
+        title: $('fieldTitle').value.trim(),
+        systemRules: $('fieldSystemRules').value.trim(),
+        worldSetting: $('fieldWorldSetting').value.trim(),
+        story: $('fieldStory').value.trim(),
+        characters: $('fieldCharacters').value.trim(),
+        characterName: $('fieldCharacterName').value.trim(),
+        characterSetting: $('fieldCharacterSetting').value.trim(),
+        userNote: $('fieldUserNote').value.trim(),
+        useLatex: $('fieldUseLatex').checked,
+        isDefault: $('fieldIsDefault').checked,
+      };
+    }
+
+    $('btnNewPreset').addEventListener('click', () => {
+      clearForm();
+      $('editingPresetId').value = '';
+      showForm('new');
+      renderPresetList();
+      $('fieldTitle').focus();
+    });
+
+    $('btnCancelForm').addEventListener('click', () => {
+      hideForm();
+    });
+
+    // --- Save ---
+    $('btnSavePreset').addEventListener('click', async () => {
+      const data = getFormData();
+      if (!data.title) {
+        showToast('제목을 입력하세요.', 'error');
+        $('fieldTitle').focus();
+        return;
+      }
+
+      const presetId = $('editingPresetId').value;
+      const btn = $('btnSavePreset');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> 저장 중...';
+
+      try {
+        if (presetId) {
+          // Update existing
+          await updateDoc(doc(db, 'presets', presetId), {
+            ...data,
+            updatedAt: serverTimestamp(),
+          });
+          const idx = presets.findIndex(p => p.id === presetId);
+          if (idx !== -1) presets[idx] = { id: presetId, ...data };
+          showToast('프리셋이 저장되었습니다.');
+        } else {
+          // Create new
+          const newId = crypto.randomUUID();
+          await setDoc(doc(db, 'presets', newId), {
+            ...data,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+          presets.push({ id: newId, ...data });
+          presets.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+          $('editingPresetId').value = newId;
+          showForm('edit');
+          showToast('프리셋이 추가되었습니다.');
+        }
+        renderPresetList();
+      } catch (e) {
+        showToast(`저장 실패: ${e.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '저장';
+      }
+    });
+
+    // --- Delete ---
+    async function confirmDelete(id) {
+      const preset = presets.find(p => p.id === id);
+      const title = preset?.title || id;
+      if (!confirm(`"${title}" 프리셋을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+      try {
+        await deleteDoc(doc(db, 'presets', id));
+        presets = presets.filter(p => p.id !== id);
+        if ($('editingPresetId').value === id) hideForm();
+        renderPresetList();
+        showToast('프리셋이 삭제되었습니다.');
+      } catch (e) {
+        showToast(`삭제 실패: ${e.message}`, 'error');
+      }
+    }
+
+    $('btnDeletePreset').addEventListener('click', () => {
+      const id = $('editingPresetId').value;
+      if (id) confirmDelete(id);
+    });
+
+    // --- Utility ---
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // --- Init ---
+    initAuth();
+  </script>
+</body>
+</html>
