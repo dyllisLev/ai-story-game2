@@ -84,7 +84,10 @@
         <button id="btnSave" class="btn btn-secondary">저장</button>
         <button id="btnLoad" class="btn btn-secondary">불러오기</button>
       </div>
-      <button id="btnShareStory" class="btn btn-secondary" style="width:100%;margin-top:8px;">공유</button>
+      <div class="btn-row">
+        <button id="btnDelete" class="btn btn-secondary">삭제</button>
+        <button id="btnShareStory" class="btn btn-secondary">공유</button>
+      </div>
     </div>
 
     <!-- Panel 2: Prompt Preview -->
@@ -113,7 +116,7 @@
   <script type="module">
     import { db } from './js/firebase-config.js';
     import { hashPassword, verifyPassword } from './js/crypto.js';
-    import { saveStoryToFirestore, loadStoryFromFirestore, updateStoryInFirestore, loadPublicPresets } from './js/firestore-ops.js';
+    import { saveStoryToFirestore, loadStoryFromFirestore, updateStoryInFirestore, deleteStoryFromFirestore, loadPublicPresets } from './js/firestore-ops.js';
     import { renderMarkdown } from './js/markdown-renderer.js';
     import { updateTokenDisplay, resetTokens } from './js/token-tracker.js';
     import { initTheme } from './js/theme.js';
@@ -678,6 +681,32 @@
         alert(`스토리 ID가 복사되었습니다.\n${currentStoryId}`);
       } catch (e) {
         prompt('스토리 ID를 복사하세요:', currentStoryId);
+      }
+    });
+
+    // --- Story Delete ---
+    $('btnDelete').addEventListener('click', async () => {
+      if (!db) { alert('Firebase가 설정되지 않았습니다.'); return; }
+      if (!currentStoryId) { alert('먼저 저장하거나 불러오세요.'); return; }
+
+      const password = prompt('삭제하려면 암호를 입력하세요:');
+      if (!password) return;
+      if (!(await verifyPassword(password, currentPasswordHash))) {
+        alert('암호가 일치하지 않습니다.');
+        return;
+      }
+
+      if (!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+
+      const ok = await deleteStoryFromFirestore(currentStoryId);
+      if (ok) {
+        alert('스토리가 삭제되었습니다.');
+        currentStoryId = null;
+        currentPasswordHash = null;
+        els.btnSave.textContent = '저장';
+        els.btnSave.classList.remove('btn-saved');
+      } else {
+        alert('삭제에 실패했습니다.');
       }
     });
 

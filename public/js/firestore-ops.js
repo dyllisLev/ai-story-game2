@@ -1,4 +1,4 @@
-import { db, currentUser, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, where, serverTimestamp } from './firebase-config.js';
+import { db, currentUser, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection, query, where, serverTimestamp } from './firebase-config.js';
 
 export async function saveStoryToFirestore(storyData, passwordHash) {
   if (!db) return null;
@@ -42,6 +42,17 @@ export async function updateStoryInFirestore(storyId, storyData, passwordHash) {
     return true;
   } catch (e) {
     console.error('Story update failed:', e);
+    return false;
+  }
+}
+
+export async function deleteStoryFromFirestore(storyId) {
+  if (!db) return false;
+  try {
+    await deleteDoc(doc(db, 'stories', storyId));
+    return true;
+  } catch (e) {
+    console.error('Story delete failed:', e);
     return false;
   }
 }

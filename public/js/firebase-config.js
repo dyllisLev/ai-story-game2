@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, where, serverTimestamp }
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection, query, where, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
 import { getAuth, signInAnonymously }
   from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js';
@@ -28,4 +28,4 @@ try {
   console.warn('Firebase init failed:', e);
 }
 
-export { db, currentUser, doc, getDoc, setDoc, updateDoc, getDocs, collection, query, where, serverTimestamp };
+export { db, currentUser, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection, query, where, serverTimestamp };
