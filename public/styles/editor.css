@@ -133,6 +133,12 @@
   color: #2ea043;
 }
 
+.btn-saved {
+  background: var(--accent) !important;
+  color: white !important;
+  border: none !important;
+}
+
 @media (max-width: 768px) {
   body { height: auto; overflow: auto; }
   .container { flex-direction: column; height: auto; min-height: auto; gap: 0; }

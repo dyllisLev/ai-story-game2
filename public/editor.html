@@ -242,8 +242,21 @@
     }
 
     const inputFields = ['presetTitle', 'systemRules', 'worldSetting', 'story', 'characters', 'characterName', 'characterSetting', 'userNote'];
+
+    // Task #1: Debounce preview + localStorage
+    let previewTimer = null;
+    let saveTimer = null;
+    function debouncedPreview() {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(updatePromptPreview, 300);
+    }
+    function debouncedSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveToLocalStorage, 500);
+    }
+
     inputFields.forEach(id => {
-      els[id].addEventListener('input', updatePromptPreview);
+      els[id].addEventListener('input', debouncedPreview);
     });
 
     updatePromptPreview();
@@ -297,9 +310,9 @@
       }
     }
 
-    // Auto-save on any input change
+    // Auto-save on any input change (debounced)
     [...inputFields, 'apiKey'].forEach(id => {
-      els[id].addEventListener('input', saveToLocalStorage);
+      els[id].addEventListener('input', debouncedSave);
     });
     els.modelSelect.addEventListener('change', saveToLocalStorage);
 
@@ -358,21 +371,32 @@
         return;
       }
 
-      applySettingsData(existing);
-      saveToLocalStorage();
+      loadAndApplyStory(existing);
       currentStoryId = storyId;
       currentPasswordHash = existing.passwordHash;
       updateSaveButtonText();
       alert('스토리를 불러왔습니다.');
     });
 
+    // Task #5: CSS class instead of inline styles
     function updateSaveButtonText() {
       if (currentStoryId) {
         els.btnSave.textContent = `저장 (${currentStoryId.slice(0, 8)}...)`;
-        els.btnSave.style.background = 'var(--accent)';
-        els.btnSave.style.color = 'white';
-        els.btnSave.style.border = 'none';
+        els.btnSave.classList.add('btn-saved');
       }
+    }
+
+    // Task #3: Unified button state toggle
+    function setGameControlsEnabled(enabled) {
+      els.gameInput.disabled = !enabled;
+      els.btnSend.disabled = !enabled;
+      els.btnStart.disabled = !enabled;
+    }
+
+    // Task #4: Unified story apply helper
+    function loadAndApplyStory(data) {
+      applySettingsData(data);
+      saveToLocalStorage();
     }
 
     // --- Gemini API ---
@@ -477,6 +501,7 @@
     });
 
     // --- Game State ---
+    const MAX_HISTORY = 20;
     let conversationHistory = [];
     let isGenerating = false;
 
@@ -485,6 +510,13 @@
       breaks: true,
       gfm: true,
     });
+
+    // Task #2: Unified render helper
+    function renderResponse(div, text) {
+      div.innerHTML = renderMarkdown(text);
+      div.classList.add('markdown-rendered');
+      els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+    }
 
     function appendToGame(text, className) {
       const placeholder = els.gameOutput.querySelector('.game-placeholder');
@@ -508,9 +540,7 @@
       }
 
       isGenerating = true;
-      els.gameInput.disabled = true;
-      els.btnSend.disabled = true;
-      els.btnStart.disabled = true;
+      setGameControlsEnabled(false);
 
       conversationHistory.push({ role: 'user', parts: [{ text: userMessage }] });
 
@@ -569,13 +599,8 @@
               const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
               if (text) {
                 fullResponse += text;
-                // Debounce markdown rendering during streaming
                 clearTimeout(renderTimer);
-                renderTimer = setTimeout(() => {
-                  responseDiv.innerHTML = renderMarkdown(fullResponse);
-                  responseDiv.classList.add('markdown-rendered');
-                  els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
-                }, 80);
+                renderTimer = setTimeout(() => renderResponse(responseDiv, fullResponse), 80);
               }
             } catch (e) { /* skip malformed JSON */ }
           }
@@ -583,14 +608,16 @@
 
         // Final render with complete markdown
         clearTimeout(renderTimer);
-        responseDiv.innerHTML = renderMarkdown(fullResponse);
-        responseDiv.classList.add('markdown-rendered');
-        els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+        renderResponse(responseDiv, fullResponse);
 
         // Update token & cost display
         if (lastUsageMetadata) updateTokenDisplay(lastUsageMetadata, model, els.tokenInfo, els.costInfo);
 
         conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
+        // Task #6: Limit history to MAX_HISTORY messages
+        if (conversationHistory.length > MAX_HISTORY) {
+          conversationHistory = conversationHistory.slice(-MAX_HISTORY);
+        }
       } catch (err) {
         responseDiv.textContent = `[오류] ${err.message}`;
         responseDiv.style.color = 'var(--accent)';
@@ -598,9 +625,7 @@
       } finally {
         responseDiv.classList.remove('loading');
         isGenerating = false;
-        els.gameInput.disabled = false;
-        els.btnSend.disabled = false;
-        els.btnStart.disabled = false;
+        setGameControlsEnabled(true);
         els.gameInput.focus();
       }
     }
@@ -615,8 +640,7 @@
       conversationHistory = [];
       els.gameOutput.innerHTML = '';
       resetTokens(els.tokenInfo, els.costInfo);
-      els.gameInput.disabled = false;
-      els.btnSend.disabled = false;
+      setGameControlsEnabled(true);
 
       // 캐시 설정
       clearCache();
@@ -701,27 +725,23 @@
       if (!data) { alert('스토리를 찾을 수 없습니다.'); return; }
 
       if (!data.passwordHash) {
-        applySettingsData(data);
-        saveToLocalStorage();
+        loadAndApplyStory(data);
         alert('암호가 없는 스토리입니다. 읽기 전용으로 로드되었습니다.');
         return;
       }
 
       const password = prompt('이 스토리는 암호로 보호되어 있습니다.\n수정하려면 암호를 입력하세요:');
       if (!password) {
-        applySettingsData(data);
-        saveToLocalStorage();
+        loadAndApplyStory(data);
         return;
       }
       if (!(await verifyPassword(password, data.passwordHash))) {
         alert('암호가 일치하지 않습니다. 읽기 전용으로 로드됩니다.');
-        applySettingsData(data);
-        saveToLocalStorage();
+        loadAndApplyStory(data);
         return;
       }
 
-      applySettingsData(data);
-      saveToLocalStorage();
+      loadAndApplyStory(data);
       currentStoryId = storyId;
       currentPasswordHash = data.passwordHash;
       updateSaveButtonText();
