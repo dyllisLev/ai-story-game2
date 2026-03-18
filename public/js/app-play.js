@@ -363,6 +363,14 @@ els.apiKey.addEventListener('input', () => {
   }, 800);
 });
 
+// 모델 변경 시 캐시 무효화 (다른 모델의 캐시는 사용 불가)
+els.modelSelect.addEventListener('change', () => {
+  if (cachedContentName) {
+    clearCache();
+    console.log('모델 변경으로 캐시가 초기화되었습니다.');
+  }
+});
+
 // --- Load Settings File ---
 els.btnLoadSettings.addEventListener('click', async () => {
   if (window.showOpenFilePicker) {
@@ -506,7 +514,8 @@ async function sendToGemini(userMessage) {
     }
   } catch (err) {
     console.error('Gemini API error:', err);
-    responseDiv.textContent = '[오류] API 요청에 실패했습니다. API 키와 모델을 확인해주세요.';
+    const detail = err.message || '';
+    responseDiv.textContent = `[오류] API 요청 실패: ${detail || 'API 키와 모델을 확인해주세요.'}`;
     responseDiv.style.color = 'var(--accent)';
     conversationHistory.pop();
   } finally {
