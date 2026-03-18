@@ -143,15 +143,16 @@ CREATE POLICY "config_select_safe" ON config
 -- password_hash 컬럼 직접 SELECT 권한 회수
 REVOKE SELECT (password_hash) ON stories FROM anon, authenticated;
 
--- 안전한 VIEW (password_hash 대신 has_password 불린)
-CREATE OR REPLACE VIEW stories_safe
-  WITH (security_invoker = true)
+-- 안전한 VIEW (password_hash 대신 has_password 불린, 공개 스토리만)
+CREATE VIEW stories_safe
+  WITH (security_invoker = false)
 AS SELECT
   id, title, world_setting, story, character_name, character_setting,
   characters, user_note, system_rules, use_latex, is_public,
   (password_hash IS NOT NULL) AS has_password,
   owner_uid, created_at, updated_at
-FROM stories;
+FROM stories
+WHERE is_public = true;
 
 GRANT SELECT ON stories_safe TO anon, authenticated;
 
@@ -249,6 +250,12 @@ INSERT INTO config (id, value) VALUES ('gameplay_config', '{
   "max_session_list": 50
 }'::jsonb)
 ON CONFLICT (id) DO NOTHING;
+
+-- Tighten RLS — config writes require admin_uid match
+-- (Writes go through SUPABASE_SERVICE_KEY which bypasses RLS, but this is defense-in-depth)
+DROP POLICY IF EXISTS config_update_admin ON config;
+CREATE POLICY config_update_admin ON config FOR UPDATE
+  USING (auth.uid()::text = (SELECT value FROM config WHERE id = 'admin_uid'));
 
 -- Add updated_at trigger for config table
 CREATE TRIGGER config_updated_at

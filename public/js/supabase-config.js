@@ -7,6 +7,8 @@ const FALLBACK_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let supabaseUrl = FALLBACK_URL;
 let supabaseAnonKey = FALLBACK_ANON_KEY;
+// promptConfig/gameplayConfig: nullable — admin page does NOT need these.
+// Play/editor pages MUST null-check at their entry point.
 let promptConfig = null;
 let gameplayConfig = null;
 
