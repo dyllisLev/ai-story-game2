@@ -1,5 +1,7 @@
 # AI Story Game - Development Guide
 
+> **프로젝트 스펙 문서:** [docs/PROJECT-SPEC.md](docs/PROJECT-SPEC.md) — DB 스키마, 접속 정보, 파일 역할, 디버깅 방법 등 개발에 필요한 전체 정보
+
 ## Tech Stack
 
 - **Frontend:** Vanilla HTML/CSS/JS (빌드 도구 없음)
