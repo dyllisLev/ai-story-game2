@@ -10,7 +10,7 @@
   },
   "vars": {
     "SUPABASE_URL": "https://cjpbsgdjpodrfdyqhaja.supabase.co",
-    "ADMIN_USER": "admin"
+    "ADMIN_USER": "dyllislev"
   }
   // Required secrets (set via Cloudflare Dashboard):
   //   SUPABASE_ANON_KEY, ADMIN_PASS, SUPABASE_SERVICE_KEY
