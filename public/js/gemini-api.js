@@ -101,3 +101,91 @@ export function clearCache(statusElement) {
   statusElement.className = 'cache-status';
   return null;
 }
+
+/**
+ * Streams a Gemini response via SSE, calling onChunk for each text fragment.
+ * @param {object} options
+ * @param {string} options.apiKey - Gemini API key
+ * @param {string} options.model - Model ID (without 'models/' prefix)
+ * @param {object} options.body - Request body (contents, system_instruction, cachedContent, safetySettings)
+ * @param {function} options.onChunk - Called with (fullTextSoFar) on each chunk
+ * @returns {Promise<{text: string, usageMetadata: object|null}>}
+ */
+export async function streamGenerate({ apiKey, model, body, onChunk }) {
+  const res = await fetch(
+    `${GEMINI_BASE}/models/${model}:streamGenerateContent?alt=sse`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`API Error ${res.status}: ${err}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let fullResponse = '';
+  let buffer = '';
+  let lastUsageMetadata = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const jsonStr = line.slice(6).trim();
+      if (!jsonStr || jsonStr === '[DONE]') continue;
+
+      try {
+        const data = JSON.parse(jsonStr);
+        if (data.usageMetadata) lastUsageMetadata = data.usageMetadata;
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (text) {
+          fullResponse += text;
+          if (onChunk) onChunk(fullResponse);
+        }
+      } catch (e) { /* skip malformed JSON */ }
+    }
+  }
+
+  return { text: fullResponse, usageMetadata: lastUsageMetadata };
+}
+
+/**
+ * Non-streaming Gemini API call (e.g. for summary generation).
+ * @param {object} options
+ * @param {string} options.apiKey - Gemini API key
+ * @param {string} options.model - Model ID
+ * @param {object} options.body - Request body
+ * @returns {Promise<{text: string, usageMetadata: object|null}>}
+ */
+export async function generate({ apiKey, model, body }) {
+  const res = await fetch(
+    `${GEMINI_BASE}/models/${model}:generateContent`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`API Error ${res.status}: ${err}`);
+  }
+
+  const data = await res.json();
+  return {
+    text: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+    usageMetadata: data.usageMetadata || null,
+  };
+}

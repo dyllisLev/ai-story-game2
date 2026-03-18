@@ -1,8 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "ai-story-game",
+  "main": "src/worker.js",
   "compatibility_date": "2026-03-18",
   "assets": {
-    "directory": "./"
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true
   }
 }
