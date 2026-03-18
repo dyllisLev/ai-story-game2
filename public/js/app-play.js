@@ -979,13 +979,14 @@ updateBadges();
 if (els.apiKey.value.trim()) fetchModels(els.apiKey.value.trim());
 renderSessionList();
 renderSaveStatus();
-loadStoryList();
-
 // --- URL Parameter Auto-Load ---
 (async () => {
   const params = new URLSearchParams(window.location.search);
   const storyId = params.get('storyId');
   const sessionId = params.get('sessionId');
+
+  // 스토리 목록을 먼저 로드한 후 자동 선택 (race condition 방지)
+  await loadStoryList();
 
   if (sessionId) {
     // 세션 이어하기
