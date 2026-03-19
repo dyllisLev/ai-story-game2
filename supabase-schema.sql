@@ -297,3 +297,27 @@ CREATE POLICY "session_memory_delete" ON session_memory
   FOR DELETE USING (
     session_id IN (SELECT id FROM sessions WHERE owner_uid = auth.uid())
   );
+
+-- ============================================================
+-- API Logs (디버깅용)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS api_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id UUID REFERENCES sessions(id) ON DELETE SET NULL,
+  endpoint TEXT NOT NULL,
+  request_model TEXT,
+  request_system_prompt TEXT,
+  request_messages JSONB,
+  request_body JSONB,
+  response_text TEXT,
+  response_usage JSONB,
+  response_error TEXT,
+  duration_ms INTEGER,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_logs_session ON api_logs(session_id);
+CREATE INDEX IF NOT EXISTS idx_api_logs_created ON api_logs(created_at DESC);
+
+ALTER TABLE api_logs ENABLE ROW LEVEL SECURITY;
+-- 클라이언트 접근 차단 (service_role만 INSERT/SELECT)
