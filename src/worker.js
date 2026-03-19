@@ -9,6 +9,9 @@
  *   SUPABASE_SERVICE_KEY - Supabase service_role key (관리자 설정 저장용, 암호화 필수)
  */
 
+import { handleGameStart, handleGameChat } from './game-handler.js';
+import { getSession, getSessionMemory, deleteSession } from './db.js';
+
 // --- Constant-time 문자열 비교 (타이밍 공격 방지) ---
 function safeCompare(a, b) {
   const encoder = new TextEncoder();
@@ -229,7 +232,7 @@ function handleAdminAuth(request, env) {
 
 // --- Worker entry point ---
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     // PUT /api/config → 관리자 설정 업데이트
@@ -240,6 +243,50 @@ export default {
     // GET /api/config → Supabase 설정 반환
     if (url.pathname === '/api/config') {
       return handleApiConfig(env);
+    }
+
+    // POST /api/game/start → 새 게임 시작
+    if (url.pathname === '/api/game/start' && request.method === 'POST') {
+      return handleGameStart(request, env, ctx);
+    }
+
+    // POST /api/game/chat → 게임 진행
+    if (url.pathname === '/api/game/chat' && request.method === 'POST') {
+      return handleGameChat(request, env, ctx);
+    }
+
+    // GET /api/session/:id → 세션 조회
+    if (url.pathname.startsWith('/api/session/') && request.method === 'GET') {
+      const parts = url.pathname.split('/');
+      const sessionId = parts[3];
+      if (parts[4] === 'memory') {
+        // GET /api/session/:id/memory
+        const memory = await getSessionMemory(env, sessionId);
+        return new Response(JSON.stringify(memory || { shortTerm: [], longTerm: [], characters: [], goals: '' }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      // GET /api/session/:id
+      const session = await getSession(env, sessionId);
+      if (!session) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      const memoryData = await getSessionMemory(env, sessionId);
+      const hasMemory = !!memoryData;
+      return new Response(JSON.stringify({
+        sessionId: session.id,
+        storyId: session.story_id,
+        title: session.title,
+        model: session.model,
+        preset: session.preset,
+        messages: session.messages,
+        memoryStatus: hasMemory ? 'exists' : 'none',
+      }), { headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // DELETE /api/session/:id → 세션 삭제
+    if (url.pathname.startsWith('/api/session/') && request.method === 'DELETE') {
+      const sessionId = url.pathname.split('/')[3];
+      await deleteSession(env, sessionId);
+      return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
     }
 
     // /base_story_admin* → Basic Auth 체크
