@@ -1,10 +1,8 @@
 // --- Supabase ---
 import { supabase, currentUser, promptConfig, gameplayConfig } from './supabase-config.js';
-import { buildPrompt, buildMemoryPrompt } from './prompt-builder.js';
-import { generateMemory, saveMemoryToLocal, loadMemoryFromLocal, migrateOldSummary } from './memory-manager.js';
 import { upsertSessionMemory, loadSessionMemory } from './supabase-ops.js';
 import { renderMarkdown } from './markdown-renderer.js';
-import { fetchModels as _fetchModels, createCache as _createCache, clearCache as _clearCache, streamGenerate, generate } from './gemini-api.js';
+import { fetchModels as _fetchModels } from './gemini-api.js';
 import { updateTokenDisplay, resetTokens } from './token-tracker.js';
 
 if (!promptConfig || !gameplayConfig) {
@@ -26,8 +24,6 @@ const els = {
   btnLoadSettings: $('btnLoadSettings'),
   fileInput: $('fileInput'),
   useLatex: $('useLatex'),
-  useCache: $('useCache'),
-  cacheStatus: $('cacheStatus'),
   tokenInfo: $('tokenInfo'),
   costInfo: $('costInfo'),
   settingsName: $('settingsName'),
@@ -53,8 +49,6 @@ let currentSessionId = null;
 let currentStoryId = null;
 let sessionMemory = null;
 let memoryUpToIndex = 0;
-let isGeneratingMemory = false;
-const SLIDING_WINDOW_SIZE = gameplayConfig.sliding_window_size;
 let isDirty = false;
 let saveStatus = 'idle';
 let autoSaveInterval = null;
@@ -117,49 +111,6 @@ function messagesFromStorage(stored) {
   }));
 }
 
-async function generateSessionMemory() {
-  const apiKey = els.apiKey.value.trim();
-  const model = els.modelSelect.value;
-  if (!apiKey || !model) return;
-  if (isGeneratingMemory) return;
-
-  const interval = SLIDING_WINDOW_SIZE;
-  if (conversationHistory.length <= interval) return;
-  if ((conversationHistory.length - memoryUpToIndex) < interval) return;
-
-  isGeneratingMemory = true;
-  updateMemoryBadge('generating');
-
-  try {
-    const windowStart = Math.max(0, conversationHistory.length - SLIDING_WINDOW_SIZE);
-    const recentMessages = conversationHistory.slice(windowStart);
-
-    const result = await generateMemory({
-      apiKey,
-      model,
-      messages: recentMessages,
-      existingMemory: sessionMemory,
-      promptConfig,
-    });
-
-    sessionMemory = result;
-    memoryUpToIndex = conversationHistory.length;
-
-    if (currentSessionId) {
-      upsertSessionMemory(currentSessionId, sessionMemory);
-      saveMemoryToLocal(currentSessionId, sessionMemory);
-    }
-
-    updateMemoryBadge('exists');
-    markDirty();
-  } catch (e) {
-    console.error('Memory generation failed:', e);
-    updateMemoryBadge('failed');
-  } finally {
-    isGeneratingMemory = false;
-  }
-}
-
 function buildSessionDocument() {
   return {
     story_id: currentStoryId || null,
@@ -170,8 +121,9 @@ function buildSessionDocument() {
       characterName: settingsData.characterName || '',
       characterSetting: settingsData.characterSetting || '',
       characters: settingsData.characters || '',
+      userNote: settingsData.userNote || '',
+      systemRules: settingsData.systemRules || '',
       useLatex: els.useLatex.checked,
-      useCache: els.useCache.checked,
       narrativeLength: narrativeLength,
     },
     messages: messagesToStorage(conversationHistory),
@@ -292,14 +244,6 @@ let settingsData = {
   systemRules: '',
 };
 
-// --- Prompt Builder (uses shared module) ---
-function getPrompt() {
-  return buildPrompt(settingsData, {
-    useLatex: els.useLatex.checked,
-    narrativeLength,
-  }, promptConfig);
-}
-
 // --- Settings Load ---
 const STORAGE_KEY = 'ai-story-game-settings';
 
@@ -309,7 +253,6 @@ function applySettings(data, source) {
     sessionStorage.setItem('gemini-api-key', data.apiKey);
   }
   if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
-  if ('useCache' in data) els.useCache.checked = !!data.useCache;
 
   settingsData.title = data.title || '';
   settingsData.worldSetting = data.worldSetting || '';
@@ -375,14 +318,6 @@ els.apiKey.addEventListener('input', () => {
   }, 800);
 });
 
-// 모델 변경 시 캐시 무효화 (다른 모델의 캐시는 사용 불가)
-els.modelSelect.addEventListener('change', () => {
-  if (cachedContentName) {
-    clearCache();
-    console.log('모델 변경으로 캐시가 초기화되었습니다.');
-  }
-});
-
 // --- Load Settings File ---
 els.btnLoadSettings.addEventListener('click', async () => {
   if (window.showOpenFilePicker) {
@@ -424,23 +359,6 @@ els.fileInput.addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-// --- Cache ---
-let cachedContentName = null;
-
-async function createCache(apiKey, model) {
-  const result = await _createCache(apiKey, model, getPrompt(), els.cacheStatus, promptConfig.cache_ttl);
-  if (result) {
-    cachedContentName = result.name;
-    return true;
-  }
-  cachedContentName = null;
-  return false;
-}
-
-function clearCache() {
-  cachedContentName = _clearCache(els.cacheStatus);
-}
-
 // --- Game State ---
 let conversationHistory = [];
 let isGenerating = false;
@@ -457,19 +375,10 @@ function appendToGame(text, className) {
   return div;
 }
 
-async function sendToGemini(userMessage) {
+async function sendToAI(userMessage) {
   const apiKey = els.apiKey.value.trim();
-  const model = els.modelSelect.value;
-
-  if (!apiKey || !model) {
-    alert('API Key와 모델을 선택해주세요.');
-    return;
-  }
-
-  if (conversationHistory.length >= gameplayConfig.message_limit) {
-    alert(`이 세션은 메시지 한도(${gameplayConfig.message_limit})에 도달했습니다. 새 게임을 시작해주세요.`);
-    return;
-  }
+  if (!apiKey) { alert('API Key를 입력해주세요.'); return; }
+  if (!currentSessionId) { alert('게임을 먼저 시작해주세요.'); return; }
 
   isGenerating = true;
   els.gameInput.disabled = true;
@@ -481,49 +390,26 @@ async function sendToGemini(userMessage) {
   markDirty();
   updateTurnCount();
 
+  appendToGame(`▸ ${userMessage}`, 'user-action');
   const responseDiv = appendToGame('', 'narrator');
   responseDiv.classList.add('loading');
 
   try {
-    // 슬라이딩 윈도우: 최근 N개만 전송, 나머지는 요약으로 대체
-    const windowStart = Math.max(0, conversationHistory.length - SLIDING_WINDOW_SIZE);
-    const recentMessages = conversationHistory.slice(windowStart);
-
-    let systemPrompt = getPrompt();
-    systemPrompt += buildMemoryPrompt(sessionMemory);
-
-    const body = cachedContentName
-      ? { cachedContent: cachedContentName, contents: recentMessages, safetySettings: promptConfig.safety_settings }
-      : { system_instruction: { parts: [{ text: systemPrompt }] }, contents: recentMessages, safetySettings: promptConfig.safety_settings };
-
-    let renderTimer = null;
-    const { text: fullResponse, usageMetadata } = await streamGenerate({
-      apiKey, model, body,
-      onChunk(textSoFar) {
-        clearTimeout(renderTimer);
-        renderTimer = setTimeout(() => {
-          responseDiv.innerHTML = renderMarkdown(textSoFar);
-          responseDiv.classList.add('markdown-rendered');
-          els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
-        }, 80);
-      },
+    const res = await fetch('/api/game/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey, sessionId: currentSessionId, userMessage }),
     });
 
-    clearTimeout(renderTimer);
-    responseDiv.innerHTML = renderMarkdown(fullResponse);
-    responseDiv.classList.add('markdown-rendered');
-    els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
 
-    if (usageMetadata) updateTokenDisplay(usageMetadata, els.modelSelect.value, els.tokenInfo, els.costInfo);
-
-    conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
-    markDirty();
-    updateTurnCount();
-    generateSessionMemory();
+    await handleSSEStream(res, responseDiv);
   } catch (err) {
-    console.error('Gemini API error:', err);
-    const detail = err.message || '';
-    responseDiv.textContent = `[오류] API 요청 실패: ${detail || 'API 키와 모델을 확인해주세요.'}`;
+    console.error('API error:', err);
+    responseDiv.textContent = `[오류] ${err.message}`;
     responseDiv.style.color = 'var(--accent)';
     conversationHistory.pop();
   } finally {
@@ -537,63 +423,180 @@ async function sendToGemini(userMessage) {
   }
 }
 
+async function handleSSEStream(res, responseDiv) {
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullResponse = '';
+  let renderTimer = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const jsonStr = line.slice(6).trim();
+      if (!jsonStr) continue;
+
+      try {
+        const data = JSON.parse(jsonStr);
+
+        if (data.type === 'chunk') {
+          fullResponse += data.text;
+          clearTimeout(renderTimer);
+          renderTimer = setTimeout(() => {
+            responseDiv.innerHTML = renderMarkdown(fullResponse);
+            responseDiv.classList.add('markdown-rendered');
+            els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+          }, 80);
+        } else if (data.type === 'done') {
+          clearTimeout(renderTimer);
+          responseDiv.innerHTML = renderMarkdown(fullResponse);
+          responseDiv.classList.add('markdown-rendered');
+          els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+
+          if (data.sessionId && !currentSessionId) {
+            currentSessionId = data.sessionId;
+            addToSessionList(currentSessionId, settingsData.title || '제목 없음');
+            renderSessionList();
+          }
+
+          if (data.usage) {
+            updateTokenDisplay(data.usage, els.modelSelect.value, els.tokenInfo, els.costInfo);
+          }
+
+          conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
+          markDirty();
+          updateTurnCount();
+
+          if (data.memoryStatus === 'pending') {
+            updateMemoryBadge('exists');
+          }
+        } else if (data.type === 'error') {
+          throw new Error(data.message);
+        }
+      } catch (e) {
+        if (e.message && !e.message.includes('JSON')) throw e;
+      }
+    }
+  }
+}
+
 // --- Game Controls ---
 els.btnStart.addEventListener('click', async () => {
   if (isGenerating) return;
   const apiKey = els.apiKey.value.trim();
   const model = els.modelSelect.value;
-  if (!apiKey) { alert('API Key를 입력해주세요.'); els.apiKey.focus(); return; }
+  if (!apiKey) { alert('API Key를 입력해주세요.'); return; }
   if (!model) { alert('모델을 선택해주세요.'); return; }
+  if (!currentStoryId) { alert('스토리를 선택해주세요.'); return; }
 
+  isGenerating = true;
+  els.btnStart.disabled = true;
   stopAutoSave();
-  currentSessionId = crypto.randomUUID();
   conversationHistory = [];
   els.gameOutput.innerHTML = '';
   resetTokens(els.tokenInfo, els.costInfo);
-  els.gameInput.disabled = false;
-  els.btnSend.disabled = false;
 
-  await createSession(currentSessionId);
-  addToSessionList(currentSessionId, settingsData.title || '제목 없음');
-  renderSessionList();
-  renderSessionId();
-  updateTurnCount();
-  isDirty = false;
-  updateSaveStatus('saved');
-  startAutoSave();
+  const responseDiv = appendToGame('', 'narrator');
+  responseDiv.classList.add('loading');
 
-  clearCache();
-  if (els.useCache.checked) {
-    const ok = await createCache(apiKey, model);
-    if (!ok) alert('캐시 생성에 실패했습니다. 캐시 없이 진행합니다.');
+  try {
+    const res = await fetch('/api/game/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey, storyId: currentStoryId, model,
+        options: {
+          characterName: settingsData.characterName,
+          characterSetting: settingsData.characterSetting,
+          useLatex: els.useLatex.checked,
+          narrativeLength,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    currentSessionId = null; // will be set by handleSSEStream from done event
+    await handleSSEStream(res, responseDiv);
+
+    els.gameInput.disabled = false;
+    els.btnSend.disabled = false;
+    renderSessionId();
+    updateTurnCount();
+    startAutoSave();
+  } catch (err) {
+    console.error('Game start error:', err);
+    responseDiv.textContent = `[오류] ${err.message}`;
+    responseDiv.style.color = 'var(--accent)';
+  } finally {
+    responseDiv.classList.remove('loading');
+    isGenerating = false;
+    els.btnStart.disabled = false;
   }
-
-  sendToGemini(promptConfig.game_start_message);
 });
 
 els.btnSend.addEventListener('click', () => {
   if (isGenerating) return;
   const text = els.gameInput.value.trim();
   if (!text) return;
-  appendToGame(`▸ ${text}`, 'user-action');
   els.gameInput.value = '';
-  sendToGemini(text);
+  sendToAI(text);
 });
 
-els.btnRegenerate.addEventListener('click', () => {
+els.btnRegenerate.addEventListener('click', async () => {
   if (isGenerating || conversationHistory.length < 2) return;
-  // 마지막 model 응답 제거
-  const lastModel = conversationHistory[conversationHistory.length - 1];
-  if (lastModel.role !== 'model') return;
-  conversationHistory.pop();
-  // 마지막 user 메시지 제거 (재전송 위해 텍스트 보관)
-  const lastUser = conversationHistory.pop();
-  const lastUserText = lastUser.parts[0].text;
-  // DOM에서 마지막 narrator(AI 응답) 제거
+
+  const apiKey = els.apiKey.value.trim();
+  if (!apiKey || !currentSessionId) return;
+
+  // DOM에서 마지막 응답 제거
   const narrators = els.gameOutput.querySelectorAll('.game-text.narrator');
   if (narrators.length) narrators[narrators.length - 1].remove();
-  // 다시 API 요청
-  sendToGemini(lastUserText);
+  const userActions = els.gameOutput.querySelectorAll('.game-text.user-action');
+  if (userActions.length) userActions[userActions.length - 1].remove();
+
+  conversationHistory.splice(-2);
+  updateTurnCount();
+
+  const responseDiv = appendToGame('', 'narrator');
+  responseDiv.classList.add('loading');
+  isGenerating = true;
+  els.btnRegenerate.disabled = true;
+
+  try {
+    const res = await fetch('/api/game/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey, sessionId: currentSessionId, regenerate: true }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    await handleSSEStream(res, responseDiv);
+  } catch (err) {
+    responseDiv.textContent = `[오류] ${err.message}`;
+    responseDiv.style.color = 'var(--accent)';
+  } finally {
+    responseDiv.classList.remove('loading');
+    isGenerating = false;
+    els.gameInput.disabled = false;
+    els.btnSend.disabled = false;
+    els.btnRegenerate.disabled = conversationHistory.length < 2;
+    els.btnStart.disabled = false;
+  }
 });
 
 els.gameInput.addEventListener('keydown', (e) => {
@@ -908,7 +911,6 @@ $('storySelect').addEventListener('change', async (e) => {
   settingsData.userNote = data.userNote || '';
   settingsData.systemRules = data.systemRules || '';
   if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
-  if ('useCache' in data) els.useCache.checked = !!data.useCache;
 
   currentStoryId = storyId;
   els.settingsName.textContent = `${data.title || '제목 없음'} (${storyId.slice(0, 8)}...)`;
@@ -988,6 +990,14 @@ $('btnDeleteSession').addEventListener('click', () => {
   renderSessionList(); renderSessionId(); renderSaveStatus();
 });
 
+async function loadSessionMemoryFromAPI(sessionId) {
+  try {
+    const res = await fetch(`/api/session/${sessionId}/memory`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
 async function loadSession(sessionId) {
   let localData = loadSessionFromLocal(sessionId);
   let remoteData = await loadSessionFromSupabase(sessionId);
@@ -1004,15 +1014,43 @@ async function loadSession(sessionId) {
   }
 
   currentSessionId = sessionId;
+  currentStoryId = data.story_id || data.storyId || null;
+
+  // 원본 스토리에서 프롬프트를 다시 로드 (스토리 수정이 즉시 반영되도록)
+  if (currentStoryId) {
+    const storyData = await loadStory(currentStoryId);
+    if (storyData) {
+      settingsData.title = storyData.title || '';
+      settingsData.worldSetting = storyData.worldSetting || '';
+      settingsData.story = storyData.story || '';
+      settingsData.characterName = storyData.characterName || '';
+      settingsData.characterSetting = storyData.characterSetting || '';
+      settingsData.characters = storyData.characters || '';
+      settingsData.userNote = storyData.userNote || '';
+      settingsData.systemRules = storyData.systemRules || '';
+      if ('useLatex' in storyData) els.useLatex.checked = !!storyData.useLatex;
+    }
+    updateEditLink();
+    // 스토리 드롭다운에서 선택
+    const storySelect = $('storySelect');
+    if (storySelect.querySelector(`option[value="${currentStoryId}"]`)) {
+      storySelect.value = currentStoryId;
+    }
+  } else if (data.preset) {
+    // story_id가 없는 레거시 세션은 preset에서 복원
+    Object.assign(settingsData, data.preset);
+  }
 
   if (data.preset) {
-    Object.assign(settingsData, data.preset);
+    // preset에서 UI 설정만 복원 (useLatex, narrativeLength 등)
     if ('useLatex' in data.preset) els.useLatex.checked = !!data.preset.useLatex;
-    if ('useCache' in data.preset) els.useCache.checked = !!data.preset.useCache;
     if ('narrativeLength' in data.preset) {
       narrativeLength = Math.max(gameplayConfig.narrative_length_min, Math.min(gameplayConfig.narrative_length_max, data.preset.narrativeLength));
       updateNarrativeDisplay();
     }
+    // preset에 주인공 설정이 있으면 복원 (세션별로 다를 수 있음)
+    if (data.preset.characterName) settingsData.characterName = data.preset.characterName;
+    if (data.preset.characterSetting) settingsData.characterSetting = data.preset.characterSetting;
     updateBadges();
   }
   if (data.model && els.modelSelect.querySelector(`option[value="${data.model}"]`)) {
@@ -1027,12 +1065,12 @@ async function loadSession(sessionId) {
     conversationHistory = messages;
   }
   memoryUpToIndex = data.summaryUpToIndex || 0;
-  const loadedMemory = await loadSessionMemory(currentSessionId)
-    || loadMemoryFromLocal(currentSessionId);
+  const loadedMemory = await loadSessionMemoryFromAPI(currentSessionId)
+    || await loadSessionMemory(currentSessionId);
   if (loadedMemory) {
     sessionMemory = loadedMemory;
-  } else if (data.summary) {
-    sessionMemory = migrateOldSummary(data.summary);
+  } else {
+    sessionMemory = null;
   }
   updateMemoryBadge(sessionMemory ? 'exists' : 'empty');
 
@@ -1148,7 +1186,6 @@ function enableLongTermEdit(content, footer) {
 
     if (currentSessionId) {
       upsertSessionMemory(currentSessionId, sessionMemory);
-      saveMemoryToLocal(currentSessionId, sessionMemory);
     }
     markDirty();
     renderMemoryModal();
@@ -1215,7 +1252,6 @@ function renderGoalsTab(content, countEl, footer) {
       sessionMemory.goals = $('memoryGoalsText').value.trim();
       if (currentSessionId) {
         upsertSessionMemory(currentSessionId, sessionMemory);
-        saveMemoryToLocal(currentSessionId, sessionMemory);
       }
       markDirty();
     }
@@ -1234,11 +1270,6 @@ document.addEventListener('click', (e) => {
     activeMemoryTab = tab.dataset.type;
     renderMemoryModal();
   }
-});
-
-$('menuSummaryRetry')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  generateSessionMemory();
 });
 
 // --- Init ---
@@ -1272,7 +1303,6 @@ renderSaveStatus();
       settingsData.userNote = data.userNote || '';
       settingsData.systemRules = data.systemRules || '';
       if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
-      if ('useCache' in data) els.useCache.checked = !!data.useCache;
       currentStoryId = storyId;
       els.settingsName.textContent = data.title || '제목 없음';
       updateBadges();
