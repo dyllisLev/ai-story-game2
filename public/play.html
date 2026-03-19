@@ -123,6 +123,9 @@
       cursor: pointer;
     }
 
+    .cache-status { font-size: 11px; color: var(--text-muted); }
+    .cache-status.active { color: var(--primary); }
+
     /* --- Main Content --- */
     .main-content {
       flex: 1;
@@ -955,6 +958,11 @@
           <div class="checkbox-group">
             <input type="checkbox" id="useLatex" checked>
             <label for="useLatex">LaTeX 연출</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="useCache">
+            <label for="useCache">컨텍스트 캐시</label>
+            <span class="cache-status" id="cacheStatus"></span>
           </div>
           <div style="display:flex;gap:6px;">
             <button id="btnLoadSettings" class="btn-icon" title="설정 파일 불러오기" style="font-size:14px;">📂</button>

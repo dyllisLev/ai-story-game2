@@ -1,6 +1,26 @@
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 /**
+ * Gemini Context Caching — 시스템 프롬프트를 캐시하여 토큰 절약.
+ * @returns {{ name: string } | null}
+ */
+export async function createCachedContent({ apiKey, model, systemPrompt, ttl }) {
+  const res = await fetch(`${GEMINI_BASE}/cachedContents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify({
+      model: `models/${model}`,
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      ttl: ttl || '300s',
+    }),
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.name ? { name: data.name } : null;
+}
+
+/**
  * Gemini 스트리밍 호출. ReadableStream을 반환하여 SSE로 프론트에 중계.
  * 스트림 완료 후 { text, usageMetadata }를 onComplete 콜백으로 전달.
  */

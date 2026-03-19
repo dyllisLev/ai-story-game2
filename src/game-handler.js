@@ -1,6 +1,6 @@
 import { getStory, getConfig, getSession, getSessionMemory, createSession, updateSession, insertApiLog, isValidUUID } from './db.js';
 import { buildPrompt, buildMemoryPrompt } from './prompt-builder.js';
-import { streamGenerate } from './gemini-client.js';
+import { streamGenerate, createCachedContent } from './gemini-client.js';
 import { shouldGenerateMemory, generateAndSaveMemory } from './memory-handler.js';
 
 function jsonResponse(data, status = 200) {
@@ -35,6 +35,7 @@ export async function handleGameStart(request, env, ctx) {
     characterName: options?.characterName || story.character_name || '',
     characterSetting: options?.characterSetting || story.character_setting || '',
     useLatex: options?.useLatex !== undefined ? options.useLatex : story.use_latex,
+    useCache: !!options?.useCache,
     narrativeLength: options?.narrativeLength || gameplayConfig.default_narrative_length,
   };
 
@@ -42,11 +43,27 @@ export async function handleGameStart(request, env, ctx) {
   const systemPrompt = buildPrompt(story, preset, promptConfig);
   const startMessage = promptConfig.game_start_message || '게임을 시작해줘';
 
-  const geminiBody = {
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents: [{ role: 'user', parts: [{ text: startMessage }] }],
-    safetySettings: promptConfig.safety_settings || [],
-  };
+  // 캐시 생성 (useCache가 true인 경우)
+  let cachedContentName = null;
+  if (preset.useCache) {
+    const cache = await createCachedContent({
+      apiKey, model, systemPrompt,
+      ttl: promptConfig.cache_ttl || '300s',
+    });
+    if (cache) cachedContentName = cache.name;
+  }
+
+  const geminiBody = cachedContentName
+    ? {
+        cachedContent: cachedContentName,
+        contents: [{ role: 'user', parts: [{ text: startMessage }] }],
+        safetySettings: promptConfig.safety_settings || [],
+      }
+    : {
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: startMessage }] }],
+        safetySettings: promptConfig.safety_settings || [],
+      };
 
   // 세션 생성
   const sessionId = crypto.randomUUID();
@@ -69,7 +86,7 @@ export async function handleGameStart(request, env, ctx) {
           id: sessionId,
           story_id: storyId,
           title: story.title || '제목 없음',
-          preset,
+          preset: { ...preset, cachedContentName },
           messages,
           model,
           summary: '',
@@ -102,7 +119,7 @@ export async function handleGameStart(request, env, ctx) {
         if (done) break;
         controller.enqueue(value);
       }
-      const doneEvent = `data: ${JSON.stringify({ type: 'done', sessionId, usage: completionData.usageMetadata, memoryStatus: 'none' })}\n\n`;
+      const doneEvent = `data: ${JSON.stringify({ type: 'done', sessionId, usage: completionData.usageMetadata, memoryStatus: 'none', cacheStatus: cachedContentName ? 'active' : 'none' })}\n\n`;
       controller.enqueue(encoder.encode(doneEvent));
       controller.close();
     },
@@ -173,11 +190,19 @@ export async function handleGameChat(request, env, ctx) {
     parts: [{ text: m.content }],
   }));
 
-  const geminiBody = {
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents,
-    safetySettings: promptConfig.safety_settings || [],
-  };
+  // 캐시가 있으면 cachedContent 사용 (메모리 없는 경우만 — 메모리가 있으면 system_instruction 사용)
+  const cachedName = !memory && session.preset?.cachedContentName;
+  const geminiBody = cachedName
+    ? {
+        cachedContent: cachedName,
+        contents,
+        safetySettings: promptConfig.safety_settings || [],
+      }
+    : {
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        safetySettings: promptConfig.safety_settings || [],
+      };
 
   const model = session.model || 'gemini-2.0-flash';
   const startTime = Date.now();

@@ -24,6 +24,8 @@ const els = {
   btnLoadSettings: $('btnLoadSettings'),
   fileInput: $('fileInput'),
   useLatex: $('useLatex'),
+  useCache: $('useCache'),
+  cacheStatus: $('cacheStatus'),
   tokenInfo: $('tokenInfo'),
   costInfo: $('costInfo'),
   settingsName: $('settingsName'),
@@ -124,6 +126,7 @@ function buildSessionDocument() {
       userNote: settingsData.userNote || '',
       systemRules: settingsData.systemRules || '',
       useLatex: els.useLatex.checked,
+      useCache: els.useCache.checked,
       narrativeLength: narrativeLength,
     },
     messages: messagesToStorage(conversationHistory),
@@ -253,6 +256,7 @@ function applySettings(data, source) {
     sessionStorage.setItem('gemini-api-key', data.apiKey);
   }
   if ('useLatex' in data) els.useLatex.checked = !!data.useLatex;
+  if ('useCache' in data) els.useCache.checked = !!data.useCache;
 
   settingsData.title = data.title || '';
   settingsData.worldSetting = data.worldSetting || '';
@@ -477,6 +481,10 @@ async function handleSSEStream(res, responseDiv) {
           if (data.memoryStatus === 'pending') {
             updateMemoryBadge('exists');
           }
+          if (data.cacheStatus === 'active') {
+            els.cacheStatus.textContent = '캐시 활성';
+            els.cacheStatus.className = 'cache-status active';
+          }
         } else if (data.type === 'error') {
           throw new Error(data.message);
         }
@@ -516,6 +524,7 @@ els.btnStart.addEventListener('click', async () => {
           characterName: settingsData.characterName,
           characterSetting: settingsData.characterSetting,
           useLatex: els.useLatex.checked,
+          useCache: els.useCache.checked,
           narrativeLength,
         },
       }),
@@ -1044,6 +1053,7 @@ async function loadSession(sessionId) {
   if (data.preset) {
     // preset에서 UI 설정만 복원 (useLatex, narrativeLength 등)
     if ('useLatex' in data.preset) els.useLatex.checked = !!data.preset.useLatex;
+    if ('useCache' in data.preset) els.useCache.checked = !!data.preset.useCache;
     if ('narrativeLength' in data.preset) {
       narrativeLength = Math.max(gameplayConfig.narrative_length_min, Math.min(gameplayConfig.narrative_length_max, data.preset.narrativeLength));
       updateNarrativeDisplay();
