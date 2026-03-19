@@ -9,7 +9,7 @@
  *   SUPABASE_SERVICE_KEY - Supabase service_role key (관리자 설정 저장용, 암호화 필수)
  */
 
-import { handleGameStart, handleGameChat } from './game-handler.js';
+import { handleGameStart, handleGameChat, handleGameSave } from './game-handler.js';
 import { getSession, getSessionMemory, deleteSession } from './db.js';
 
 // --- Constant-time 문자열 비교 (타이밍 공격 방지) ---
@@ -245,14 +245,19 @@ export default {
       return handleApiConfig(env);
     }
 
-    // POST /api/game/start → 새 게임 시작
+    // POST /api/game/start → 프롬프트 빌드 + 세션 생성
     if (url.pathname === '/api/game/start' && request.method === 'POST') {
-      return handleGameStart(request, env, ctx);
+      return handleGameStart(request, env);
     }
 
-    // POST /api/game/chat → 게임 진행
+    // POST /api/game/chat → 프롬프트 빌드 + 슬라이딩 윈도우
     if (url.pathname === '/api/game/chat' && request.method === 'POST') {
-      return handleGameChat(request, env, ctx);
+      return handleGameChat(request, env);
+    }
+
+    // POST /api/game/save → Gemini 응답 저장 + 메모리 트리거
+    if (url.pathname === '/api/game/save' && request.method === 'POST') {
+      return handleGameSave(request, env, ctx);
     }
 
     // GET /api/session/:id → 세션 조회

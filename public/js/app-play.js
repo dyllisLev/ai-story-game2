@@ -2,7 +2,7 @@
 import { supabase, currentUser, promptConfig, gameplayConfig } from './supabase-config.js';
 import { upsertSessionMemory, loadSessionMemory } from './supabase-ops.js';
 import { renderMarkdown } from './markdown-renderer.js';
-import { fetchModels as _fetchModels } from './gemini-api.js';
+import { fetchModels as _fetchModels, createCache as _createCache, clearCache as _clearCache, streamGenerate } from './gemini-api.js';
 import { updateTokenDisplay, resetTokens } from './token-tracker.js';
 
 if (!promptConfig || !gameplayConfig) {
@@ -322,6 +322,13 @@ els.apiKey.addEventListener('input', () => {
   }, 800);
 });
 
+els.modelSelect.addEventListener('change', () => {
+  if (cachedContentName) {
+    clearCache();
+    console.log('모델 변경으로 캐시가 초기화되었습니다.');
+  }
+});
+
 // --- Load Settings File ---
 els.btnLoadSettings.addEventListener('click', async () => {
   if (window.showOpenFilePicker) {
@@ -379,8 +386,71 @@ function appendToGame(text, className) {
   return div;
 }
 
+// --- 캐시 ---
+let cachedContentName = null;
+
+async function createCache(apiKey, model, systemPrompt) {
+  els.cacheStatus.textContent = '캐시 생성 중...';
+  els.cacheStatus.className = 'cache-status';
+  const result = await _createCache(apiKey, model, systemPrompt, els.cacheStatus, promptConfig.cache_ttl);
+  if (result) { cachedContentName = result.name; return true; }
+  cachedContentName = null;
+  return false;
+}
+
+function clearCache() {
+  cachedContentName = _clearCache(els.cacheStatus);
+}
+
+// --- Gemini 호출 (프론트에서 직접, 프롬프트는 Worker에서 빌드) ---
+async function callGeminiAndSave({ apiKey, model, geminiBody, systemPrompt, userMessage, responseDiv, isStart }) {
+  const startTime = Date.now();
+  let renderTimer = null;
+
+  const { text: fullResponse, usageMetadata } = await streamGenerate({
+    apiKey, model, body: geminiBody,
+    onChunk(textSoFar) {
+      clearTimeout(renderTimer);
+      renderTimer = setTimeout(() => {
+        responseDiv.innerHTML = renderMarkdown(textSoFar);
+        responseDiv.classList.add('markdown-rendered');
+        els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+      }, 80);
+    },
+  });
+
+  clearTimeout(renderTimer);
+  responseDiv.innerHTML = renderMarkdown(fullResponse);
+  responseDiv.classList.add('markdown-rendered');
+  els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
+
+  if (usageMetadata) updateTokenDisplay(usageMetadata, model, els.tokenInfo, els.costInfo);
+
+  conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
+  markDirty();
+  updateTurnCount();
+
+  // Worker에 결과 저장 (비동기, 기다리지 않음)
+  fetch('/api/game/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiKey, sessionId: currentSessionId, userMessage,
+      responseText: fullResponse, usageMetadata, systemPrompt,
+      isStart, durationMs: Date.now() - startTime,
+    }),
+  }).then(res => {
+    if (res.ok) return res.json();
+  }).then(data => {
+    if (data?.memoryStatus === 'pending') updateMemoryBadge('exists');
+  }).catch(e => console.error('Save failed:', e));
+
+  return fullResponse;
+}
+
 async function sendToAI(userMessage) {
   const apiKey = els.apiKey.value.trim();
+  const model = els.modelSelect.value;
   if (!apiKey) { alert('API Key를 입력해주세요.'); return; }
   if (!currentSessionId) { alert('게임을 먼저 시작해주세요.'); return; }
 
@@ -399,18 +469,27 @@ async function sendToAI(userMessage) {
   responseDiv.classList.add('loading');
 
   try {
+    // Worker에서 프롬프트 빌드
     const res = await fetch('/api/game/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey, sessionId: currentSessionId, userMessage }),
+      body: JSON.stringify({ sessionId: currentSessionId, userMessage }),
     });
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
       throw new Error(err.error || `HTTP ${res.status}`);
     }
+    const prompt = await res.json();
 
-    await handleSSEStream(res, responseDiv);
+    // 프론트에서 Gemini 직접 호출
+    const geminiBody = cachedContentName && !prompt.hasMemory
+      ? { cachedContent: cachedContentName, contents: prompt.contents, safetySettings: prompt.safetySettings }
+      : { system_instruction: { parts: [{ text: prompt.systemPrompt }] }, contents: prompt.contents, safetySettings: prompt.safetySettings };
+
+    await callGeminiAndSave({
+      apiKey, model: prompt.model, geminiBody,
+      systemPrompt: prompt.systemPrompt, userMessage, responseDiv, isStart: false,
+    });
   } catch (err) {
     console.error('API error:', err);
     responseDiv.textContent = `[오류] ${err.message}`;
@@ -424,74 +503,6 @@ async function sendToAI(userMessage) {
     els.btnRegenerate.disabled = conversationHistory.length < 2;
     els.btnStart.disabled = false;
     els.gameInput.focus();
-  }
-}
-
-async function handleSSEStream(res, responseDiv) {
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let fullResponse = '';
-  let renderTimer = null;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const jsonStr = line.slice(6).trim();
-      if (!jsonStr) continue;
-
-      try {
-        const data = JSON.parse(jsonStr);
-
-        if (data.type === 'chunk') {
-          fullResponse += data.text;
-          clearTimeout(renderTimer);
-          renderTimer = setTimeout(() => {
-            responseDiv.innerHTML = renderMarkdown(fullResponse);
-            responseDiv.classList.add('markdown-rendered');
-            els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
-          }, 80);
-        } else if (data.type === 'done') {
-          clearTimeout(renderTimer);
-          responseDiv.innerHTML = renderMarkdown(fullResponse);
-          responseDiv.classList.add('markdown-rendered');
-          els.gameOutput.scrollTop = els.gameOutput.scrollHeight;
-
-          if (data.sessionId && !currentSessionId) {
-            currentSessionId = data.sessionId;
-            addToSessionList(currentSessionId, settingsData.title || '제목 없음');
-            renderSessionList();
-          }
-
-          if (data.usage) {
-            updateTokenDisplay(data.usage, els.modelSelect.value, els.tokenInfo, els.costInfo);
-          }
-
-          conversationHistory.push({ role: 'model', parts: [{ text: fullResponse }] });
-          markDirty();
-          updateTurnCount();
-
-          if (data.memoryStatus === 'pending') {
-            updateMemoryBadge('exists');
-          }
-          if (data.cacheStatus === 'active') {
-            els.cacheStatus.textContent = '캐시 활성';
-            els.cacheStatus.className = 'cache-status active';
-          }
-        } else if (data.type === 'error') {
-          throw new Error(data.message);
-        }
-      } catch (e) {
-        if (e.message && !e.message.includes('JSON')) throw e;
-      }
-    }
   }
 }
 
@@ -510,16 +521,18 @@ els.btnStart.addEventListener('click', async () => {
   conversationHistory = [];
   els.gameOutput.innerHTML = '';
   resetTokens(els.tokenInfo, els.costInfo);
+  clearCache();
 
   const responseDiv = appendToGame('', 'narrator');
   responseDiv.classList.add('loading');
 
   try {
+    // Worker에서 프롬프트 빌드 + 세션 생성
     const res = await fetch('/api/game/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        apiKey, storyId: currentStoryId, model,
+        storyId: currentStoryId, model,
         options: {
           characterName: settingsData.characterName,
           characterSetting: settingsData.characterSetting,
@@ -535,8 +548,26 @@ els.btnStart.addEventListener('click', async () => {
       throw new Error(err.error || `HTTP ${res.status}`);
     }
 
-    currentSessionId = null; // will be set by handleSSEStream from done event
-    await handleSSEStream(res, responseDiv);
+    const data = await res.json();
+    currentSessionId = data.sessionId;
+    addToSessionList(currentSessionId, settingsData.title || '제목 없음');
+    renderSessionList();
+
+    // 캐시 생성 (옵션 체크 시)
+    if (els.useCache.checked) {
+      const ok = await createCache(apiKey, model, data.systemPrompt);
+      if (!ok) console.warn('캐시 생성 실패, 캐시 없이 진행');
+    }
+
+    // 프론트에서 Gemini 직접 호출
+    const geminiBody = cachedContentName
+      ? { cachedContent: cachedContentName, contents: [{ role: 'user', parts: [{ text: data.startMessage }] }], safetySettings: data.safetySettings }
+      : { system_instruction: { parts: [{ text: data.systemPrompt }] }, contents: [{ role: 'user', parts: [{ text: data.startMessage }] }], safetySettings: data.safetySettings };
+
+    await callGeminiAndSave({
+      apiKey, model, geminiBody,
+      systemPrompt: data.systemPrompt, userMessage: data.startMessage, responseDiv, isStart: true,
+    });
 
     els.gameInput.disabled = false;
     els.btnSend.disabled = false;
@@ -566,9 +597,9 @@ els.btnRegenerate.addEventListener('click', async () => {
   if (isGenerating || conversationHistory.length < 2) return;
 
   const apiKey = els.apiKey.value.trim();
+  const model = els.modelSelect.value;
   if (!apiKey || !currentSessionId) return;
 
-  // DOM에서 마지막 응답 제거
   const narrators = els.gameOutput.querySelectorAll('.game-text.narrator');
   if (narrators.length) narrators[narrators.length - 1].remove();
   const userActions = els.gameOutput.querySelectorAll('.game-text.user-action');
@@ -586,15 +617,22 @@ els.btnRegenerate.addEventListener('click', async () => {
     const res = await fetch('/api/game/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey, sessionId: currentSessionId, regenerate: true }),
+      body: JSON.stringify({ sessionId: currentSessionId, regenerate: true }),
     });
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
       throw new Error(err.error || `HTTP ${res.status}`);
     }
+    const prompt = await res.json();
 
-    await handleSSEStream(res, responseDiv);
+    const geminiBody = cachedContentName && !prompt.hasMemory
+      ? { cachedContent: cachedContentName, contents: prompt.contents, safetySettings: prompt.safetySettings }
+      : { system_instruction: { parts: [{ text: prompt.systemPrompt }] }, contents: prompt.contents, safetySettings: prompt.safetySettings };
+
+    await callGeminiAndSave({
+      apiKey, model: prompt.model, geminiBody,
+      systemPrompt: prompt.systemPrompt, userMessage: prompt.contents[0]?.parts[0]?.text || '', responseDiv, isStart: false,
+    });
   } catch (err) {
     responseDiv.textContent = `[오류] ${err.message}`;
     responseDiv.style.color = 'var(--accent)';
