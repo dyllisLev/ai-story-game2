@@ -454,7 +454,114 @@ Phase 4: 사용자 선택 → React 컴포넌트로 전환
 - 사용자 선택 완료 후 불필요한 파일 정리
 - 선택된 디자인만 git에 레퍼런스로 보관
 
-## 7. 데이터 마이그레이션
+## 7. 상태창 시스템
+
+### 개요
+
+스토리마다 다른 캐릭터 상태를 우측 패널에 동적으로 렌더링하는 시스템.
+작성자는 JSON을 모르며, GUI로 속성을 추가/삭제/정렬한다.
+
+### 프리셋
+
+관리자가 장르별 상태창 프리셋을 관리한다. 작성자는 프리셋 선택 후 자유롭게 커스텀 가능.
+
+기본 프리셋:
+- **무협**: 경지, 내공, 외공, 경공, 검법, 심법, 세력, 직책, 장소, 임무, 상황
+- **판타지**: 체력, 마나, 경험치, 레벨, 힘/민첩/지능, 장비, 스킬, 골드, 장소, 퀘스트
+- **현대**: 체력, 스트레스, 소지금, 호감도, 직업, 장소, 상황
+
+### 속성 타입
+
+| 타입 | 렌더링 | 예시 |
+|------|--------|------|
+| `bar` | 프로그레스 바 + 숫자 | 체력 78/100 |
+| `percent` | 퍼센트 바 | 경험치 40% |
+| `number` | 숫자만 | 힘 65 |
+| `text` | 텍스트 | 세력: 천마신교 |
+| `list` | 항목 나열 | 검법: 초절정 알고리즘 |
+
+### DB 변경
+
+```sql
+-- stories 테이블에 상태창 스키마 추가
+ALTER TABLE story_game.stories ADD COLUMN stats_schema JSONB;
+
+-- 상태창 프리셋 테이블
+CREATE TABLE story_game.stats_presets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,           -- "무협", "판타지", "현대"
+  schema JSONB NOT NULL,        -- [{key, type, max?}]
+  is_default BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+`stats_schema` 예시:
+```json
+[
+  { "key": "경지", "type": "text" },
+  { "key": "내공", "type": "bar", "max": 100 },
+  { "key": "검법", "type": "list" },
+  { "key": "장소", "type": "text" }
+]
+```
+
+### 프롬프트 자동 생성
+
+`prompt-builder.ts`가 `stats_schema`를 읽어 자동으로 프롬프트에 주입:
+
+```
+[상태창 규칙]
+매 응답 끝에 반드시 아래 형식으로 현재 상태를 출력하세요.
+\`\`\`status
+경지: (텍스트)
+내공: (0~100 숫자)
+검법: (텍스트)
+장소: (텍스트)
+\`\`\`
+이야기 진행에 따라 값을 적절히 변경하세요.
+상태 블록 외에 본문에서 상태창을 텍스트로 출력하지 마세요.
+```
+
+작성자는 이 프롬프트를 보지 않음 — 시스템이 자동 처리.
+
+### 응답 파싱
+
+`game/chat.ts`에서 AI 응답을 파싱:
+1. ` ```status ... ``` ` 블록 추출
+2. 본문 텍스트와 분리
+3. key-value 파싱 → `session_memory`에 `player_stats` 타입으로 저장
+4. SSE `event: stats` 로 프론트에 전달
+
+### 프론트 렌더링
+
+우측 패널 "정보" 탭에서 `stats_schema`의 타입에 따라 동적 렌더링:
+- `bar` → 프로그레스 바 + 숫자/최대값
+- `percent` → 퍼센트 바
+- `number` → 숫자 표시
+- `text` → 텍스트 표시
+- `list` → 항목 나열
+
+### API 엔드포인트 추가
+
+```
+관리자
+├── GET    /api/stats-presets           # 프리셋 목록
+├── POST   /api/stats-presets           # 프리셋 생성
+├── PUT    /api/stats-presets/:id       # 프리셋 수정
+└── DELETE /api/stats-presets/:id       # 프리셋 삭제
+```
+
+### 에디터 UX
+
+1. "상태창 사용" 토글 ON
+2. 프리셋 선택 (무협/판타지/현대/직접 만들기)
+3. 선택하면 기본 속성이 채워짐
+4. 속성 추가/삭제/순서 변경 자유
+5. 각 속성: 이름 입력 + 타입 드롭다운 + (바 타입이면 최대값)
+
+## 8. 데이터 마이그레이션 (기존 7에서 이동)
 
 ### 마이그레이션 전략
 
