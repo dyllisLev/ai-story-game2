@@ -342,7 +342,7 @@ story_game.user_profiles
 ├── POST   /api/stories              # 스토리 생성
 ├── PUT    /api/stories/:id          # 스토리 수정 (소유자만)
 ├── DELETE /api/stories/:id          # 스토리 삭제 (소유자만)
-├── GET    /api/stories/:id/verify   # 스토리 비밀번호 검증
+├── POST   /api/stories/:id/verify   # 스토리 비밀번호 검증 (hash를 body로 전송)
 ├── GET    /api/me                   # 내 프로필
 ├── PUT    /api/me/apikey            # API 키 저장/갱신
 └── DELETE /api/me/apikey            # API 키 삭제

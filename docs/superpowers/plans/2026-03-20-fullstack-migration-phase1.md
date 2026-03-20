@@ -109,7 +109,7 @@ ai-story-game2/
 packages:
   - 'packages/*'
   - 'backend'
-  - 'frontend'
+  # - 'frontend'  # Phase 2에서 추가
 ```
 
 - [ ] **Step 2: 루트 package.json 생성**
@@ -645,14 +645,16 @@ CREATE TABLE story_game.api_logs (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- stories_safe VIEW (password_hash 노출 방지)
-CREATE VIEW story_game.stories_safe AS
-SELECT
+-- stories_safe VIEW (password_hash 노출 방지, 공개 스토리만)
+CREATE VIEW story_game.stories_safe
+  WITH (security_invoker = false)
+AS SELECT
   id, title, world_setting, story, character_name, character_setting,
   characters, user_note, system_rules, use_latex, is_public,
   (password_hash IS NOT NULL) AS has_password,
   owner_uid, created_at, updated_at
-FROM story_game.stories;
+FROM story_game.stories
+WHERE is_public = true;
 
 -- 인덱스
 CREATE INDEX idx_sg_stories_public ON story_game.stories(is_public) WHERE is_public = true;
@@ -895,12 +897,20 @@ await app.register(rateLimit, {
 });
 
 // Health check (no rate limit)
-app.get('/api/health', async () => ({
-  status: 'ok',
-  supabase: 'connected',
-  uptime: process.uptime(),
-  version: '1.0.0',
-}));
+app.get('/api/health', async () => {
+  let supabaseStatus = 'disconnected';
+  try {
+    const { error } = await app.supabaseAdmin.from('config').select('id').limit(1);
+    supabaseStatus = error ? 'disconnected' : 'connected';
+  } catch { /* disconnected */ }
+
+  return {
+    status: supabaseStatus === 'connected' ? 'ok' : 'degraded',
+    supabase: supabaseStatus,
+    uptime: process.uptime(),
+    version: '1.0.0',
+  };
+});
 
 // Start server
 try {
@@ -918,8 +928,9 @@ Run: `cd backend && pnpm add -D pino-pretty`
 - [ ] **Step 4: 서버 시작 확인**
 
 `.env`에 새 환경변수 추가 (기존 값 유지 + 새로 추가):
-```
-API_KEY_ENCRYPTION_SECRET=dev-secret-key-change-in-production
+```bash
+# 64자 hex 문자열 생성: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+API_KEY_ENCRYPTION_SECRET=<64자리 hex 문자열>
 ```
 
 Run: `cd backend && pnpm dev`
@@ -1100,7 +1111,9 @@ export default async function configRoutes(app: FastifyInstance) {
     }
   });
 
-  // PUT /api/config — 관리자만 (Task 7에서 auth 미들웨어 적용 후 보호)
+  // PUT /api/config — 관리자만
+  // NOTE: auth 플러그인은 Task 7에서 등록됨. Task 6 단독 테스트 시 이 엔드포인트는 무보호 상태.
+  // Task 7 완료 후 requireAdmin(request) 호출을 추가할 것.
   app.put('/api/config', async (request, reply) => {
     const body = request.body as { promptConfig?: unknown; gameplayConfig?: unknown };
     if (!body.promptConfig || !body.gameplayConfig) {
@@ -1400,7 +1413,8 @@ export default async function (app: FastifyInstance) {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10)));
     const offset = (pageNum - 1) * limitNum;
 
-    let query = app.supabaseAdmin
+    // 공개 읽기 → anon key 사용 (RLS 적용)
+    let query = app.supabase
       .from('stories_safe')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
@@ -1481,9 +1495,18 @@ export default async function (app: FastifyInstance) {
     if (!existing) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Story not found' } });
     if (existing.owner_uid !== user.id) return reply.status(403).send({ error: { code: 'FORBIDDEN', message: '소유자만 수정 가능합니다' } });
 
+    // 허용된 필드만 추출 (owner_uid 등 변경 방지)
+    const allowedFields = ['title', 'world_setting', 'story', 'character_name', 'character_setting',
+      'characters', 'user_note', 'system_rules', 'use_latex', 'is_public', 'password_hash'];
+    const body = request.body as Record<string, unknown>;
+    const safeUpdate: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      if (key in body) safeUpdate[key] = body[key];
+    }
+
     const { error } = await app.supabaseAdmin
       .from('stories')
-      .update(request.body as Record<string, unknown>)
+      .update(safeUpdate)
       .eq('id', id);
 
     if (error) return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message } });
@@ -1516,9 +1539,14 @@ export default async function (app: FastifyInstance) {
 import type { FastifyInstance } from 'fastify';
 
 export default async function (app: FastifyInstance) {
+  // POST (not GET) — hash를 URL에 노출하지 않기 위해 POST 사용 (스펙에서 GET→POST 변경)
   app.post<{ Params: { id: string } }>('/api/stories/:id/verify', async (request, reply) => {
     const { id } = request.params;
     const { hash } = request.body as { hash: string };
+
+    if (!hash) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'hash required' } });
+    }
 
     const { data } = await app.supabaseAdmin.rpc('verify_story_password', {
       p_story_id: id,
@@ -1678,16 +1706,57 @@ export default async function (app: FastifyInstance) {
 ```typescript
 // backend/src/routes/sessions/crud.ts
 import type { FastifyInstance } from 'fastify';
-import { verifySessionAccess } from '../../plugins/auth.js';
+import { requireAuth, verifySessionAccess } from '../../plugins/auth.js';
+
+// PUT에서 변경 가능한 필드만 허용 (권한 상승 방지)
+const ALLOWED_UPDATE_FIELDS = ['title', 'preset', 'last_played_at'];
 
 export default async function (app: FastifyInstance) {
+  // POST /api/sessions — 빈 세션 생성 (game/start를 사용하지 않는 경우)
+  app.post('/api/sessions', async (request, reply) => {
+    const user = requireAuth(request);
+    const body = request.body as { story_id: string; title?: string; model?: string };
+
+    if (!body.story_id) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'story_id required' } });
+    }
+
+    const { data, error } = await app.supabaseAdmin
+      .from('sessions')
+      .insert({
+        id: crypto.randomUUID(),
+        story_id: body.story_id,
+        title: body.title || '새 세션',
+        model: body.model || 'gemini-2.0-flash',
+        messages: [],
+        preset: {},
+        owner_uid: user.id,
+      })
+      .select('id, session_token')
+      .single();
+
+    if (error) return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message } });
+    return reply.status(201).send({ id: data.id, sessionToken: data.session_token });
+  });
+
   app.put<{ Params: { id: string } }>('/api/sessions/:id', async (request, reply) => {
     const { id } = request.params;
     await verifySessionAccess(app, request, id);
 
+    // 허용된 필드만 추출 (owner_uid, session_token 등 변경 방지)
+    const body = request.body as Record<string, unknown>;
+    const safeUpdate: Record<string, unknown> = {};
+    for (const key of ALLOWED_UPDATE_FIELDS) {
+      if (key in body) safeUpdate[key] = body[key];
+    }
+
+    if (Object.keys(safeUpdate).length === 0) {
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'No valid fields to update' } });
+    }
+
     const { error } = await app.supabaseAdmin
       .from('sessions')
-      .update(request.body as Record<string, unknown>)
+      .update(safeUpdate)
       .eq('id', id);
 
     if (error) return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message } });
@@ -2281,12 +2350,36 @@ export default async function (app: FastifyInstance) {
   });
 }
 
-function resolveApiKey(app: FastifyInstance, request: any): string | null {
-  // 헤더에서 직접 가져오기
+/**
+ * API 키 해석: 헤더 직접 전달 또는 로그인 사용자의 DB 저장 키 복호화
+ * game/start.ts, game/chat.ts 모두에서 사용
+ */
+async function resolveApiKey(app: FastifyInstance, request: any): Promise<string | null> {
+  // 1. 헤더에서 직접 가져오기 (익명 + 로그인 모두)
   const headerKey = request.headers['x-gemini-key'] as string;
   if (headerKey) return headerKey;
 
-  // TODO: 로그인 사용자의 경우 DB에서 암호화된 키 복호화
+  // 2. 로그인 사용자: DB에서 암호화된 키 복호화
+  if (request.user) {
+    const { data: profile } = await app.supabaseAdmin
+      .from('user_profiles')
+      .select('api_key_enc')
+      .eq('id', request.user.id)
+      .single();
+
+    if (profile?.api_key_enc) {
+      const { decrypt } = await import('../../services/crypto.js');
+      const decrypted = decrypt(profile.api_key_enc, app.config.API_KEY_ENCRYPTION_SECRET);
+      if (decrypted) return decrypted;
+      // 복호화 실패 시 — 손상된 키 삭제
+      await app.supabaseAdmin
+        .from('user_profiles')
+        .update({ api_key_enc: null })
+        .eq('id', request.user.id);
+      app.log.warn({ userId: request.user.id }, 'Failed to decrypt stored API key, cleared');
+    }
+  }
+
   return null;
 }
 ```
@@ -2308,7 +2401,6 @@ export default async function (app: FastifyInstance) {
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const body = request.body as GameChatRequest;
-    const apiKey = request.headers['x-gemini-key'] as string;
 
     if (!body.sessionId) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'sessionId required' } });
@@ -2316,8 +2408,11 @@ export default async function (app: FastifyInstance) {
     if (!body.regenerate && !body.userMessage) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'userMessage required' } });
     }
+
+    // resolveApiKey는 game/start.ts에서 정의한 것과 동일 — 공통 유틸로 추출 권장
+    const apiKey = await resolveApiKey(app, request);
     if (!apiKey) {
-      return reply.status(400).send({ error: { code: 'INVALID_API_KEY', message: 'API key required (X-Gemini-Key header)' } });
+      return reply.status(400).send({ error: { code: 'INVALID_API_KEY', message: 'API key required (X-Gemini-Key header or saved key)' } });
     }
 
     await verifySessionAccess(app, request, body.sessionId);
