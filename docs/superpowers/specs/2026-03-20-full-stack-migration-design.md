@@ -52,7 +52,9 @@ Cloudflare Workers + Vanilla JS 아키텍처를 Node.js (Fastify) + React (Vite)
 - 프론트엔드는 백엔드 API와만 통신 (Supabase 직접 접근 금지)
 - Nginx가 `/api/*` → Fastify, 나머지 → React 정적 파일 서빙
 - Gemini API 호출은 서버에서 수행 (프롬프트 노출 방지)
-- 사용자 API 키는 요청 헤더로 전달, 서버에 저장하지 않음 (로그인 시 암호화 저장 가능)
+- 사용자 API 키는 `X-Gemini-Key` 헤더로 전달 (요청 body에 포함하지 않음)
+- HTTPS 필수 (Nginx에서 TLS 종료)
+- 모든 엔드포인트에 per-IP rate limiting 적용
 
 ## 2. 백엔드 구조 (Fastify + TypeScript)
 
@@ -104,7 +106,8 @@ backend/
 - 라우트 ↔ 서비스 분리: 라우트는 요청/응답 처리만, 비즈니스 로직은 services/에
 - 기존 Worker 로직 재활용: prompt-builder, memory-handler, gemini-client를 TypeScript로 전환
 - Fastify 플러그인 패턴: Supabase 클라이언트를 플러그인으로 등록
-- types/를 프론트엔드와 공유 가능
+- 구조화 로깅: Fastify 내장 pino 사용, JSON 형식 stdout 출력 (Docker 로그 수집 호환)
+- config 캐싱: 인메모리 5분 TTL 캐시 (현재 Worker와 동일), `GET /api/config` 요청마다 DB 조회 방지
 
 **SSE 스트리밍 처리:**
 1. 클라이언트 → POST /api/game/chat
@@ -112,6 +115,25 @@ backend/
 3. Gemini API에 스트리밍 요청
 4. ReadableStream을 SSE로 변환하여 클라이언트에 전달
 5. 스트림 완료 후 비동기로: 메시지 저장, 메모리 트리거 체크
+
+**SSE 연결 끊김 처리:**
+- 클라이언트 disconnect 감지 시에도 Gemini 응답은 끝까지 수신하여 메시지 저장 완료
+- 클라이언트는 `useSSE` 훅에서 자동 재연결하지 않음 (채팅 특성상 동일 요청 재전송은 부적절)
+- 연결 끊김 시 프론트에서 "연결이 끊어졌습니다. 새로고침하세요" 안내
+- 응답 타임아웃: Gemini 스트리밍 60초 무응답 시 연결 종료
+
+**Rate Limiting:**
+- `@fastify/rate-limit` 플러그인 사용
+- Fastify `trustProxy: true` 설정 + Nginx에서 `X-Real-IP` 헤더 설정
+- 게임 엔드포인트: 분당 20회 per IP
+- 인증 엔드포인트: 분당 5회 per IP (brute force 방지)
+- 일반 API: 분당 60회 per IP
+- `/api/health`는 rate limiting 제외
+
+**CORS:**
+- 로컬 개발: `localhost:5173` 허용 (Vite dev server)
+- 프로덕션: 동일 origin (Nginx가 프록시) → CORS 불필요
+- plugins/cors.ts에서 환경변수 기반으로 분기
 
 ## 3. 프론트엔드 구조 (React + Vite + TypeScript)
 
@@ -225,9 +247,9 @@ frontend/
 ```sql
 CREATE SCHEMA story_game;
 
--- 기존 테이블 (구조 동일)
+-- 기존 테이블 (구조 동일, 추가 컬럼 포함)
 story_game.stories
-story_game.sessions
+story_game.sessions          -- + session_token UUID NOT NULL DEFAULT gen_random_uuid()
 story_game.session_memory
 story_game.presets
 story_game.config
@@ -244,8 +266,14 @@ story_game.user_profiles
 
 **변경사항:**
 - `owner_uid` → Supabase Auth `auth.users.id`와 FK 연결
-- `stories_safe` VIEW 제거 — 백엔드에서 password_hash 필터링
-- RLS 간소화 — 백엔드가 service key로 접근, 최소한의 안전장치만 유지
+- `stories_safe` VIEW 유지 — 백엔드에서도 stories 조회 시 이 VIEW를 사용하여 password_hash 노출 방지 (defense-in-depth)
+- RLS 정책 유지 목록:
+  - `stories` SELECT: 공개 OR 소유자 (유지)
+  - `stories` INSERT/UPDATE/DELETE: 소유자만 (유지)
+  - `sessions` SELECT/UPDATE/DELETE: 소유자만 (유지, 현재의 전체공개에서 강화)
+  - `session_memory`: 세션 소유자만 (유지)
+  - `config`: 서비스 키만 쓰기 (유지)
+- 백엔드는 일반 조회 시 `anon key`, 권한 필요 작업 시 `service key` 사용하여 RLS 활용
 
 ### 인증 흐름
 
@@ -272,8 +300,22 @@ story_game.user_profiles
 
 **API 키 보안:**
 - 로그인 사용자: AES-256-GCM 암호화 후 user_profiles.api_key_enc에 저장
-- 익명 사용자: localStorage에 보관, 요청마다 헤더로 전송
-- 서버는 API 키를 로그에 남기지 않음
+- 익명 사용자: localStorage에 보관, 요청마다 `X-Gemini-Key` 헤더로 전송
+- 서버는 API 키를 로그에 남기지 않음 (pino 로깅에서 해당 헤더 제외)
+
+**세션 접근 보안:**
+- 게임 엔드포인트(`/api/game/*`)는 익명 허용하지만, 세션 접근 시 세션 토큰으로 소유권 검증
+- `POST /api/game/start` 응답의 SSE `done` 이벤트에 `sessionId` + `sessionToken`을 포함하여 반환
+- 이후 게임 요청 시 `X-Session-Token` 헤더로 토큰 전송
+- 검증 흐름 (`plugins/auth.ts`):
+  1. JWT가 있으면 → Supabase Auth로 검증 → `req.user` 설정 → 세션 owner_uid 비교
+  2. JWT가 없고 `X-Session-Token`이 있으면 → DB에서 sessionId + session_token 쌍 검증
+  3. 둘 다 없으면 → 공개 라우트만 허용, 게임 엔드포인트는 403 반환
+- `sessions` 테이블에 `session_token UUID NOT NULL DEFAULT gen_random_uuid()` 컬럼 추가 (인덱스 포함)
+
+**API 키 암호화 키 관리:**
+- 암호화 키는 환경변수 `API_KEY_ENCRYPTION_SECRET`으로 서버에만 존재 (DB와 분리)
+- 복호화 실패 시: 사용자에게 "API 키를 다시 입력해주세요" 안내 + 손상된 `api_key_enc` 값 삭제
 
 ## 5. API 설계
 
@@ -315,11 +357,17 @@ story_game.user_profiles
 ### POST /api/game/chat (핵심 엔드포인트)
 
 **Request:**
-```json
+```
+POST /api/game/chat
+Headers:
+  X-Gemini-Key: sk-...          (익명 사용자만, 로그인 시 서버에서 자동 로드)
+  X-Session-Token: uuid         (익명 사용자의 세션 소유권 검증)
+  Authorization: Bearer <JWT>   (로그인 사용자, 선택)
+
+Body:
 {
   "sessionId": "uuid",
   "userMessage": "마을로 향한다",
-  "apiKey": "sk-...",
   "regenerate": false
 }
 ```
@@ -329,7 +377,7 @@ story_game.user_profiles
 | 이벤트 | 시점 | 데이터 |
 |--------|------|--------|
 | `token` | 스트리밍 중 | 텍스트 청크 |
-| `done` | 응답 완료 | 토큰 사용량 |
+| `done` | 응답 완료 | 토큰 사용량, sessionToken (game/start만) |
 | `memory` | 메모리 트리거 시 | 상태 알림 |
 | `memory_complete` | 메모리 생성 완료 | 4카테고리 데이터 |
 | `error` | 에러 발생 | 에러 코드 + 메시지 |
@@ -344,6 +392,20 @@ story_game.user_profiles
 | `INVALID_API_KEY` | 400 | Gemini API 키 무효 |
 | `GEMINI_ERROR` | 502 | Gemini API 오류 |
 | `SESSION_LIMIT` | 400 | 메시지 한도 초과 |
+| `RATE_LIMITED` | 429 | 요청 빈도 초과 |
+
+### GET /api/health (운영)
+
+```json
+{
+  "status": "ok",
+  "supabase": "connected",
+  "uptime": 3600,
+  "version": "1.0.0"
+}
+```
+
+Docker 헬스체크, 모니터링에 사용. Supabase 연결 상태를 포함.
 
 ## 6. UI/UX 6팀 리뷰 프로세스
 
@@ -387,7 +449,77 @@ Phase 4: 사용자 선택 → React 컴포넌트로 전환
 - 우측 설정 패널 (플레이 가이드, 유저 노트, 출력량 조절, 메모리 등)
 - 이미지 기능은 제외
 
-## 7. 배포 (Docker, 추후 진행)
+**HTML 산출물 관리:**
+- 24개 HTML → 8개 최종안은 `docs/ui-designs/` 디렉토리에 저장
+- 사용자 선택 완료 후 불필요한 파일 정리
+- 선택된 디자인만 git에 레퍼런스로 보관
+
+## 7. 데이터 마이그레이션
+
+### 마이그레이션 전략
+
+기존 Supabase Cloud (public 스키마) → OCI 셀프호스팅 (story_game 스키마) 데이터 이전:
+
+```
+1. OCI Supabase에 story_game 스키마 + 테이블 생성
+2. 기존 Cloud에서 데이터 export (pg_dump --data-only)
+3. OCI에 데이터 import (스키마 매핑: public.* → story_game.*)
+4. owner_uid 매핑: 기존 UUID → 새 Supabase Auth 사용자 ID
+   (초기에는 1:1 매핑 테이블로 처리, 기존 사용자가 새로 가입 시 연결)
+5. config 테이블의 prompt_config, gameplay_config 데이터 확인
+6. 검증: 데이터 건수 비교, 핵심 데이터 무결성 체크
+```
+
+### 전환 계획
+
+- **점진적 전환**: 새 시스템 개발 중에도 기존 서비스는 유지
+- **전환 시점**: 새 시스템 테스트 완료 후 점검 시간 공지 → 최종 데이터 동기화 → DNS 전환
+- **롤백**: 기존 Cloudflare Workers 배포를 즉시 복원 가능하도록 유지 (최소 1개월)
+
+### 마이그레이션 스크립트
+
+`supabase/migrations/` 디렉토리에 마이그레이션 SQL 파일 관리:
+- `00000000000001_create_story_game_schema.sql` — 스키마 + 테이블 생성
+- `00000000000002_create_user_profiles.sql` — user_profiles 테이블
+- `00000000000003_setup_rls.sql` — RLS 정책 설정
+- `00000000000004_seed_config.sql` — 기본 config 데이터
+- `00000000000005_add_session_token.sql` — sessions 테이블에 session_token 컬럼 + 인덱스
+
+## 8. 타입 공유 (Monorepo)
+
+### pnpm workspace 설정
+
+```
+ai-story-game2/
+├── pnpm-workspace.yaml
+├── packages/
+│   └── shared/
+│       ├── src/
+│       │   ├── types/
+│       │   │   ├── game.ts
+│       │   │   ├── story.ts
+│       │   │   ├── memory.ts
+│       │   │   └── api.ts        # API 요청/응답 타입
+│       │   └── index.ts
+│       ├── package.json          # "name": "@story-game/shared"
+│       └── tsconfig.json
+├── backend/
+│   └── package.json              # dependencies: "@story-game/shared": "workspace:*"
+├── frontend/
+│   └── package.json              # dependencies: "@story-game/shared": "workspace:*"
+```
+
+```yaml
+# pnpm-workspace.yaml
+packages:
+  - 'packages/*'
+  - 'backend'
+  - 'frontend'
+```
+
+백엔드와 프론트엔드가 동일한 API 타입을 참조하여 타입 불일치 방지.
+
+## 9. 배포 (Docker, 추후 진행)
 
 Docker 배포는 모든 개발/테스트 완료 후 마지막에 진행한다.
 
@@ -417,10 +549,10 @@ ai-story-game2/
 
 ```bash
 # 터미널 1: 백엔드
-cd backend && npm run dev     # → http://localhost:3000
+cd backend && pnpm dev     # → http://localhost:3000
 
 # 터미널 2: 프론트엔드
-cd frontend && npm run dev    # → http://localhost:5173
+cd frontend && pnpm dev    # → http://localhost:5173
 # Vite proxy: /api/* → localhost:3000
 ```
 
@@ -430,23 +562,35 @@ cd frontend && npm run dev    # → http://localhost:5173
 services:
   backend:
     build: ./backend
-    ports: ["3000:3000"]
+    expose: ["3000"]
     env_file: .env
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
-  frontend:
-    build: ./frontend
-    ports: ["80:80"]
-    depends_on: [backend]
+  nginx:
+    image: nginx:alpine
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/dist:/usr/share/nginx/html
+    depends_on:
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 ```
 
-- 프론트엔드 Dockerfile: Vite 빌드 → Nginx 이미지에 정적 파일 복사
-- Nginx: `/api/*` → backend:3000 프록시, 나머지 → React SPA 서빙
+- Nginx는 독립 컨테이너로 분리 (아키텍처 다이어그램과 일치)
+- 프론트엔드는 빌드 시 `npm run build` 후 `frontend/dist/`를 Nginx 볼륨 마운트
+- backend 헬스체크 통과 후 nginx 시작
 - 기존 OCI Supabase는 별도 운영 중이므로 compose에 미포함
 - 도메인 DNS 변경 또는 새 도메인 사용
+- TLS 인증서: Let's Encrypt (certbot) 또는 기존 인증서 사용
 
-## 8. 구현 순서
+## 10. 구현 순서
 
 ```
 1. 백엔드 API 구현 (Fastify + TypeScript)
