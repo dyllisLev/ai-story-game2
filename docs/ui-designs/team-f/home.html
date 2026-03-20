@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스토리 세계 — AI 스토리 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;700;900&family=Black+Han+Sans&family=Nanum+Myeongjo:wght@400;700;800&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0908;
+  --ink-2: #13110f;
+  --ink-3: #1e1a16;
+  --parchment: #f5edd6;
+  --parchment-2: #ede0c0;
+  --amber: #c9a84c;
+  --amber-glow: #e8c56d;
+  --cyan: #00d4ff;
+  --crimson: #c0392b;
+  --sage: #7a9e7e;
+  --text-primary: rgba(245, 237, 214, 0.95);
+  --text-secondary: rgba(245, 237, 214, 0.55);
+  --text-muted: rgba(245, 237, 214, 0.3);
+  --border: rgba(201, 168, 76, 0.2);
+  --border-hover: rgba(201, 168, 76, 0.5);
+  --glass: rgba(201, 168, 76, 0.04);
+  --glass-hover: rgba(201, 168, 76, 0.08);
+  --shadow-amber: 0 0 40px rgba(201, 168, 76, 0.15);
+  --shadow-deep: 0 20px 60px rgba(0,0,0,0.8);
+  --radius: 2px;
+  --radius-lg: 4px;
+  --font-display: 'Black Han Sans', serif;
+  --font-body: 'Noto Serif KR', serif;
+  --font-elegant: 'Nanum Myeongjo', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+[data-theme="light"] {
+  --ink: #f5edd6;
+  --ink-2: #ede0c0;
+  --ink-3: #e5d4a8;
+  --parchment: #1a1208;
+  --parchment-2: #2a1e0e;
+  --text-primary: rgba(26, 18, 8, 0.95);
+  --text-secondary: rgba(26, 18, 8, 0.6);
+  --text-muted: rgba(26, 18, 8, 0.35);
+  --border: rgba(140, 100, 30, 0.25);
+  --border-hover: rgba(140, 100, 30, 0.55);
+  --glass: rgba(140, 100, 30, 0.05);
+  --glass-hover: rgba(140, 100, 30, 0.1);
+  --amber: #8c641e;
+  --amber-glow: #a07828;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--ink);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* Grain texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.6;
+}
+
+/* Ambient light effects */
+.ambient-left {
+  position: fixed;
+  top: -20%;
+  left: -10%;
+  width: 50vw;
+  height: 70vh;
+  background: radial-gradient(ellipse, rgba(201,168,76,0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.ambient-right {
+  position: fixed;
+  bottom: -20%;
+  right: -10%;
+  width: 40vw;
+  height: 60vh;
+  background: radial-gradient(ellipse, rgba(0,212,255,0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0 48px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,9,8,0.85);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  text-decoration: none;
+}
+.logo-mark {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--amber);
+  letter-spacing: -0.5px;
+}
+.logo-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.nav-link {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 6px 16px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+  transition: all 0.2s;
+  position: relative;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: var(--amber);
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+.nav-link:hover { color: var(--amber); }
+.nav-link:hover::after { transform: scaleX(1); }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Theme toggle */
+.theme-toggle {
+  width: 40px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--ink-3);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s;
+  outline: none;
+}
+.theme-toggle:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+.theme-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--amber);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+}
+[data-theme="light"] .theme-toggle-thumb { transform: translateX(16px); }
+
+.btn-primary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  background: var(--amber);
+  color: var(--ink);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  font-weight: 700;
+}
+.btn-primary:hover {
+  background: var(--amber-glow);
+  box-shadow: 0 0 20px rgba(201,168,76,0.4);
+  transform: translateY(-1px);
+}
+.btn-primary:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+
+/* Hero section */
+.hero {
+  position: relative;
+  padding: 120px 48px 80px;
+  overflow: hidden;
+}
+
+/* Decorative scroll lines */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 60px,
+    rgba(201,168,76,0.02) 60px,
+    rgba(201,168,76,0.02) 61px
+  );
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  animation: fadeSlideUp 0.6s ease 0.1s forwards;
+}
+.hero-eyebrow::before {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: var(--amber);
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 8vw, 120px);
+  line-height: 0.9;
+  letter-spacing: -2px;
+  color: var(--text-primary);
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: fadeSlideUp 0.7s ease 0.2s forwards;
+}
+.hero-title .accent {
+  color: var(--amber);
+  position: relative;
+  display: inline-block;
+}
+.hero-title .accent::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  color: var(--cyan);
+  opacity: 0.15;
+  z-index: -1;
+}
+
+.hero-desc {
+  font-family: var(--font-elegant);
+  font-size: 18px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  max-width: 560px;
+  margin-bottom: 48px;
+  opacity: 0;
+  animation: fadeSlideUp 0.7s ease 0.35s forwards;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 48px;
+  opacity: 0;
+  animation: fadeSlideUp 0.7s ease 0.45s forwards;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 32px;
+  color: var(--amber);
+  line-height: 1;
+}
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Decorative ink brush stroke */
+.brush-stroke {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40vw;
+  height: 400px;
+  opacity: 0.06;
+  background: radial-gradient(ellipse 60% 80% at 60% 50%, var(--amber) 0%, transparent 100%);
+  filter: blur(60px);
+  pointer-events: none;
+  animation: breathe 6s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { opacity: 0.06; transform: translateY(-50%) scale(1); }
+  50% { opacity: 0.1; transform: translateY(-52%) scale(1.05); }
+}
+
+/* Search and filters */
+.controls-bar {
+  padding: 0 48px 40px;
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  flex-wrap: wrap;
+  opacity: 0;
+  animation: fadeSlideUp 0.7s ease 0.55s forwards;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+}
+.search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--amber);
+  opacity: 0.6;
+  font-size: 16px;
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  background: var(--ink-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  transition: all 0.2s;
+  outline: none;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+  background: var(--ink-3);
+}
+
+.filter-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--glass);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+  white-space: nowrap;
+}
+.filter-pill:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  background: var(--glass-hover);
+}
+.filter-pill.active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--ink);
+  font-weight: 700;
+}
+.filter-pill:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+
+/* Sort dropdown */
+.sort-select {
+  padding: 10px 36px 10px 16px;
+  background: var(--ink-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L2 4h8z' fill='%23c9a84c'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: all 0.2s;
+}
+.sort-select:focus {
+  border-color: var(--amber);
+  outline: 2px solid rgba(201,168,76,0.3);
+  outline-offset: 2px;
+}
+
+/* Story grid */
+.stories-section {
+  padding: 0 48px 80px;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.section-title {
+  font-family: var(--font-elegant);
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.section-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--amber);
+}
+
+.stories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* Story card — the hero element */
+.story-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--ink-2);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  outline: none;
+}
+.story-card:focus-visible { outline: 2px solid var(--amber); outline-offset: 4px; }
+.story-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-deep), var(--shadow-amber);
+}
+.story-card:hover .card-glow { opacity: 1; }
+.story-card:hover .card-art { transform: scale(1.05); }
+.story-card:hover .card-cta { opacity: 1; transform: translateY(0); }
+
+.card-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(201,168,76,0.08) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+
+.card-art-container {
+  height: 180px;
+  overflow: hidden;
+  position: relative;
+  background: var(--ink-3);
+}
+.card-art {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  position: relative;
+}
+.card-art-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, var(--ink-2) 100%);
+}
+
+/* Unique art styles per genre */
+.card-art.fantasy {
+  background: linear-gradient(135deg, #1a0a2e, #2d1654, #0d1a3d);
+}
+.card-art.romance {
+  background: linear-gradient(135deg, #2d0a16, #4a1529, #1a0d20);
+}
+.card-art.mystery {
+  background: linear-gradient(135deg, #0a0f1a, #0f1e2d, #050a10);
+}
+.card-art.historical {
+  background: linear-gradient(135deg, #1a1205, #2d2010, #0f0c05);
+}
+.card-art.scifi {
+  background: linear-gradient(135deg, #030f1a, #071a2d, #030d1a);
+}
+
+/* Particle decorations in cards */
+.card-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.card-particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: float var(--duration, 4s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); opacity: var(--opacity, 0.4); }
+  50% { transform: translateY(-15px) scale(1.1); opacity: calc(var(--opacity, 0.4) * 0.6); }
+}
+
+.card-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.badge-new { background: var(--cyan); color: var(--ink); }
+.badge-hot { background: var(--crimson); color: white; }
+.badge-classic { background: var(--amber); color: var(--ink); }
+
+.card-body {
+  padding: 20px 20px 24px;
+}
+
+.card-genre {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-genre::before {
+  content: '';
+  width: 16px;
+  height: 1px;
+  background: var(--amber);
+}
+
+.card-title {
+  font-family: var(--font-elegant);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.card-desc {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.card-tag {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.card-stats {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.card-stat {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.card-stat svg { opacity: 0.5; }
+
+.card-cta {
+  position: absolute;
+  bottom: 24px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px rgba(201,168,76,0.5);
+}
+
+/* Featured story — large card */
+.story-card.featured {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.story-card.featured .card-art-container {
+  height: auto;
+  min-height: 280px;
+}
+.story-card.featured .card-body {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.story-card.featured .card-title { font-size: 28px; }
+.story-card.featured .card-desc { -webkit-line-clamp: 4; font-size: 15px; }
+
+/* Scroll reveal animation */
+.story-card {
+  opacity: 0;
+  transform: translateY(20px);
+}
+.story-card.revealed {
+  animation: cardReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes cardReveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Ambient scrolling text */
+.marquee-section {
+  padding: 40px 0;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 80px;
+}
+.marquee-track {
+  display: flex;
+  gap: 60px;
+  animation: marquee 30s linear infinite;
+  white-space: nowrap;
+}
+.marquee-track:hover { animation-play-state: paused; }
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-item {
+  font-family: var(--font-elegant);
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  flex-shrink: 0;
+}
+.marquee-dot {
+  color: var(--amber);
+}
+
+/* Keyframes */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Footer */
+.site-footer {
+  padding: 40px 48px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+.footer-link {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-link:hover { color: var(--amber); }
+
+/* Loading skeleton */
+.skeleton-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--ink-2);
+  overflow: hidden;
+}
+.skeleton-art { height: 180px; background: var(--ink-3); }
+.skeleton-body { padding: 20px; }
+.skeleton-line {
+  height: 12px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--ink-3) 25%, var(--ink-2) 50%, var(--ink-3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  margin-bottom: 10px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-40 { width: 40%; }
+
+/* Accessible skip link */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  padding: 8px 16px;
+  background: var(--amber);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  z-index: 10000;
+  transition: top 0.2s;
+}
+.skip-link:focus { top: 16px; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.5); }
+
+/* Ripple effect */
+.ripple-container { position: relative; overflow: hidden; }
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(201,168,76,0.3);
+  transform: scale(0);
+  animation: rippleOut 0.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes rippleOut {
+  to { transform: scale(4); opacity: 0; }
+}
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
+<div class="ambient-left" aria-hidden="true"></div>
+<div class="ambient-right" aria-hidden="true"></div>
+
+<header class="site-header" role="banner">
+  <a href="#" class="logo" aria-label="AI 스토리 게임 홈">
+    <span class="logo-mark">墨想</span>
+    <span class="logo-sub">AI STORY</span>
+  </a>
+  <nav class="header-nav" role="navigation" aria-label="주 내비게이션">
+    <a href="#" class="nav-link">스토리</a>
+    <a href="editor.html" class="nav-link">에디터</a>
+    <a href="admin.html" class="nav-link">관리</a>
+  </nav>
+  <div class="header-actions">
+    <button
+      class="theme-toggle"
+      id="themeToggle"
+      aria-label="라이트 테마로 전환"
+      aria-pressed="false"
+    >
+      <div class="theme-toggle-thumb" aria-hidden="true">☀</div>
+    </button>
+    <a href="play.html" class="btn-primary ripple-container">
+      플레이 시작
+    </a>
+  </div>
+</header>
+
+<main id="main-content">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="brush-stroke" aria-hidden="true"></div>
+    <p class="hero-eyebrow" aria-hidden="true">AI 인터랙티브 픽션</p>
+    <h1 class="hero-title" id="hero-title">
+      <span class="accent" data-text="당신의">당신의</span><br>이야기가<br>시작된다
+    </h1>
+    <p class="hero-desc">
+      인공지능이 직조하는 무한한 서사의 세계. 매 선택마다 달라지는 운명, 당신이 주인공이 되는 이야기 속으로 들어오세요.
+    </p>
+    <div class="hero-stats" role="group" aria-label="서비스 통계">
+      <div class="stat">
+        <span class="stat-value">247</span>
+        <span class="stat-label">스토리</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">18K</span>
+        <span class="stat-label">플레이어</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">∞</span>
+        <span class="stat-label">가능성</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="marquee-section" aria-hidden="true">
+    <div class="marquee-track">
+      <span class="marquee-item">판타지 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">로맨스 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">미스터리 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">역사 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">SF <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">호러 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">무협 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">현대 드라마 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">판타지 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">로맨스 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">미스터리 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">역사 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">SF <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">호러 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">무협 <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">현대 드라마 <span class="marquee-dot">◆</span></span>
+    </div>
+  </div>
+
+  <section class="controls-bar" aria-label="스토리 검색 및 필터">
+    <div class="search-container">
+      <span class="search-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M11 11L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <label for="story-search" class="sr-only">스토리 검색</label>
+      <input
+        id="story-search"
+        class="search-input"
+        type="search"
+        placeholder="스토리 제목, 장르, 태그 검색..."
+        aria-label="스토리 검색"
+        autocomplete="off"
+      >
+    </div>
+    <div class="filter-group" role="group" aria-label="장르 필터">
+      <button class="filter-pill active" data-filter="all" aria-pressed="true">전체</button>
+      <button class="filter-pill" data-filter="fantasy" aria-pressed="false">판타지</button>
+      <button class="filter-pill" data-filter="romance" aria-pressed="false">로맨스</button>
+      <button class="filter-pill" data-filter="mystery" aria-pressed="false">미스터리</button>
+      <button class="filter-pill" data-filter="historical" aria-pressed="false">역사</button>
+      <button class="filter-pill" data-filter="scifi" aria-pressed="false">SF</button>
+    </div>
+    <label for="sort-select" class="sr-only">정렬 기준</label>
+    <select id="sort-select" class="sort-select" aria-label="정렬 기준">
+      <option>인기순</option>
+      <option>최신순</option>
+      <option>평점순</option>
+      <option>플레이 수</option>
+    </select>
+  </section>
+
+  <section class="stories-section" aria-label="스토리 목록">
+    <div class="section-header">
+      <h2 class="section-title">모든 스토리</h2>
+      <span class="section-count" aria-live="polite">247개</span>
+    </div>
+    <div class="stories-grid" id="storiesGrid" role="list">
+
+      <!-- Featured story -->
+      <article class="story-card featured ripple-container" role="listitem" tabindex="0" aria-label="이계의 군주 — 추천 스토리">
+        <div class="card-art-container">
+          <div class="card-art fantasy">
+            <div class="card-particles" aria-hidden="true">
+              <div class="card-particle" style="width:4px;height:4px;background:#c9a84c;top:30%;left:20%;--duration:3s;--delay:0s;--opacity:0.6;"></div>
+              <div class="card-particle" style="width:3px;height:3px;background:#00d4ff;top:60%;left:40%;--duration:4s;--delay:1s;--opacity:0.4;"></div>
+              <div class="card-particle" style="width:5px;height:5px;background:#9b59b6;top:20%;left:70%;--duration:5s;--delay:0.5s;--opacity:0.5;"></div>
+              <div class="card-particle" style="width:2px;height:2px;background:#c9a84c;top:75%;left:60%;--duration:3.5s;--delay:2s;--opacity:0.4;"></div>
+              <div class="card-particle" style="width:6px;height:6px;background:#4a1a8f;top:50%;left:85%;--duration:6s;--delay:1.5s;--opacity:0.3;"></div>
+            </div>
+            <span style="filter:drop-shadow(0 0 20px rgba(201,168,76,0.8))">👑</span>
+          </div>
+          <div class="card-art-overlay"></div>
+        </div>
+        <div class="card-glow"></div>
+        <div class="card-badge badge-hot">HOT</div>
+        <div class="card-body">
+          <p class="card-genre">판타지 · 이세계</p>
+          <h3 class="card-title">이계의 군주: 마검의 각성</h3>
+          <p class="card-desc">
+            현대 직장인 강민준은 갑작스럽게 마법과 검이 공존하는 이세계로 소환된다. 그가 선택하는 모든 순간이 왕국의 운명을 결정짓는 분기점이 된다. 동맹을 맺을 것인가, 단독으로 싸울 것인가—모든 결정은 당신의 것이다.
+          </p>
+          <div class="card-meta">
+            <div class="card-tags">
+              <span class="card-tag">이세계</span>
+              <span class="card-tag">전투</span>
+              <span class="card-tag">성장</span>
+            </div>
+            <div class="card-stats">
+              <span class="card-stat">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9 3 10.5l.5-3.5L1 4.5 4.5 4z" fill="currentColor"/></svg>
+                4.8
+              </span>
+              <span class="card-stat">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2C3.8 2 2 3.8 2 6s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm0 7C4.3 9 3 7.7 3 6s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z" fill="currentColor" opacity=".5"/><path d="M6 4v2.5l1.5 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+                약 45분
+              </span>
+              <span class="card-stat">8.2K</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-cta" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </article>
+
+      <!-- Regular cards -->
+      <article class="story-card ripple-container" role="listitem" tabindex="0" aria-label="달빛 연서 스토리">
+        <div class="card-art-container">
+          <div class="card-art romance">
+            <div class="card-particles" aria-hidden="true">
+              <div class="card-particle" style="width:3px;height:3px;background:#e91e8c;top:25%;left:30%;--duration:4s;--delay:0s;--opacity:0.5;"></div>
+              <div class="card-particle" style="width:4px;height:4px;background:#f48fb1;top:65%;left:60%;--duration:5s;--delay:1s;--opacity:0.4;"></div>
+            </div>
+            <span style="filter:drop-shadow(0 0 20px rgba(233,30,140,0.6))">🌹</span>
+          </div>
+          <div class="card-art-overlay"></div>
+        </div>
+        <div class="card-glow"></div>
+        <div class="card-badge badge-new">NEW</div>
+        <div class="card-body">
+          <p class="card-genre">로맨스</p>
+          <h3 class="card-title">달빛 연서</h3>
+          <p class="card-desc">조선 시대 사대부가의 숨겨진 사랑. 신분의 벽을 넘어 피어나는 감정들.</p>
+          <div class="card-meta">
+            <div class="card-tags">
+              <span class="card-tag">역사</span>
+              <span class="card-tag">로맨스</span>
+            </div>
+            <div class="card-stats">
+              <span class="card-stat">★ 4.9</span>
+              <span class="card-stat">3.1K</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-cta" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </article>
+
+      <article class="story-card ripple-container" role="listitem" tabindex="0" aria-label="심연의 탐정 스토리">
+        <div class="card-art-container">
+          <div class="card-art mystery">
+            <div class="card-particles" aria-hidden="true">
+              <div class="card-particle" style="width:2px;height:2px;background:#00d4ff;top:40%;left:25%;--duration:6s;--delay:0.5s;--opacity:0.3;"></div>
+              <div class="card-particle" style="width:3px;height:3px;background:#607d8b;top:70%;left:70%;--duration:4s;--delay:2s;--opacity:0.25;"></div>
+            </div>
+            <span style="filter:drop-shadow(0 0 20px rgba(0,212,255,0.4))">🔍</span>
+          </div>
+          <div class="card-art-overlay"></div>
+        </div>
+        <div class="card-glow"></div>
+        <div class="card-body">
+          <p class="card-genre">미스터리 · 스릴러</p>
+          <h3 class="card-title">심연의 탐정</h3>
+          <p class="card-desc">연쇄살인마를 추적하는 프로파일러. 범인은 생각보다 훨씬 가까운 곳에 있다.</p>
+          <div class="card-meta">
+            <div class="card-tags">
+              <span class="card-tag">범죄</span>
+              <span class="card-tag">추리</span>
+            </div>
+            <div class="card-stats">
+              <span class="card-stat">★ 4.7</span>
+              <span class="card-stat">2.4K</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-cta" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </article>
+
+      <article class="story-card ripple-container" role="listitem" tabindex="0" aria-label="별들의 전쟁 스토리">
+        <div class="card-art-container">
+          <div class="card-art scifi">
+            <div class="card-particles" aria-hidden="true">
+              <div class="card-particle" style="width:2px;height:2px;background:#00d4ff;top:20%;left:15%;--duration:3s;--delay:0s;--opacity:0.7;"></div>
+              <div class="card-particle" style="width:2px;height:2px;background:#fff;top:50%;left:80%;--duration:4s;--delay:1s;--opacity:0.5;"></div>
+              <div class="card-particle" style="width:3px;height:3px;background:#00d4ff;top:80%;left:45%;--duration:5s;--delay:0.5s;--opacity:0.4;"></div>
+            </div>
+            <span style="filter:drop-shadow(0 0 20px rgba(0,212,255,0.8))">🚀</span>
+          </div>
+          <div class="card-art-overlay"></div>
+        </div>
+        <div class="card-glow"></div>
+        <div class="card-badge badge-classic">CLASSIC</div>
+        <div class="card-body">
+          <p class="card-genre">SF · 우주</p>
+          <h3 class="card-title">별들의 전쟁</h3>
+          <p class="card-desc">인류의 마지막 함대를 지휘하라. 은하계를 걸친 문명의 명운이 당신 손에.</p>
+          <div class="card-meta">
+            <div class="card-tags">
+              <span class="card-tag">전략</span>
+              <span class="card-tag">SF</span>
+            </div>
+            <div class="card-stats">
+              <span class="card-stat">★ 4.6</span>
+              <span class="card-stat">5.7K</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-cta" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </article>
+
+      <article class="story-card ripple-container" role="listitem" tabindex="0" aria-label="고려검왕전 스토리">
+        <div class="card-art-container">
+          <div class="card-art historical">
+            <div class="card-particles" aria-hidden="true">
+              <div class="card-particle" style="width:3px;height:3px;background:#c9a84c;top:35%;left:25%;--duration:5s;--delay:1s;--opacity:0.5;"></div>
+              <div class="card-particle" style="width:4px;height:4px;background:#a0522d;top:60%;left:65%;--duration:4s;--delay:0.5s;--opacity:0.4;"></div>
+            </div>
+            <span style="filter:drop-shadow(0 0 20px rgba(201,168,76,0.6))">⚔️</span>
+          </div>
+          <div class="card-art-overlay"></div>
+        </div>
+        <div class="card-glow"></div>
+        <div class="card-body">
+          <p class="card-genre">역사 · 무협</p>
+          <h3 class="card-title">고려검왕전</h3>
+          <p class="card-desc">고려 말 혼란의 시대, 천하제일의 검객이 되어 나라를 구하는 대서사시.</p>
+          <div class="card-meta">
+            <div class="card-tags">
+              <span class="card-tag">역사</span>
+              <span class="card-tag">액션</span>
+            </div>
+            <div class="card-stats">
+              <span class="card-stat">★ 4.5</span>
+              <span class="card-stat">1.8K</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-cta" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </article>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer" role="contentinfo">
+  <p class="footer-text">© 2026 묵상 AI STORY — 모든 이야기는 당신에게서 시작됩니다</p>
+  <nav class="footer-links" aria-label="하단 내비게이션">
+    <a href="#" class="footer-link">이용약관</a>
+    <a href="#" class="footer-link">개인정보처리방침</a>
+    <a href="admin.html" class="footer-link">관리자</a>
+  </nav>
+</footer>
+
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}</style>
+
+<script>
+// Theme toggle
+const toggle = document.getElementById('themeToggle');
+const html = document.documentElement;
+toggle.addEventListener('click', () => {
+  const isDark = html.dataset.theme === 'dark';
+  html.dataset.theme = isDark ? 'light' : 'dark';
+  toggle.setAttribute('aria-label', isDark ? '다크 테마로 전환' : '라이트 테마로 전환');
+  toggle.setAttribute('aria-pressed', !isDark);
+});
+
+// Filter pills
+document.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.filter-pill').forEach(p => {
+      p.classList.remove('active');
+      p.setAttribute('aria-pressed', 'false');
+    });
+    pill.classList.add('active');
+    pill.setAttribute('aria-pressed', 'true');
+  });
+});
+
+// Scroll reveal with IntersectionObserver
+const cards = document.querySelectorAll('.story-card');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => {
+        entry.target.classList.add('revealed');
+      }, Array.from(cards).indexOf(entry.target) * 80);
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+cards.forEach(card => observer.observe(card));
+
+// Ripple effect
+document.querySelectorAll('.ripple-container').forEach(el => {
+  el.addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const ripple = document.createElement('div');
+    ripple.className = 'ripple';
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.cssText = `
+      width: ${size}px; height: ${size}px;
+      left: ${e.clientX - rect.left - size/2}px;
+      top: ${e.clientY - rect.top - size/2}px;
+    `;
+    this.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  });
+});
+
+// Keyboard navigation for cards
+cards.forEach(card => {
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      card.click();
+    }
+  });
+});
+
+// Search live filter simulation
+const searchInput = document.getElementById('story-search');
+const countEl = document.querySelector('.section-count');
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  let visible = 0;
+  cards.forEach(card => {
+    const title = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
+    const show = q === '' || title.includes(q);
+    card.style.opacity = show ? '' : '0.3';
+    if (show) visible++;
+  });
+  countEl.textContent = `${visible}개`;
+});
+</script>
+</body>
+</html>

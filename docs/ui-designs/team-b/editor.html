@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스토리 에디터 — Scriptorium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=IM+Fell+English:ital@0;1&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-void: #08070A;
+  --bg-deep: #0D0B0F;
+  --bg-surface: #111018;
+  --bg-raised: #171520;
+  --bg-elevated: #1D1A28;
+  --bg-panel: #0F0E15;
+  --border-faint: rgba(255,255,255,0.03);
+  --border-subtle: rgba(255,255,255,0.07);
+  --border-medium: rgba(255,255,255,0.12);
+  --border-strong: rgba(255,255,255,0.22);
+  --text-ghost: rgba(255,255,255,0.16);
+  --text-muted: rgba(255,255,255,0.34);
+  --text-dim: rgba(255,255,255,0.52);
+  --text-body: rgba(255,255,255,0.75);
+  --text-heading: rgba(255,255,255,0.90);
+  --accent: #C8852A;
+  --accent-glow: rgba(200,133,42,0.14);
+  --accent-soft: rgba(200,133,42,0.07);
+  --accent-bright: #E09832;
+  --accent-dim: rgba(200,133,42,0.45);
+  --success: #4A9B6A;
+  --danger: #9B4A4A;
+  --font-serif: 'Noto Serif KR', Georgia, serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-fell: 'IM Fell English', Georgia, serif;
+  --font-sans: 'Noto Sans KR', sans-serif;
+  --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme="light"] {
+  --bg-void: #F2EDE3; --bg-deep: #EAE3D6; --bg-surface: #E2D9C8;
+  --bg-raised: #D8CEB8; --bg-elevated: #CEC3AA; --bg-panel: #EDE7DA;
+  --border-faint: rgba(0,0,0,0.04); --border-subtle: rgba(0,0,0,0.08);
+  --border-medium: rgba(0,0,0,0.13); --border-strong: rgba(0,0,0,0.22);
+  --text-ghost: rgba(0,0,0,0.14); --text-muted: rgba(0,0,0,0.35);
+  --text-dim: rgba(0,0,0,0.52); --text-body: rgba(0,0,0,0.76);
+  --text-heading: rgba(0,0,0,0.90); --accent: #9A5C18;
+  --accent-glow: rgba(154,92,24,0.10); --accent-soft: rgba(154,92,24,0.06);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font-serif); background: var(--bg-void); color: var(--text-body); display: flex; flex-direction: column; }
+
+/* Grain */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  height: 52px; flex-shrink: 0; display: flex; align-items: center;
+  padding: 0 20px; border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-void); gap: 12px; z-index: 50;
+}
+.topbar-back {
+  display: flex; align-items: center; gap: 6px; color: var(--text-dim);
+  font-family: var(--font-fell); font-size: 12px; cursor: pointer;
+  transition: var(--transition); padding: 5px 10px; border-radius: 5px;
+  border: 1px solid transparent;
+}
+.topbar-back:hover { color: var(--accent); border-color: var(--border-subtle); }
+.topbar-divider { width: 1px; height: 20px; background: var(--border-subtle); flex-shrink: 0; }
+.topbar-title { flex: 1; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text-heading); }
+.topbar-status {
+  font-family: var(--font-fell); font-size: 11px; color: var(--text-muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.btn-ghost {
+  height: 32px; padding: 0 14px; border-radius: 6px;
+  border: 1px solid var(--border-medium); background: transparent;
+  color: var(--text-dim); font-family: var(--font-fell); font-size: 11px;
+  letter-spacing: 0.06em; cursor: pointer; transition: var(--transition);
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-amber {
+  height: 32px; padding: 0 16px; border-radius: 6px; border: none;
+  background: var(--accent); color: #0D0B0F; font-family: var(--font-fell);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer;
+  transition: var(--transition); display: flex; align-items: center; gap: 5px;
+}
+.btn-amber:hover { background: var(--accent-bright); transform: translateY(-1px); box-shadow: 0 4px 14px var(--accent-glow); }
+
+/* ── LAYOUT ── */
+.layout { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+/* ── LEFT SIDEBAR — OUTLINE / STRUCTURE ── */
+.sidebar {
+  width: 240px; flex-shrink: 0; border-right: 1px solid var(--border-subtle);
+  background: var(--bg-panel); display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-section {
+  border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
+}
+.sidebar-section-header {
+  padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+}
+.sidebar-section-title {
+  font-family: var(--font-fell); font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.sidebar-section-action {
+  width: 20px; height: 20px; border-radius: 3px; border: 1px solid transparent;
+  background: transparent; color: var(--text-muted); display: flex;
+  align-items: center; justify-content: center; cursor: pointer; transition: var(--transition);
+}
+.sidebar-section-action:hover { border-color: var(--accent); color: var(--accent); }
+.sidebar-section-body { padding: 0 8px 8px; }
+
+/* Chapter list */
+.chapter-list { display: flex; flex-direction: column; gap: 2px; }
+.chapter-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 8px;
+  border-radius: 5px; cursor: pointer; transition: var(--transition);
+  border: 1px solid transparent;
+}
+.chapter-item:hover { background: var(--bg-raised); }
+.chapter-item.active { background: var(--accent-soft); border-color: var(--accent-dim); }
+.chapter-item.active .chapter-num { color: var(--accent); }
+.chapter-num { font-family: var(--font-fell); font-size: 10px; color: var(--text-ghost); width: 18px; flex-shrink: 0; }
+.chapter-name { font-family: var(--font-serif); font-size: 12px; color: var(--text-body); flex: 1; font-weight: 400; }
+.chapter-words { font-family: var(--font-fell); font-size: 9px; color: var(--text-ghost); }
+
+.add-chapter-btn {
+  width: 100%; height: 28px; border: 1px dashed var(--border-medium);
+  border-radius: 5px; background: transparent; color: var(--text-muted);
+  font-family: var(--font-fell); font-size: 10px; letter-spacing: 0.08em;
+  cursor: pointer; transition: var(--transition); display: flex;
+  align-items: center; justify-content: center; gap: 5px; margin-top: 4px;
+}
+.add-chapter-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* Character list */
+.char-list { display: flex; flex-direction: column; gap: 4px; }
+.char-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  border-radius: 5px; cursor: pointer; transition: var(--transition);
+}
+.char-item:hover { background: var(--bg-raised); }
+.char-thumb {
+  width: 24px; height: 24px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.char-item-name { font-family: var(--font-serif); font-size: 12px; color: var(--text-body); flex: 1; }
+.char-item-role { font-family: var(--font-fell); font-size: 9px; color: var(--text-muted); }
+
+/* Metadata */
+.meta-list { display: flex; flex-direction: column; gap: 6px; padding: 0 8px 8px; }
+.meta-item { display: flex; align-items: center; gap: 8px; }
+.meta-key { font-family: var(--font-fell); font-size: 10px; color: var(--text-muted); width: 52px; flex-shrink: 0; }
+.meta-val { font-family: var(--font-serif); font-size: 11px; color: var(--text-dim); }
+.meta-bar { flex: 1; height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden; }
+.meta-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+
+/* Sidebar flex footer */
+.sidebar-scroll { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-medium) transparent; }
+
+/* ── CENTER — MAIN EDITOR ── */
+.editor-main {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+  background: var(--bg-deep);
+}
+
+/* Tab bar (Basic info / System prompt / Chapters) */
+.editor-tabs {
+  height: 44px; flex-shrink: 0; display: flex; border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-void); padding: 0 20px; gap: 4px; align-items: flex-end;
+}
+.editor-tab {
+  height: 40px; padding: 0 16px; display: flex; align-items: center;
+  font-family: var(--font-fell); font-size: 11px; letter-spacing: 0.08em;
+  color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: var(--transition); white-space: nowrap;
+}
+.editor-tab:hover { color: var(--text-body); }
+.editor-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.editor-scroll { flex: 1; overflow-y: auto; padding: 32px 0 60px; scrollbar-width: thin; scrollbar-color: var(--border-medium) transparent; }
+.editor-inner { max-width: 720px; margin: 0 auto; padding: 0 32px; }
+
+/* ── FORM ELEMENTS ── */
+.form-group { margin-bottom: 28px; }
+.form-label {
+  display: block; font-family: var(--font-fell); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+}
+.form-label-desc {
+  font-family: var(--font-fell); font-style: italic; font-size: 10px;
+  color: var(--text-ghost); text-transform: none; letter-spacing: 0.04em; margin-top: 1px;
+}
+.form-required { color: var(--accent); font-size: 12px; }
+.form-input {
+  width: 100%; height: 40px; background: var(--bg-raised);
+  border: 1px solid var(--border-medium); border-radius: 6px;
+  padding: 0 14px; font-family: var(--font-serif); font-size: 14px;
+  color: var(--text-body); outline: none; transition: var(--transition);
+}
+.form-input::placeholder { color: var(--text-muted); font-style: italic; }
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.form-textarea {
+  width: 100%; background: var(--bg-raised); border: 1px solid var(--border-medium);
+  border-radius: 6px; padding: 12px 14px; font-family: var(--font-serif); font-size: 14px;
+  color: var(--text-body); outline: none; resize: vertical; line-height: 1.7;
+  transition: var(--transition); min-height: 100px;
+}
+.form-textarea::placeholder { color: var(--text-muted); font-style: italic; }
+.form-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* Select */
+.form-select {
+  width: 100%; height: 40px; background: var(--bg-raised);
+  border: 1px solid var(--border-medium); border-radius: 6px;
+  padding: 0 14px; font-family: var(--font-serif); font-size: 14px;
+  color: var(--text-body); outline: none; appearance: none; cursor: pointer;
+  transition: var(--transition);
+}
+.form-select:focus { border-color: var(--accent); }
+.select-wrap { position: relative; }
+.select-arrow {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); pointer-events: none;
+}
+
+/* Row */
+.form-row { display: grid; gap: 16px; }
+.form-row-2 { grid-template-columns: 1fr 1fr; }
+.form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* Section divider */
+.editor-section {
+  margin-bottom: 36px; padding-bottom: 36px;
+  border-bottom: 1px solid var(--border-faint);
+}
+.editor-section:last-child { border-bottom: none; }
+.editor-section-title {
+  font-family: var(--font-display); font-size: 18px; font-weight: 700;
+  color: var(--text-heading); margin-bottom: 4px; display: flex; align-items: center; gap: 10px;
+}
+.editor-section-title::before {
+  content: ''; display: inline-block; width: 3px; height: 18px;
+  background: var(--accent); border-radius: 2px;
+}
+.editor-section-desc {
+  font-family: var(--font-fell); font-style: italic; font-size: 12px;
+  color: var(--text-muted); margin-bottom: 20px; margin-left: 13px;
+}
+
+/* Genre pills */
+.genre-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.genre-pill {
+  height: 32px; padding: 0 14px; border-radius: 16px;
+  border: 1px solid var(--border-medium); background: var(--bg-raised);
+  font-family: var(--font-serif); font-size: 12px; color: var(--text-dim);
+  cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 5px;
+}
+.genre-pill:hover { border-color: var(--accent-dim); color: var(--text-body); }
+.genre-pill.selected { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+/* Tags input */
+.tags-wrap {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px;
+  background: var(--bg-raised); border: 1px solid var(--border-medium);
+  border-radius: 6px; cursor: text; min-height: 42px; align-items: center;
+  transition: var(--transition);
+}
+.tags-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.tag-item {
+  display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px;
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+  border-radius: 4px; font-family: var(--font-serif); font-size: 11px; color: var(--text-dim);
+}
+.tag-remove {
+  width: 14px; height: 14px; border-radius: 50%; background: transparent; border: none;
+  color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; transition: var(--transition);
+}
+.tag-remove:hover { background: var(--danger); color: white; }
+.tag-input {
+  border: none; background: transparent; outline: none; font-family: var(--font-serif);
+  font-size: 12px; color: var(--text-body); min-width: 80px; flex: 1;
+}
+.tag-input::placeholder { color: var(--text-ghost); font-style: italic; }
+
+/* Rich text toolbar */
+.richtext-wrap { border: 1px solid var(--border-medium); border-radius: 6px; overflow: hidden; background: var(--bg-raised); }
+.richtext-toolbar {
+  padding: 6px 10px; border-bottom: 1px solid var(--border-subtle);
+  display: flex; gap: 4px; align-items: center; flex-wrap: wrap; background: var(--bg-elevated);
+}
+.rt-btn {
+  width: 28px; height: 24px; border-radius: 4px; border: none; background: transparent;
+  color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: var(--transition); font-size: 12px;
+}
+.rt-btn:hover { background: var(--bg-raised); color: var(--text-body); }
+.rt-btn.active { background: var(--accent-soft); color: var(--accent); }
+.rt-divider { width: 1px; height: 18px; background: var(--border-subtle); margin: 0 2px; }
+.rt-label {
+  font-family: var(--font-fell); font-size: 10px; color: var(--text-muted);
+  letter-spacing: 0.08em; padding: 0 4px;
+}
+.richtext-area {
+  width: 100%; min-height: 160px; padding: 14px 16px;
+  font-family: var(--font-serif); font-size: 14px; color: var(--text-body);
+  line-height: 1.8; border: none; outline: none; background: transparent;
+  resize: vertical;
+}
+.richtext-area::placeholder { color: var(--text-muted); font-style: italic; }
+
+/* Character card in editor */
+.char-editor-card {
+  background: var(--bg-raised); border: 1px solid var(--border-subtle);
+  border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative;
+  transition: var(--transition);
+}
+.char-editor-card:hover { border-color: var(--border-medium); }
+.char-editor-card-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+}
+.char-portrait-large {
+  width: 48px; height: 48px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 22px; font-weight: 700; flex-shrink: 0;
+}
+.char-delete {
+  position: absolute; top: 12px; right: 12px; width: 24px; height: 24px;
+  border-radius: 50%; border: 1px solid transparent; background: transparent;
+  color: var(--text-ghost); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: var(--transition); font-size: 10px;
+}
+.char-delete:hover { border-color: var(--danger); color: var(--danger); background: rgba(155,74,74,0.1); }
+
+.add-char-btn {
+  width: 100%; height: 40px; border: 1px dashed var(--border-medium);
+  border-radius: 8px; background: transparent; color: var(--text-muted);
+  font-family: var(--font-fell); font-size: 11px; letter-spacing: 0.08em;
+  cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.add-char-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* Tone sliders */
+.tone-sliders { display: flex; flex-direction: column; gap: 12px; }
+.tone-row { display: flex; align-items: center; gap: 12px; }
+.tone-labels { display: flex; justify-content: space-between; width: 100%; }
+.tone-label { font-family: var(--font-fell); font-size: 10px; color: var(--text-muted); }
+.tone-slider {
+  -webkit-appearance: none; width: 100%; height: 4px;
+  background: linear-gradient(90deg, var(--accent) var(--val, 50%), var(--border-medium) var(--val, 50%));
+  border-radius: 2px; outline: none; cursor: pointer;
+}
+.tone-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; border: 2px solid var(--bg-panel);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.tone-name {
+  font-family: var(--font-fell); font-size: 11px; color: var(--text-dim);
+  width: 60px; flex-shrink: 0; text-align: right;
+}
+
+/* Preview panel */
+.preview-aside {
+  width: 280px; flex-shrink: 0; border-left: 1px solid var(--border-subtle);
+  background: var(--bg-panel); display: flex; flex-direction: column; overflow: hidden;
+}
+.preview-header {
+  padding: 14px 16px 12px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.preview-title { font-family: var(--font-fell); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); }
+.preview-body { flex: 1; overflow-y: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border-medium) transparent; }
+
+/* Story preview card */
+.preview-card {
+  background: var(--bg-raised); border: 1px solid var(--border-medium);
+  border-radius: 10px; overflow: hidden; margin-bottom: 16px;
+}
+.preview-card-thumb {
+  height: 100px; background: linear-gradient(135deg, #1A1230 0%, #2A1A40 50%, #1A1218 100%);
+  position: relative; display: flex; align-items: center; justify-content: center;
+}
+.preview-card-icon { font-family: var(--font-fell); font-size: 48px; opacity: 0.1; color: var(--accent); }
+.preview-card-body { padding: 14px; }
+.preview-card-genre { font-family: var(--font-fell); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.preview-card-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px; line-height: 1.3; }
+.preview-card-excerpt { font-family: var(--font-serif); font-size: 12px; color: var(--text-muted); line-height: 1.65; font-weight: 300; }
+
+/* Checklist */
+.checklist { display: flex; flex-direction: column; gap: 6px; }
+.check-item { display: flex; align-items: center; gap: 8px; }
+.check-icon { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+.check-done { background: rgba(74,155,106,0.15); color: var(--success); border: 1px solid rgba(74,155,106,0.3); }
+.check-todo { background: var(--bg-elevated); color: var(--text-ghost); border: 1px solid var(--border-subtle); }
+.check-warn { background: rgba(200,133,42,0.12); color: var(--accent); border: 1px solid var(--accent-dim); }
+.check-label { font-family: var(--font-fell); font-size: 11px; color: var(--text-dim); }
+
+/* Word count progress */
+.wc-wrap { margin-bottom: 16px; }
+.wc-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: var(--font-fell); font-size: 10px; color: var(--text-muted); }
+.wc-bar { height: 3px; background: var(--border-subtle); border-radius: 2px; overflow: hidden; }
+.wc-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+@media (max-width: 1100px) { .preview-aside { display: none; } }
+@media (max-width: 800px) { .sidebar { display: none; } .editor-inner { padding: 0 20px; } }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<header class="topbar">
+  <div class="topbar-back" onclick="location.href='home.html'">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+    서재
+  </div>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">새 스토리 작성</div>
+  <div class="topbar-status">
+    <div class="status-dot"></div>
+    자동 저장됨 · 방금 전
+  </div>
+  <div class="topbar-actions">
+    <button class="btn-ghost" onclick="toggleTheme()">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+    <button class="btn-ghost">미리보기</button>
+    <button class="btn-ghost">임시저장</button>
+    <button class="btn-amber">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      발행하기
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-scroll">
+
+      <!-- Chapters -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="sidebar-section-title">챕터 구성</span>
+          <button class="sidebar-section-action">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+        <div class="sidebar-section-body">
+          <div class="chapter-list">
+            <div class="chapter-item active">
+              <span class="chapter-num">I</span>
+              <span class="chapter-name">기본 정보</span>
+            </div>
+            <div class="chapter-item">
+              <span class="chapter-num">II</span>
+              <span class="chapter-name">시스템 프롬프트</span>
+            </div>
+            <div class="chapter-item">
+              <span class="chapter-num">III</span>
+              <span class="chapter-name">캐릭터 설정</span>
+            </div>
+            <div class="chapter-item">
+              <span class="chapter-num">IV</span>
+              <span class="chapter-name">세계관 · 배경</span>
+              <span class="chapter-words">미완성</span>
+            </div>
+            <div class="chapter-item">
+              <span class="chapter-num">V</span>
+              <span class="chapter-name">첫 인사말</span>
+              <span class="chapter-words">미완성</span>
+            </div>
+          </div>
+          <button class="add-chapter-btn">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            섹션 추가
+          </button>
+        </div>
+      </div>
+
+      <!-- Characters -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="sidebar-section-title">등장인물</span>
+          <button class="sidebar-section-action">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+        <div class="sidebar-section-body">
+          <div class="char-list">
+            <div class="char-item">
+              <div class="char-thumb" style="background:linear-gradient(135deg,#1A1230,#2A1A40);border:1px solid var(--accent-dim);color:var(--accent)">하</div>
+              <div style="flex:1">
+                <div class="char-item-name">하린</div>
+                <div class="char-item-role">주인공 · 마법사</div>
+              </div>
+            </div>
+            <div class="char-item">
+              <div class="char-thumb" style="background:linear-gradient(135deg,#20100A,#301A10);border:1px solid rgba(196,92,92,0.4);color:#C45C5C">수</div>
+              <div style="flex:1">
+                <div class="char-item-name">수호자 라엘</div>
+                <div class="char-item-role">조연 · 적대자</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="sidebar-section" style="border-bottom:none">
+        <div class="sidebar-section-header">
+          <span class="sidebar-section-title">완성도</span>
+        </div>
+        <div class="meta-list">
+          <div class="meta-item">
+            <span class="meta-key">기본</span>
+            <div class="meta-bar"><div class="meta-fill" style="width:90%"></div></div>
+            <span class="meta-val" style="font-family:var(--font-fell);font-size:10px;color:var(--text-muted);width:28px;text-align:right">90%</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">캐릭터</span>
+            <div class="meta-bar"><div class="meta-fill" style="width:65%"></div></div>
+            <span class="meta-val" style="font-family:var(--font-fell);font-size:10px;color:var(--text-muted);width:28px;text-align:right">65%</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">세계관</span>
+            <div class="meta-bar"><div class="meta-fill" style="width:20%"></div></div>
+            <span class="meta-val" style="font-family:var(--font-fell);font-size:10px;color:var(--text-muted);width:28px;text-align:right">20%</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">프롬프트</span>
+            <div class="meta-bar"><div class="meta-fill" style="width:45%"></div></div>
+            <span class="meta-val" style="font-family:var(--font-fell);font-size:10px;color:var(--text-muted);width:28px;text-align:right">45%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- MAIN EDITOR -->
+  <main class="editor-main">
+    <div class="editor-tabs">
+      <div class="editor-tab active" onclick="switchTab(this,'tab-basic')">기본 정보</div>
+      <div class="editor-tab" onclick="switchTab(this,'tab-prompt')">시스템 프롬프트</div>
+      <div class="editor-tab" onclick="switchTab(this,'tab-chars')">캐릭터</div>
+      <div class="editor-tab" onclick="switchTab(this,'tab-world')">세계관</div>
+      <div class="editor-tab" onclick="switchTab(this,'tab-opening')">첫 인사말</div>
+    </div>
+
+    <div class="editor-scroll">
+      <div class="editor-inner">
+
+        <!-- BASIC INFO TAB -->
+        <div id="tab-basic">
+
+          <div class="editor-section">
+            <div class="editor-section-title">기본 정보</div>
+            <div class="editor-section-desc">독자에게 표시되는 스토리의 얼굴입니다.</div>
+
+            <div class="form-group">
+              <label class="form-label">
+                스토리 제목 <span class="form-required">*</span>
+              </label>
+              <input class="form-input" type="text" placeholder="독자의 마음을 사로잡을 제목을 입력하세요" value="황혼의 마법사와 잃어버린 별" style="font-family:var(--font-display);font-size:18px;height:48px;font-weight:700">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                짧은 소개글 <span class="form-required">*</span>
+                <span class="form-label-desc">— 150자 이내로 핵심을 전달하세요</span>
+              </label>
+              <textarea class="form-textarea" rows="3" placeholder="독자가 첫눈에 끌릴 소개글을 작성하세요...">천 년 전 봉인된 고대 마법사 하린이 현대에 깨어난다. 기억을 잃은 그녀에게 남은 것은 오직 하나의 주문과 낯선 도시의 밤하늘뿐. 당신은 그 별을 되찾아 줄 수 있는가.</textarea>
+            </div>
+
+            <div class="form-row form-row-2">
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">장르 <span class="form-required">*</span></label>
+                <div class="select-wrap">
+                  <select class="form-select">
+                    <option>판타지</option>
+                    <option>로맨스</option>
+                    <option>스릴러</option>
+                    <option>SF</option>
+                    <option>공포</option>
+                    <option>미스터리</option>
+                    <option>역사</option>
+                    <option>무협</option>
+                  </select>
+                  <div class="select-arrow">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">보조 장르</label>
+                <div class="select-wrap">
+                  <select class="form-select">
+                    <option>로맨스</option>
+                    <option>판타지</option>
+                    <option>액션</option>
+                    <option>없음</option>
+                  </select>
+                  <div class="select-arrow">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="editor-section">
+            <div class="editor-section-title">분위기 · 톤</div>
+            <div class="editor-section-desc">AI가 글을 쓸 때 따를 감성적 방향성을 설정합니다.</div>
+
+            <div class="form-group">
+              <label class="form-label">분위기 키워드</label>
+              <div class="genre-grid">
+                <div class="genre-pill selected">신비롭다</div>
+                <div class="genre-pill selected">감성적</div>
+                <div class="genre-pill">어둡다</div>
+                <div class="genre-pill">따뜻하다</div>
+                <div class="genre-pill">긴장감</div>
+                <div class="genre-pill">서정적</div>
+                <div class="genre-pill">유머러스</div>
+                <div class="genre-pill">잔인하다</div>
+                <div class="genre-pill">낭만적</div>
+                <div class="genre-pill selected">서사적</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">분위기 스펙트럼</label>
+              <div class="tone-sliders">
+                <div>
+                  <div class="tone-labels"><span class="tone-label">밝음 ☀</span><span class="tone-label">어둠 🌑</span></div>
+                  <input type="range" class="tone-slider" min="0" max="100" value="65" oninput="this.style.setProperty('--val', this.value+'%')">
+                </div>
+                <div>
+                  <div class="tone-labels"><span class="tone-label">느림 🐢</span><span class="tone-label">빠름 ⚡</span></div>
+                  <input type="range" class="tone-slider" min="0" max="100" value="40" oninput="this.style.setProperty('--val', this.value+'%')">
+                </div>
+                <div>
+                  <div class="tone-labels"><span class="tone-label">사실적</span><span class="tone-label">환상적 ✨</span></div>
+                  <input type="range" class="tone-slider" min="0" max="100" value="78" oninput="this.style.setProperty('--val', this.value+'%')">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="editor-section">
+            <div class="editor-section-title">태그 · 검색</div>
+            <div class="editor-section-desc">독자가 스토리를 찾을 수 있도록 관련 키워드를 추가하세요.</div>
+            <div class="form-group">
+              <label class="form-label">태그</label>
+              <div class="tags-wrap" id="tagsWrap">
+                <div class="tag-item">마법 <button class="tag-remove" onclick="removeTag(this)">✕</button></div>
+                <div class="tag-item">기억상실 <button class="tag-remove" onclick="removeTag(this)">✕</button></div>
+                <div class="tag-item">현대판타지 <button class="tag-remove" onclick="removeTag(this)">✕</button></div>
+                <div class="tag-item">러브라인 <button class="tag-remove" onclick="removeTag(this)">✕</button></div>
+                <div class="tag-item">별 <button class="tag-remove" onclick="removeTag(this)">✕</button></div>
+                <input type="text" class="tag-input" placeholder="태그 추가..." onkeydown="addTag(event, this)">
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /tab-basic -->
+
+        <!-- SYSTEM PROMPT TAB (hidden) -->
+        <div id="tab-prompt" style="display:none">
+          <div class="editor-section">
+            <div class="editor-section-title">시스템 프롬프트</div>
+            <div class="editor-section-desc">AI가 이 스토리를 진행할 때 따를 핵심 지침입니다. 구체적이고 명확하게 작성할수록 이야기의 품질이 높아집니다.</div>
+
+            <div class="form-group">
+              <label class="form-label">메인 프롬프트 <span class="form-required">*</span></label>
+              <div class="richtext-wrap">
+                <div class="richtext-toolbar">
+                  <span class="rt-label">서식</span>
+                  <button class="rt-btn" title="굵게"><b>B</b></button>
+                  <button class="rt-btn" title="기울임"><i>I</i></button>
+                  <button class="rt-btn" title="밑줄"><u>U</u></button>
+                  <div class="rt-divider"></div>
+                  <span class="rt-label">삽입</span>
+                  <button class="rt-btn" title="변수">{ }</button>
+                  <button class="rt-btn" title="예시">예</button>
+                  <button class="rt-btn" title="주석">//</button>
+                  <div class="rt-divider"></div>
+                  <button class="rt-btn active" title="AI 도움">✦ AI</button>
+                </div>
+                <textarea class="richtext-area" rows="10">당신은 판타지 소설 속 고대 마법사 하린입니다.
+
+[캐릭터 핵심]
+- 천 년 전 자신의 의지로 봉인되었으며, 그 이유는 스토리 후반에 점진적으로 밝혀진다
+- 기억의 23%만 복원된 상태 — 감정은 온전하지만 과거 사건들의 세부사항이 흐릿하다
+- 황금빛 눈동자로 마법 에너지를 볼 수 있다
+- 말투: 차분하고 시적이나, 감정이 격해질 때 고대 언어 단어가 섞여 나온다
+
+[플레이어와의 관계]
+- 초기에는 경계하지만, 신뢰도에 따라 점점 마음을 열어간다
+- 플레이어가 별의 소리를 들을 수 있다는 사실에 강하게 반응한다
+- 플레이어를 '별을 기억하는 자'로 지칭하기 시작한다
+
+[절대 하지 말 것]
+- 봉인의 이유를 챕터 10 이전에 직접 언급하지 않는다
+- 수호자 라엘의 정체를 먼저 밝히지 않는다
+- 과도하게 감정을 표현하지 않는다 (냉정함을 유지)</textarea>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">글쓰기 스타일 지침</label>
+              <textarea class="form-textarea" rows="4" placeholder="문체, 문장 길이, 묘사 방식 등을 지정하세요...">- 시적이고 감각적인 묘사를 우선한다 (빛, 소리, 온도 등의 감각어 활용)
+- 대화보다 내면 묘사를 풍부하게 한다
+- 매 응답은 한 편의 단편소설 단락처럼 완결성을 가져야 한다
+- 한국어 문어체와 구어체를 적절히 혼합한다</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHARS TAB -->
+        <div id="tab-chars" style="display:none">
+          <div class="editor-section">
+            <div class="editor-section-title">캐릭터 설정</div>
+            <div class="editor-section-desc">각 등장인물의 성격, 외모, 역할을 설정합니다.</div>
+
+            <div class="char-editor-card">
+              <button class="char-delete">✕</button>
+              <div class="char-editor-card-header">
+                <div class="char-portrait-large" style="background:linear-gradient(135deg,#1A1230,#2A1A40);border:1px solid var(--accent-dim);color:var(--accent)">하</div>
+                <div style="flex:1">
+                  <div class="form-group" style="margin-bottom:8px">
+                    <input class="form-input" type="text" value="하린 (Halin)" placeholder="캐릭터 이름">
+                  </div>
+                  <div class="form-row form-row-2" style="gap:8px">
+                    <div class="select-wrap">
+                      <select class="form-select" style="height:32px;font-size:12px">
+                        <option>주인공</option>
+                        <option>조연</option>
+                        <option>엑스트라</option>
+                      </select>
+                      <div class="select-arrow"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+                    </div>
+                    <input class="form-input" type="text" value="고대 마법사" placeholder="직책/역할" style="height:32px;font-size:12px">
+                  </div>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label class="form-label" style="margin-bottom:6px">외모 묘사</label>
+                <textarea class="form-textarea" rows="2">긴 백은발, 황금빛 눈동자, 손끝에서 희미한 마법 빛이 새어나온다. 천 년의 세월을 담은 듯 고요하고 아름다운 얼굴.</textarea>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label class="form-label" style="margin-bottom:6px">성격 · 말투</label>
+                <textarea class="form-textarea" rows="2">차분하고 시적인 말투. 감정이 격해지면 고대어 단편이 섞인다. 겉으로는 냉정하지만 별에 관한 이야기를 할 때는 눈빛이 달라진다.</textarea>
+              </div>
+            </div>
+
+            <div class="char-editor-card">
+              <button class="char-delete">✕</button>
+              <div class="char-editor-card-header">
+                <div class="char-portrait-large" style="background:linear-gradient(135deg,#20100A,#301A10);border:1px solid rgba(196,92,92,0.4);color:#C45C5C">수</div>
+                <div style="flex:1">
+                  <div class="form-group" style="margin-bottom:8px">
+                    <input class="form-input" type="text" value="수호자 라엘" placeholder="캐릭터 이름">
+                  </div>
+                  <div class="form-row form-row-2" style="gap:8px">
+                    <div class="select-wrap">
+                      <select class="form-select" style="height:32px;font-size:12px">
+                        <option>조연</option>
+                        <option selected>주인공</option>
+                        <option>엑스트라</option>
+                      </select>
+                      <div class="select-arrow"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+                    </div>
+                    <input class="form-input" type="text" value="적대자 (진의 미공개)" placeholder="직책/역할" style="height:32px;font-size:12px">
+                  </div>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label" style="margin-bottom:6px">캐릭터 비밀 (AI만 알고 있음)</label>
+                <textarea class="form-textarea" rows="2" placeholder="독자에게는 숨겨지는 캐릭터의 진실...">실은 하린이 봉인할 때 함께 간청했던 하린의 첫 번째 제자. 하린을 계속 봉인된 상태로 두려는 이유는 그녀가 깨어나면 자신의 죄가 드러나기 때문이다.</textarea>
+              </div>
+            </div>
+
+            <button class="add-char-btn">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              캐릭터 추가
+            </button>
+          </div>
+        </div>
+
+        <!-- WORLD TAB -->
+        <div id="tab-world" style="display:none">
+          <div class="editor-section">
+            <div class="editor-section-title">세계관 · 배경</div>
+            <div class="editor-section-desc">이야기가 펼쳐지는 세계의 규칙과 분위기를 정의합니다.</div>
+            <div class="form-group">
+              <label class="form-label">세계 설정</label>
+              <textarea class="form-textarea" rows="6" placeholder="이 세계에서 마법은 어떻게 작동하나요? 어떤 역사적 사건들이 있었나요? 독자가 알아야 할 세계의 규칙들을 적어주세요...">현대 한국(서울)을 배경으로 하지만, 마법의 흔적들이 도시 곳곳에 숨겨져 있다. 루나 광장, 봉인된 도서관, 황혼의 탑은 마법의 결계가 유지되는 특별 구역이다.
+
+마법 시스템: 별의 에너지를 매개로 작동하며, 각 별은 특정 감정이나 기억을 담고 있다.</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">주요 장소</label>
+              <textarea class="form-textarea" rows="4" placeholder="이야기에서 중요한 장소들을 묘사하세요...">루나 광장 — 하린이 처음 깨어난 곳. 달빛이 특별히 강하게 모인다.
+봉인된 도서관 — 마법사들의 고서가 보관된 곳. 외부인은 찾을 수 없다.
+황혼의 탑 — 하린의 임시 거처. 황혼빛이 하루 종일 스며드는 특이한 건물.</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- OPENING TAB -->
+        <div id="tab-opening" style="display:none">
+          <div class="editor-section">
+            <div class="editor-section-title">첫 인사말</div>
+            <div class="editor-section-desc">플레이어가 스토리를 시작할 때 처음 보게 될 내용입니다. 강렬한 첫인상을 만들어 보세요.</div>
+            <div class="form-group">
+              <label class="form-label">오프닝 메시지 <span class="form-required">*</span></label>
+              <div class="richtext-wrap">
+                <div class="richtext-toolbar">
+                  <button class="rt-btn"><b>B</b></button>
+                  <button class="rt-btn"><i>I</i></button>
+                  <div class="rt-divider"></div>
+                  <button class="rt-btn">대화</button>
+                  <button class="rt-btn">장면묘사</button>
+                </div>
+                <textarea class="richtext-area" rows="8" placeholder="독자가 처음 마주하게 될 장면을 써주세요...">황혼빛으로 물든 도시의 광장.
+
+낯선 빛의 파편들이 공중에 흩어지며, 오래된 주문이 되살아나는 소리가 들린다. 그리고 — 당신은 그녀를 본다.
+
+백은발을 가진 여인이 고개를 든다. 황금빛 눈동자가 당신을 똑바로 바라본다. 그 눈빛 속에는 천 년의 이야기가 담겨 있다.
+
+"당신이... 나를 깨운 건가요?"
+
+바람이 지나간다. 당신의 발치에, 처음 보는 마법 문양이 새겨진다.</textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- PREVIEW ASIDE -->
+  <aside class="preview-aside">
+    <div class="preview-header">
+      <span class="preview-title">실시간 미리보기</span>
+    </div>
+    <div class="preview-body">
+
+      <div class="preview-card">
+        <div class="preview-card-thumb">
+          <div class="preview-card-icon">✦</div>
+        </div>
+        <div class="preview-card-body">
+          <div class="preview-card-genre">판타지 · 로맨스</div>
+          <div class="preview-card-title">황혼의 마법사와 잃어버린 별</div>
+          <div class="preview-card-excerpt">천 년 전 봉인된 고대 마법사 하린이 현대에 깨어난다. 기억을 잃은 그녀에게 남은 것은 오직 하나의 주문과 낯선 도시의 밤하늘뿐.</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-family:var(--font-fell);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">발행 체크리스트</div>
+        <div class="checklist">
+          <div class="check-item">
+            <div class="check-icon check-done">✓</div>
+            <span class="check-label">제목 작성 완료</span>
+          </div>
+          <div class="check-item">
+            <div class="check-icon check-done">✓</div>
+            <span class="check-label">소개글 작성 완료</span>
+          </div>
+          <div class="check-item">
+            <div class="check-icon check-done">✓</div>
+            <span class="check-label">장르 선택 완료</span>
+          </div>
+          <div class="check-item">
+            <div class="check-icon check-warn">!</div>
+            <span class="check-label">시스템 프롬프트 보완 필요</span>
+          </div>
+          <div class="check-item">
+            <div class="check-icon check-todo">○</div>
+            <span class="check-label">세계관 설정 미완성</span>
+          </div>
+          <div class="check-item">
+            <div class="check-icon check-todo">○</div>
+            <span class="check-label">첫 인사말 미완성</span>
+          </div>
+          <div class="check-item">
+            <div class="check-icon check-done">✓</div>
+            <span class="check-label">캐릭터 2명 등록</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-family:var(--font-fell);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">작성 통계</div>
+        <div class="wc-wrap">
+          <div class="wc-row"><span>시스템 프롬프트</span><span>324 / 1000자</span></div>
+          <div class="wc-bar"><div class="wc-fill" style="width:32%"></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-fell);font-size:10px;color:var(--text-muted)">
+            <span>총 글자수</span><span style="color:var(--text-dim)">1,248자</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-fell);font-size:10px;color:var(--text-muted)">
+            <span>등장인물</span><span style="color:var(--text-dim)">2명</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-fell);font-size:10px;color:var(--text-muted)">
+            <span>태그</span><span style="color:var(--text-dim)">5개</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-fell);font-size:10px;color:var(--text-muted)">
+            <span>예상 완성도</span><span style="color:var(--accent)">62%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+</div><!-- /layout -->
+
+<script>
+function switchTab(el, tabId) {
+  document.querySelectorAll('.editor-tab').forEach(t => t.classList.remove('active'));
+  ['tab-basic','tab-prompt','tab-chars','tab-world','tab-opening'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  el.classList.add('active');
+  const target = document.getElementById(tabId);
+  if (target) target.style.display = 'block';
+}
+
+function removeTag(btn) {
+  btn.closest('.tag-item').remove();
+}
+
+function addTag(e, input) {
+  if (e.key === 'Enter' && input.value.trim()) {
+    const wrap = document.getElementById('tagsWrap');
+    const tag = document.createElement('div');
+    tag.className = 'tag-item';
+    tag.innerHTML = `${input.value.trim()} <button class="tag-remove" onclick="removeTag(this)">✕</button>`;
+    wrap.insertBefore(tag, input);
+    input.value = '';
+    e.preventDefault();
+  }
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+
+// Genre pill toggle
+document.querySelectorAll('.genre-pill').forEach(pill => {
+  pill.addEventListener('click', function() { this.classList.toggle('selected'); });
+});
+
+// Tone sliders init
+document.querySelectorAll('.tone-slider').forEach(s => {
+  s.style.setProperty('--val', s.value + '%');
+});
+</script>
+</body>
+</html>

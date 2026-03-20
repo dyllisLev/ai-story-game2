@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스토리 에디터 — AI 스토리 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;700&family=Black+Han+Sans&family=Nanum+Myeongjo:wght@400;700;800&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #090806;
+  --ink-2: #111009;
+  --ink-3: #1c1912;
+  --ink-4: #252118;
+  --amber: #c9a84c;
+  --amber-dim: rgba(201,168,76,0.12);
+  --amber-glow: #e8c56d;
+  --cyan: #00c4ef;
+  --cyan-dim: rgba(0,196,239,0.1);
+  --crimson: #b03030;
+  --sage: #6a8e6e;
+  --violet: #7b52ab;
+  --text-primary: rgba(245, 237, 214, 0.95);
+  --text-secondary: rgba(245, 237, 214, 0.58);
+  --text-muted: rgba(245, 237, 214, 0.28);
+  --border: rgba(201,168,76,0.14);
+  --border-hover: rgba(201,168,76,0.38);
+  --glass: rgba(201,168,76,0.04);
+  --panel-bg: rgba(14, 13, 8, 0.97);
+  --font-display: 'Black Han Sans', serif;
+  --font-body: 'Noto Serif KR', serif;
+  --font-elegant: 'Nanum Myeongjo', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --transition: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-theme="light"] {
+  --ink: #f4ead4; --ink-2: #ece0c0; --ink-3: #e3d5aa; --ink-4: #d9c890;
+  --text-primary: rgba(20,14,4,0.95); --text-secondary: rgba(20,14,4,0.58); --text-muted: rgba(20,14,4,0.32);
+  --border: rgba(110,75,10,0.2); --border-hover: rgba(110,75,10,0.42); --panel-bg: rgba(244,234,212,0.97);
+  --amber: #8a5f10; --amber-dim: rgba(138,95,16,0.1); --amber-glow: #a0731a;
+  --cyan: #0070a0; --cyan-dim: rgba(0,112,160,0.08);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font-body);
+  background: var(--ink);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ======================== TOP BAR ======================== */
+.top-bar {
+  height: 52px; background: var(--panel-bg); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0;
+  backdrop-filter: blur(20px); z-index: 200;
+}
+.logo { font-family: var(--font-display); font-size: 18px; color: var(--amber); text-decoration: none; flex-shrink: 0; }
+.divider { width: 1px; height: 20px; background: var(--border); }
+.doc-title-input {
+  background: transparent; border: none; color: var(--text-primary);
+  font-family: var(--font-elegant); font-size: 15px; outline: none; flex: 1;
+  min-width: 0;
+}
+.doc-title-input::placeholder { color: var(--text-muted); }
+.doc-title-input:focus { border-bottom: 1px solid var(--amber); }
+.save-status {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px;
+  color: var(--text-muted); white-space: nowrap; text-transform: uppercase;
+}
+.save-status.saving { color: var(--amber); }
+.save-status.saved { color: var(--sage); }
+.top-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+.btn-sm {
+  padding: 6px 14px; border-radius: 3px; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+  outline: none; border: 1px solid var(--border);
+}
+.btn-sm:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.btn-accent { background: var(--amber); color: var(--ink); border-color: var(--amber); font-weight: 700; }
+.btn-accent:hover { background: var(--amber-glow); box-shadow: 0 0 16px rgba(201,168,76,0.3); }
+.icon-btn {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 3px; background: transparent;
+  color: var(--text-secondary); cursor: pointer; transition: all 0.2s; outline: none;
+}
+.icon-btn:hover { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+.icon-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+/* ======================== EDITOR LAYOUT ======================== */
+.editor-layout {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* ======================== LEFT SIDEBAR ======================== */
+.sidebar {
+  width: 240px; background: var(--panel-bg); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+}
+.sidebar-tabs {
+  display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sidebar-tab {
+  flex: 1; padding: 10px 6px; background: transparent; border: none;
+  color: var(--text-muted); font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer;
+  transition: all 0.2s; border-bottom: 2px solid transparent; outline: none;
+}
+.sidebar-tab:hover { color: var(--text-secondary); }
+.sidebar-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+.sidebar-tab:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
+.sidebar-content { flex: 1; overflow-y: auto; padding: 12px; }
+.sidebar-content::-webkit-scrollbar { width: 3px; }
+.sidebar-content::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 2px; }
+.sidebar-section { margin-bottom: 20px; }
+.sidebar-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 4px 8px; margin-bottom: 4px;
+}
+.sidebar-section-label {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.sidebar-section-add {
+  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--border); border-radius: 2px;
+  color: var(--text-muted); cursor: pointer; transition: all 0.15s; outline: none;
+  font-size: 14px; line-height: 1;
+}
+.sidebar-section-add:hover { border-color: var(--amber); color: var(--amber); }
+.sidebar-section-add:focus-visible { outline: 2px solid var(--amber); }
+.sidebar-item {
+  padding: 7px 8px; border-radius: 3px; cursor: pointer; transition: all 0.15s;
+  border: 1px solid transparent; margin-bottom: 2px; display: flex; align-items: center;
+  gap: 8px; outline: none;
+}
+.sidebar-item:hover { background: var(--amber-dim); border-color: var(--border); }
+.sidebar-item.active { background: var(--amber-dim); border-color: rgba(201,168,76,0.3); }
+.sidebar-item:focus-visible { outline: 2px solid var(--amber); }
+.sidebar-item-icon { font-size: 14px; flex-shrink: 0; }
+.sidebar-item-text { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
+.sidebar-item.active .sidebar-item-text { color: var(--text-primary); }
+.sidebar-item-badge {
+  font-family: var(--font-mono); font-size: 8px; padding: 2px 6px; border-radius: 999px;
+  flex-shrink: 0;
+}
+.badge-new { background: var(--cyan); color: var(--ink); }
+.badge-draft { background: rgba(201,168,76,0.3); color: var(--amber); }
+
+/* ======================== MAIN EDITOR ======================== */
+.editor-main {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+}
+
+/* Editor toolbar */
+.editor-toolbar {
+  display: flex; align-items: center; padding: 8px 24px; gap: 4px;
+  border-bottom: 1px solid var(--border); background: var(--panel-bg);
+  flex-shrink: 0; flex-wrap: wrap;
+}
+.toolbar-group { display: flex; gap: 2px; }
+.toolbar-divider { width: 1px; height: 20px; background: var(--border); margin: 0 6px; }
+.toolbar-btn {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent; border-radius: 3px;
+  color: var(--text-secondary); cursor: pointer; transition: all 0.15s; outline: none;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+}
+.toolbar-btn:hover { background: var(--amber-dim); border-color: var(--border); color: var(--text-primary); }
+.toolbar-btn.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+.toolbar-btn:focus-visible { outline: 2px solid var(--amber); }
+
+/* Writing area */
+.writing-area {
+  flex: 1; overflow-y: auto; padding: 48px 80px;
+  background: var(--ink);
+}
+.writing-area::-webkit-scrollbar { width: 4px; }
+.writing-area::-webkit-scrollbar-track { background: transparent; }
+.writing-area::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 2px; }
+
+.writing-inner { max-width: 640px; margin: 0 auto; }
+
+/* Editable field */
+.field-group { margin-bottom: 32px; }
+.field-label {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--amber); margin-bottom: 8px; display: block;
+}
+.field-input {
+  width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--border);
+  color: var(--text-primary); font-family: var(--font-elegant); outline: none;
+  padding: 8px 0; transition: border-color 0.2s;
+}
+.field-input:focus { border-bottom-color: var(--amber); }
+.field-input.title { font-size: 28px; font-weight: 800; line-height: 1.3; }
+.field-input.subtitle { font-size: 16px; color: var(--text-secondary); }
+.field-textarea {
+  width: 100%; background: var(--ink-2); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text-primary); font-family: var(--font-elegant); font-size: 15px;
+  line-height: 1.9; outline: none; padding: 16px; resize: none; transition: border-color 0.2s;
+  min-height: 120px;
+}
+.field-textarea:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
+.field-textarea::placeholder { color: var(--text-muted); font-style: italic; }
+
+/* Section divider */
+.section-divider {
+  display: flex; align-items: center; gap: 16px; margin: 40px 0;
+  color: var(--text-muted); font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 3px; text-transform: uppercase;
+}
+.section-divider::before, .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Genre/tag selector */
+.tag-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag-option {
+  padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-secondary); font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 1px; cursor: pointer; transition: all 0.15s; outline: none;
+}
+.tag-option:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.tag-option.selected { background: var(--amber); border-color: var(--amber); color: var(--ink); font-weight: 700; }
+.tag-option:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+/* Character card in editor */
+.char-cards { display: flex; flex-direction: column; gap: 12px; }
+.char-card {
+  border: 1px solid var(--border); border-radius: 4px; background: var(--ink-2);
+  overflow: hidden; transition: border-color 0.2s;
+}
+.char-card:hover { border-color: var(--border-hover); }
+.char-card-header {
+  padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  cursor: pointer; background: var(--ink-3);
+}
+.char-avatar {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--ink-4);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  border: 1px solid var(--border); flex-shrink: 0;
+}
+.char-info { flex: 1; min-width: 0; }
+.char-card-name { font-family: var(--font-elegant); font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.char-card-role { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--amber); }
+.char-expand-btn {
+  background: transparent; border: none; color: var(--text-muted); cursor: pointer; outline: none;
+  transition: transform 0.2s;
+}
+.char-expand-btn[aria-expanded="true"] { transform: rotate(180deg); }
+.char-expand-btn:focus-visible { outline: 2px solid var(--amber); }
+.char-body { padding: 16px; display: none; }
+.char-body.open { display: block; }
+.char-field { margin-bottom: 12px; }
+.char-field-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.char-field-input {
+  width: 100%; background: var(--ink-3); border: 1px solid var(--border); border-radius: 3px;
+  color: var(--text-primary); font-family: var(--font-body); font-size: 13px; padding: 8px 10px;
+  outline: none; transition: border-color 0.2s;
+}
+.char-field-input:focus { border-color: var(--amber); }
+
+/* Memory visualization — mind-map inspired */
+.memory-viz {
+  padding: 24px; background: var(--ink-2); border: 1px solid var(--border);
+  border-radius: 4px; margin-bottom: 24px;
+}
+.memory-viz-title {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.memory-graph {
+  position: relative; width: 100%; height: 200px;
+}
+.memory-node {
+  position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  cursor: pointer; transition: transform 0.2s;
+}
+.memory-node:hover { transform: scale(1.08); }
+.memory-node-circle {
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; border: 2px solid;
+  box-shadow: 0 0 16px var(--glow-color, rgba(201,168,76,0.3));
+}
+.memory-node-label {
+  font-family: var(--font-mono); font-size: 8px; letter-spacing: 1.5px;
+  text-transform: uppercase; white-space: nowrap;
+}
+/* Center hub */
+.memory-hub {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--amber-dim); border: 2px solid var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 0 24px rgba(201,168,76,0.25);
+}
+/* SVG connector lines */
+.memory-graph svg {
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+}
+
+/* AI assist panel */
+.ai-assist-bar {
+  background: var(--ink-2); border-top: 1px solid var(--border);
+  padding: 10px 24px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+}
+.ai-assist-label {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--amber); white-space: nowrap;
+}
+.ai-prompt-input {
+  flex: 1; background: var(--ink-3); border: 1px solid var(--border); border-radius: 3px;
+  color: var(--text-primary); font-family: var(--font-body); font-size: 13px; padding: 8px 12px;
+  outline: none; transition: border-color 0.2s;
+}
+.ai-prompt-input:focus { border-color: var(--amber); }
+.ai-prompt-input::placeholder { color: var(--text-muted); font-style: italic; }
+.ai-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* Right inspect panel */
+.inspect-panel {
+  width: 260px; background: var(--panel-bg); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+}
+.inspect-panel-header {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.inspect-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+.inspect-scroll::-webkit-scrollbar { width: 3px; }
+.inspect-scroll::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 2px; }
+
+.inspect-section { margin-bottom: 20px; }
+.inspect-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+.inspect-value { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.inspect-tag {
+  display: inline-block; padding: 3px 8px; border-radius: 2px; border: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); margin: 2px;
+}
+.word-count-big { font-family: var(--font-display); font-size: 32px; color: var(--amber); line-height: 1; }
+
+/* Setting rows */
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid rgba(201,168,76,0.06);
+}
+.setting-label { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); }
+.select-sm {
+  background: var(--ink-3); border: 1px solid var(--border); border-radius: 3px;
+  color: var(--text-secondary); font-family: var(--font-mono); font-size: 10px; padding: 4px 8px;
+  outline: none; cursor: pointer;
+}
+.select-sm:focus { border-color: var(--amber); }
+.toggle-mini {
+  width: 30px; height: 16px; border-radius: 8px; background: var(--ink-3);
+  border: 1px solid var(--border); position: relative; cursor: pointer; transition: background 0.2s;
+  outline: none;
+}
+.toggle-mini[aria-checked="true"] { background: var(--amber); border-color: var(--amber); }
+.toggle-mini:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.toggle-mini-knob {
+  position: absolute; top: 1px; left: 1px; width: 12px; height: 12px;
+  background: white; border-radius: 50%; transition: transform 0.2s;
+  pointer-events: none;
+}
+.toggle-mini[aria-checked="true"] .toggle-mini-knob { transform: translateX(14px); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+.skip-link { position: absolute; top: -100px; left: 16px; padding: 8px 16px; background: var(--amber); color: var(--ink); font-family: var(--font-mono); font-size: 12px; border-radius: 3px; text-decoration: none; z-index: 10000; transition: top 0.2s; }
+.skip-link:focus { top: 16px; }
+</style>
+</head>
+<body>
+<a href="#editor-area" class="skip-link">에디터로 건너뛰기</a>
+
+<header class="top-bar" role="banner">
+  <a href="home.html" class="logo" aria-label="홈으로">墨想</a>
+  <div class="divider" aria-hidden="true"></div>
+  <input
+    class="doc-title-input"
+    value="이계의 군주: 마검의 각성"
+    aria-label="스토리 제목"
+    placeholder="제목 없는 스토리..."
+  >
+  <span class="save-status saved" id="saveStatus" role="status" aria-live="polite">저장됨 · 2분 전</span>
+  <div class="top-actions">
+    <button class="icon-btn" aria-label="미리보기">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7s2.5-5 6-5 6 5 6 5-2.5 5-6 5-6-5-6-5z" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/></svg>
+    </button>
+    <button class="icon-btn" id="themeBtn" aria-label="테마 전환">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v1M7 12v1M1 7h1M12 7h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </button>
+    <button class="btn-sm btn-ghost" aria-label="버리기">버리기</button>
+    <button class="btn-sm btn-accent" id="publishBtn" aria-label="발행하기">발행</button>
+  </div>
+</header>
+
+<div class="editor-layout">
+
+  <!-- Left sidebar -->
+  <aside class="sidebar" aria-label="에디터 사이드바">
+    <div class="sidebar-tabs" role="tablist" aria-label="사이드바 탭">
+      <button class="sidebar-tab active" role="tab" aria-selected="true" aria-controls="tabStructure" id="tabBtnStructure">구조</button>
+      <button class="sidebar-tab" role="tab" aria-selected="false" aria-controls="tabAssets" id="tabBtnAssets">자원</button>
+    </div>
+    <div class="sidebar-content">
+      <div class="tab-panel active" id="tabStructure" role="tabpanel">
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-head">
+            <span class="sidebar-section-label">챕터</span>
+            <button class="sidebar-section-add" aria-label="챕터 추가">+</button>
+          </div>
+          <div role="tree" aria-label="챕터 목록">
+            <div class="sidebar-item active" role="treeitem" tabindex="0" aria-selected="true" aria-label="프롤로그: 소환된 자">
+              <span class="sidebar-item-icon" aria-hidden="true">📖</span>
+              <span class="sidebar-item-text">프롤로그</span>
+            </div>
+            <div class="sidebar-item" role="treeitem" tabindex="0" aria-label="챕터 1: 낯선 세계">
+              <span class="sidebar-item-icon" aria-hidden="true">📖</span>
+              <span class="sidebar-item-text">챕터 1: 낯선 세계</span>
+            </div>
+            <div class="sidebar-item" role="treeitem" tabindex="0" aria-label="챕터 2: 루나와의 만남">
+              <span class="sidebar-item-icon" aria-hidden="true">📖</span>
+              <span class="sidebar-item-text">챕터 2: 루나와의 만남</span>
+            </div>
+            <div class="sidebar-item" role="treeitem" tabindex="0" aria-label="챕터 3: 시련의 검 (현재 편집 중)">
+              <span class="sidebar-item-icon" aria-hidden="true">✏️</span>
+              <span class="sidebar-item-text">챕터 3: 시련의 검</span>
+              <span class="sidebar-item-badge badge-draft">편집중</span>
+            </div>
+            <div class="sidebar-item" role="treeitem" tabindex="0" aria-label="챕터 4 — 미작성">
+              <span class="sidebar-item-icon" aria-hidden="true">📄</span>
+              <span class="sidebar-item-text" style="color:var(--text-muted);">챕터 4 (미작성)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-head">
+            <span class="sidebar-section-label">등장인물</span>
+            <button class="sidebar-section-add" aria-label="인물 추가">+</button>
+          </div>
+          <div role="list" aria-label="등장인물 목록">
+            <div class="sidebar-item" role="listitem" tabindex="0" aria-label="주인공: 강민준">
+              <span class="sidebar-item-icon" aria-hidden="true">👤</span>
+              <span class="sidebar-item-text">강민준</span>
+              <span class="sidebar-item-badge" style="background:rgba(201,168,76,0.2);color:var(--amber);">주인공</span>
+            </div>
+            <div class="sidebar-item" role="listitem" tabindex="0" aria-label="루나 아르젠트">
+              <span class="sidebar-item-icon" aria-hidden="true">⚔️</span>
+              <span class="sidebar-item-text">루나 아르젠트</span>
+            </div>
+            <div class="sidebar-item" role="listitem" tabindex="0" aria-label="메르린 현자">
+              <span class="sidebar-item-icon" aria-hidden="true">🧙</span>
+              <span class="sidebar-item-text">메르린 현자</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="tab-panel" id="tabAssets" role="tabpanel" style="display:none;">
+        <div class="sidebar-section">
+          <div class="sidebar-section-head">
+            <span class="sidebar-section-label">세계 설정</span>
+            <button class="sidebar-section-add" aria-label="세계 설정 추가">+</button>
+          </div>
+          <div class="sidebar-item" role="button" tabindex="0">
+            <span class="sidebar-item-icon">🌍</span>
+            <span class="sidebar-item-text">아르카나 왕국</span>
+          </div>
+          <div class="sidebar-item" role="button" tabindex="0">
+            <span class="sidebar-item-icon">⚡</span>
+            <span class="sidebar-item-text">마법 체계</span>
+          </div>
+          <div class="sidebar-item" role="button" tabindex="0">
+            <span class="sidebar-item-icon">🗺️</span>
+            <span class="sidebar-item-text">지역 지도</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main editor -->
+  <main class="editor-main" id="editor-area">
+
+    <!-- Toolbar -->
+    <div class="editor-toolbar" role="toolbar" aria-label="서식 도구">
+      <div class="toolbar-group" role="group" aria-label="텍스트 서식">
+        <button class="toolbar-btn active" aria-label="굵게" aria-pressed="true">B</button>
+        <button class="toolbar-btn" aria-label="기울임" aria-pressed="false"><em>I</em></button>
+        <button class="toolbar-btn" aria-label="밑줄" style="text-decoration:underline;" aria-pressed="false">U</button>
+      </div>
+      <div class="toolbar-divider" aria-hidden="true"></div>
+      <div class="toolbar-group" role="group" aria-label="단락 형식">
+        <button class="toolbar-btn" aria-label="제목 1">H1</button>
+        <button class="toolbar-btn" aria-label="제목 2">H2</button>
+        <button class="toolbar-btn" aria-label="본문">P</button>
+        <button class="toolbar-btn" aria-label="대화문">「」</button>
+      </div>
+      <div class="toolbar-divider" aria-hidden="true"></div>
+      <div class="toolbar-group" role="group" aria-label="삽입">
+        <button class="toolbar-btn" aria-label="장면 구분선 삽입">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6h10M4 3l-3 3 3 3M8 3l3 3-3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="toolbar-btn" aria-label="선택지 블록 삽입">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="3" rx="1.5" stroke="currentColor" stroke-width="1.1"/><rect x="1" y="7" width="10" height="3" rx="1.5" stroke="currentColor" stroke-width="1.1"/></svg>
+        </button>
+        <button class="toolbar-btn" aria-label="LaTeX 수식 삽입">∑</button>
+      </div>
+      <div class="toolbar-divider" aria-hidden="true"></div>
+      <div class="toolbar-group" role="group" aria-label="정렬">
+        <button class="toolbar-btn" aria-label="왼쪽 정렬">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 1h10M1 5h7M1 9h9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="toolbar-btn" aria-label="가운데 정렬">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 1h10M2.5 5h7M1.5 9h9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Writing area -->
+    <div class="writing-area" id="writingArea">
+      <div class="writing-inner">
+
+        <div class="field-group">
+          <label class="field-label" for="storyTitle">스토리 제목</label>
+          <input class="field-input title" id="storyTitle" value="이계의 군주: 마검의 각성" aria-label="스토리 제목">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="storyTagline">태그라인</label>
+          <input class="field-input subtitle" id="storyTagline" value="선택의 무게가 운명을 결정한다" aria-label="스토리 태그라인" placeholder="한 줄 소개...">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="storyDesc">줄거리 소개</label>
+          <textarea class="field-textarea" id="storyDesc" rows="4" aria-label="줄거리 소개" placeholder="스토리 배경과 플레이어가 맡을 역할을 설명하세요...">현대 직장인 강민준은 퇴근길에 갑작스럽게 마법과 검이 공존하는 이세계 아르카나 왕국으로 소환된다. 왕국 최고의 마검 에클립스가 그에게 반응하면서, 강민준은 왕국의 운명을 바꿀 예언의 용사로 지목된다. 플레이어는 강민준이 되어 동료를 모으고, 선택을 내리며, 자신만의 이야기를 써내려간다.</textarea>
+        </div>
+
+        <div class="section-divider">장르 · 태그</div>
+
+        <div class="field-group">
+          <label class="field-label">장르 선택</label>
+          <div class="tag-grid" role="group" aria-label="장르 선택">
+            <button class="tag-option selected" aria-pressed="true">판타지</button>
+            <button class="tag-option selected" aria-pressed="true">이세계</button>
+            <button class="tag-option" aria-pressed="false">로맨스</button>
+            <button class="tag-option" aria-pressed="false">액션</button>
+            <button class="tag-option" aria-pressed="false">미스터리</button>
+            <button class="tag-option" aria-pressed="false">역사</button>
+            <button class="tag-option" aria-pressed="false">SF</button>
+            <button class="tag-option" aria-pressed="false">현대</button>
+          </div>
+        </div>
+
+        <div class="section-divider">등장인물 설정</div>
+
+        <!-- Memory visualization -->
+        <div class="memory-viz" aria-label="기억 시스템 시각화">
+          <div class="memory-viz-title">
+            <span aria-hidden="true">⬡</span>
+            기억 시스템 구조
+          </div>
+          <div class="memory-graph" role="img" aria-label="4가지 기억 카테고리: 세계 설정, 인물 관계, 주요 사건, 플레이어 선호">
+            <svg aria-hidden="true">
+              <line x1="50%" y1="50%" x2="18%" y2="22%" stroke="rgba(201,168,76,0.3)" stroke-width="1" stroke-dasharray="3,3"/>
+              <line x1="50%" y1="50%" x2="82%" y2="22%" stroke="rgba(0,196,239,0.3)" stroke-width="1" stroke-dasharray="3,3"/>
+              <line x1="50%" y1="50%" x2="18%" y2="78%" stroke="rgba(192,57,43,0.3)" stroke-width="1" stroke-dasharray="3,3"/>
+              <line x1="50%" y1="50%" x2="82%" y2="78%" stroke="rgba(106,142,110,0.3)" stroke-width="1" stroke-dasharray="3,3"/>
+            </svg>
+            <div class="memory-hub" aria-hidden="true">⬡</div>
+            <div class="memory-node" style="left:5%;top:10%;" tabindex="0" role="button" aria-label="세계 설정 기억 — 2개 항목">
+              <div class="memory-node-circle" style="width:44px;height:44px;background:rgba(201,168,76,0.1);border-color:var(--amber);--glow-color:rgba(201,168,76,0.3);">🌍</div>
+              <div class="memory-node-label" style="color:var(--amber);">세계</div>
+            </div>
+            <div class="memory-node" style="right:5%;top:10%;" tabindex="0" role="button" aria-label="인물 관계 기억 — 3개 항목">
+              <div class="memory-node-circle" style="width:44px;height:44px;background:rgba(0,196,239,0.1);border-color:var(--cyan);--glow-color:rgba(0,196,239,0.3);">👤</div>
+              <div class="memory-node-label" style="color:var(--cyan);">인물</div>
+            </div>
+            <div class="memory-node" style="left:5%;bottom:10%;" tabindex="0" role="button" aria-label="주요 사건 기억 — 2개 항목">
+              <div class="memory-node-circle" style="width:44px;height:44px;background:rgba(192,57,43,0.1);border-color:var(--crimson);--glow-color:rgba(192,57,43,0.3);">⚡</div>
+              <div class="memory-node-label" style="color:var(--crimson);">사건</div>
+            </div>
+            <div class="memory-node" style="right:5%;bottom:10%;" tabindex="0" role="button" aria-label="플레이어 선호 기억 — 2개 항목">
+              <div class="memory-node-circle" style="width:44px;height:44px;background:rgba(106,142,110,0.1);border-color:var(--sage);--glow-color:rgba(106,142,110,0.3);">💭</div>
+              <div class="memory-node-label" style="color:var(--sage);">선호</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Character cards -->
+        <div class="char-cards" aria-label="캐릭터 목록">
+
+          <div class="char-card">
+            <div class="char-card-header" role="button" aria-expanded="true" aria-controls="charBody1" tabindex="0">
+              <div class="char-avatar" aria-hidden="true">👤</div>
+              <div class="char-info">
+                <div class="char-card-name">강민준</div>
+                <div class="char-card-role">주인공 · 소환된 자</div>
+              </div>
+              <button class="char-expand-btn" id="charToggle1" aria-expanded="true" aria-controls="charBody1" aria-label="강민준 캐릭터 정보 접기">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div class="char-body open" id="charBody1">
+              <div class="char-field">
+                <div class="char-field-label">소개</div>
+                <input class="char-field-input" value="서울 출신 32세 전직 직장인. 빠른 판단력과 높은 마법 친화도 보유." aria-label="강민준 소개">
+              </div>
+              <div class="char-field">
+                <div class="char-field-label">성격</div>
+                <input class="char-field-input" value="냉정하고 분석적. 위기에서 빠르게 방법을 찾는 타입." aria-label="강민준 성격">
+              </div>
+              <div class="char-field">
+                <div class="char-field-label">비밀</div>
+                <input class="char-field-input" value="현대 세계에서 어두운 과거를 숨기고 있다." aria-label="강민준 비밀">
+              </div>
+            </div>
+          </div>
+
+          <div class="char-card">
+            <div class="char-card-header" role="button" aria-expanded="false" aria-controls="charBody2" tabindex="0">
+              <div class="char-avatar" aria-hidden="true">⚔️</div>
+              <div class="char-info">
+                <div class="char-card-name">루나 아르젠트</div>
+                <div class="char-card-role">기사 · 왕국 부대장</div>
+              </div>
+              <button class="char-expand-btn" id="charToggle2" aria-expanded="false" aria-controls="charBody2" aria-label="루나 아르젠트 캐릭터 정보 펼치기">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div class="char-body" id="charBody2">
+              <div class="char-field">
+                <div class="char-field-label">소개</div>
+                <input class="char-field-input" value="왕국 최강의 기사 중 한 명. 소환자들에 대한 깊은 불신이 있다." aria-label="루나 소개">
+              </div>
+              <div class="char-field">
+                <div class="char-field-label">성격</div>
+                <input class="char-field-input" value="냉정하고 의무감이 강함. 감정을 표현하는 것을 꺼린다." aria-label="루나 성격">
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- AI assist bar -->
+    <div class="ai-assist-bar" role="complementary" aria-label="AI 보조 도구">
+      <span class="ai-assist-label" aria-hidden="true">AI 보조</span>
+      <label for="aiPromptInput" class="sr-only">AI에게 작성 요청</label>
+      <input
+        class="ai-prompt-input"
+        id="aiPromptInput"
+        placeholder="챕터 3 전투 장면 설명을 좀 더 긴장감 있게 다듬어줘..."
+        aria-label="AI 작성 요청"
+      >
+      <div class="ai-actions">
+        <button class="btn-sm btn-ghost" aria-label="이어쓰기">이어쓰기</button>
+        <button class="btn-sm btn-ghost" aria-label="다듬기">다듬기</button>
+        <button class="btn-sm btn-accent" aria-label="AI 생성">생성</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Right inspect panel -->
+  <aside class="inspect-panel" aria-label="문서 정보">
+    <div class="inspect-panel-header">문서 정보</div>
+    <div class="inspect-scroll">
+
+      <div class="inspect-section">
+        <div class="inspect-label">단어 수</div>
+        <div class="word-count-big" id="wordCount" aria-label="단어 수">1,247</div>
+        <div class="inspect-value" style="margin-top:4px;">예상 플레이 시간 · 약 35분</div>
+      </div>
+
+      <div class="inspect-section">
+        <div class="inspect-label">현재 챕터</div>
+        <div class="inspect-value">챕터 3 / 4 (75% 완성)</div>
+        <div style="height:4px;background:var(--ink-3);border-radius:2px;margin-top:6px;">
+          <div style="height:100%;width:75%;background:var(--amber);border-radius:2px;transition:width 0.5s;"></div>
+        </div>
+      </div>
+
+      <div class="inspect-section">
+        <div class="inspect-label">태그</div>
+        <div>
+          <span class="inspect-tag">판타지</span>
+          <span class="inspect-tag">이세계</span>
+          <span class="inspect-tag">성장</span>
+          <span class="inspect-tag">전투</span>
+        </div>
+      </div>
+
+      <div class="inspect-section">
+        <div class="inspect-label">공개 설정</div>
+        <div class="setting-row">
+          <span class="setting-label">공개 여부</span>
+          <select class="select-sm" aria-label="공개 여부 선택">
+            <option>공개</option>
+            <option>비공개</option>
+            <option>초대 전용</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">성인 콘텐츠</span>
+          <button class="toggle-mini" role="switch" aria-checked="false" aria-label="성인 콘텐츠 설정">
+            <div class="toggle-mini-knob"></div>
+          </button>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">댓글 허용</span>
+          <button class="toggle-mini" role="switch" aria-checked="true" aria-label="댓글 허용 설정">
+            <div class="toggle-mini-knob"></div>
+          </button>
+        </div>
+      </div>
+
+      <div class="inspect-section">
+        <div class="inspect-label">AI 모델 설정</div>
+        <div class="setting-row">
+          <span class="setting-label">모델</span>
+          <select class="select-sm" aria-label="AI 모델 선택">
+            <option>Gemini Pro</option>
+            <option>Gemini Ultra</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">창의성</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--amber);">0.8</span>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+</div>
+
+<script>
+// Sidebar tab switching
+const sidebarTabs = document.querySelectorAll('.sidebar-tab');
+sidebarTabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    sidebarTabs.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected','true');
+    const id = btn.getAttribute('aria-controls');
+    document.querySelectorAll('.tab-panel').forEach(p => p.style.display='none');
+    const panel = document.getElementById(id);
+    if (panel) panel.style.display='block';
+  });
+});
+
+// Character card expand/collapse
+document.querySelectorAll('.char-expand-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', !expanded);
+    const targetId = btn.getAttribute('aria-controls');
+    const body = document.getElementById(targetId);
+    if (body) body.classList.toggle('open', !expanded);
+  });
+});
+document.querySelectorAll('.char-card-header').forEach(header => {
+  header.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      header.querySelector('.char-expand-btn')?.click();
+    }
+  });
+});
+
+// Theme toggle
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const light = document.documentElement.dataset.theme === 'light';
+  document.documentElement.dataset.theme = light ? 'dark' : 'light';
+});
+
+// Tag options toggle
+document.querySelectorAll('.tag-option').forEach(tag => {
+  tag.addEventListener('click', () => {
+    const sel = tag.classList.toggle('selected');
+    tag.setAttribute('aria-pressed', sel);
+  });
+});
+
+// Toggle mini switches
+document.querySelectorAll('.toggle-mini').forEach(sw => {
+  sw.addEventListener('click', () => {
+    const checked = sw.getAttribute('aria-checked') === 'true';
+    sw.setAttribute('aria-checked', !checked);
+  });
+  sw.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); sw.click(); }
+  });
+});
+
+// Auto-save simulation
+const saveStatus = document.getElementById('saveStatus');
+let saveTimer;
+function triggerSave() {
+  clearTimeout(saveTimer);
+  saveStatus.textContent = '저장 중...';
+  saveStatus.className = 'save-status saving';
+  saveTimer = setTimeout(() => {
+    saveStatus.textContent = '저장됨 · 방금';
+    saveStatus.className = 'save-status saved';
+  }, 1200);
+}
+document.querySelectorAll('.field-input, .field-textarea, .char-field-input, .doc-title-input').forEach(el => {
+  el.addEventListener('input', triggerSave);
+});
+
+// Publish button
+document.getElementById('publishBtn').addEventListener('click', () => {
+  saveStatus.textContent = '발행됨!';
+  saveStatus.className = 'save-status saved';
+  setTimeout(() => { saveStatus.textContent = '저장됨 · 방금'; }, 2000);
+});
+
+// Word count update (simple)
+const descArea = document.getElementById('storyDesc');
+const wordCount = document.getElementById('wordCount');
+descArea.addEventListener('input', () => {
+  const words = descArea.value.replace(/\s+/g,' ').trim().split(' ').length;
+  wordCount.textContent = (1247 + words).toLocaleString();
+});
+
+// Sidebar items keyboard nav
+document.querySelectorAll('.sidebar-item').forEach(item => {
+  item.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      item.click();
+    }
+  });
+  item.addEventListener('click', () => {
+    const list = item.closest('[role="tree"], [role="list"]');
+    if (list) {
+      list.querySelectorAll('.sidebar-item').forEach(i => {
+        i.classList.remove('active');
+        i.removeAttribute('aria-selected');
+        i.setAttribute('aria-current', 'false');
+      });
+    }
+    item.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

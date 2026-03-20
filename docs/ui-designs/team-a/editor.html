@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스토리 에디터 — AI 스토리 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --bg-surface: #0e0e16;
+    --bg-panel: #111118;
+    --bg-card: #16161f;
+    --bg-input: #13131c;
+    --border: rgba(255,255,255,0.07);
+    --border-mid: rgba(255,255,255,0.1);
+    --border-focus: rgba(197,168,74,0.5);
+    --text-primary: #f0eff8;
+    --text-secondary: #9896b0;
+    --text-muted: #5c5a72;
+    --accent: #c5a84a;
+    --accent-dim: rgba(197,168,74,0.12);
+    --accent-glow: rgba(197,168,74,0.25);
+    --purple: #7c6df0;
+    --purple-dim: rgba(124,109,240,0.12);
+    --rose: #e05a7a;
+    --rose-dim: rgba(224,90,122,0.1);
+    --green: #52d48a;
+    --green-dim: rgba(82,212,138,0.1);
+    --radius: 10px;
+    --transition: 180ms cubic-bezier(0.4,0,0.2,1);
+    --sidebar-w: 240px;
+  }
+
+  [data-theme="light"] {
+    --bg: #f2f1f8;
+    --bg-surface: #eceaf5;
+    --bg-panel: #ffffff;
+    --bg-card: #f8f7ff;
+    --bg-input: #ffffff;
+    --border: rgba(0,0,0,0.07);
+    --border-mid: rgba(0,0,0,0.1);
+    --border-focus: rgba(168,136,30,0.5);
+    --text-primary: #1a1826;
+    --text-secondary: #5a5870;
+    --text-muted: #9896b0;
+    --accent: #a8881e;
+    --accent-dim: rgba(168,136,30,0.1);
+    --accent-glow: rgba(168,136,30,0.2);
+  }
+
+  html { height: 100%; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    height: 52px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 12px;
+    flex-shrink: 0;
+    z-index: 40;
+    position: sticky;
+    top: 0;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 8px;
+    text-decoration: none; flex-shrink: 0;
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-text {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 14px; font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .header-sep { width: 1px; height: 20px; background: var(--border); }
+
+  .breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px;
+  }
+  .breadcrumb-item { color: var(--text-muted); cursor: pointer; transition: color var(--transition); }
+  .breadcrumb-item:hover { color: var(--text-secondary); }
+  .breadcrumb-item.active { color: var(--text-primary); font-weight: 500; }
+  .breadcrumb-sep { color: var(--text-muted); }
+
+  .header-right {
+    display: flex; align-items: center; gap: 8px;
+    margin-left: auto;
+  }
+
+  .btn-icon {
+    width: 32px; height: 32px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .btn-icon:hover { background: var(--bg-card); color: var(--text-primary); }
+
+  .btn-secondary {
+    height: 32px; padding: 0 14px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    transition: all var(--transition);
+  }
+  .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
+
+  .btn-primary {
+    height: 32px; padding: 0 16px;
+    border-radius: 7px;
+    border: none;
+    background: var(--accent);
+    color: #0a0a0f;
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    transition: all var(--transition);
+  }
+  .btn-primary:hover { background: #d4b85a; box-shadow: 0 0 16px var(--accent-glow); }
+
+  .save-status {
+    font-size: 11px; color: var(--green);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .save-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+  }
+
+  /* ─── LAYOUT ─── */
+  .editor-layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    height: calc(100vh - 52px);
+  }
+
+  /* ─── SIDEBAR NAV ─── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .sidebar-section {
+    padding: 16px 12px 8px;
+  }
+  .sidebar-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 0 8px;
+    margin-bottom: 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-secondary);
+    transition: all var(--transition);
+    border: 1px solid transparent;
+    position: relative;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: var(--bg-card); color: var(--text-primary); }
+  .nav-item.active {
+    background: var(--bg-card);
+    border-color: var(--border-mid);
+    color: var(--text-primary);
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 6px; bottom: 6px;
+    width: 2px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+  .nav-item-icon {
+    width: 20px; height: 20px;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+  .nav-required-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--rose);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .nav-done-check {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--green-dim);
+    border: 1px solid rgba(82,212,138,0.3);
+    display: flex; align-items: center; justify-content: center;
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--green);
+  }
+
+  .progress-wrap {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .progress-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 65%;
+    background: linear-gradient(90deg, var(--accent), var(--purple));
+    border-radius: 2px;
+    transition: width 500ms ease;
+  }
+
+  /* ─── MAIN FORM AREA ─── */
+  .form-main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+    min-width: 0;
+  }
+
+  .form-section {
+    max-width: 780px;
+    margin: 0 auto 40px;
+    display: none;
+  }
+  .form-section.active { display: block; }
+
+  .form-section-title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+  .form-section-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  .form-group {
+    margin-bottom: 24px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .label-required {
+    font-size: 10px;
+    color: var(--rose);
+    font-weight: 700;
+    background: var(--rose-dim);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .label-optional {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .label-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-mid);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+  .form-input::placeholder { color: var(--text-muted); }
+  .form-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .form-textarea {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-mid);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'Noto Serif KR', serif;
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--text-primary);
+    outline: none;
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+  .form-textarea::placeholder { color: var(--text-muted); font-family: 'Noto Sans KR', sans-serif; }
+  .form-textarea:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .form-textarea-lg { min-height: 220px; }
+  .form-textarea-xl { min-height: 320px; }
+
+  .char-count {
+    text-align: right;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .char-count.warn { color: var(--rose); }
+
+  /* Tag input */
+  .tag-input-wrap {
+    background: var(--bg-input);
+    border: 1px solid var(--border-mid);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 44px;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    cursor: text;
+  }
+  .tag-input-wrap:focus-within {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+  .tag-pill {
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 5px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(197,168,74,0.25);
+    color: var(--accent);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tag-pill button {
+    border: none; background: none;
+    color: inherit; cursor: pointer;
+    padding: 0; font-size: 13px;
+    opacity: 0.7;
+    transition: opacity var(--transition);
+    line-height: 1;
+    display: flex; align-items: center;
+  }
+  .tag-pill button:hover { opacity: 1; }
+  .tag-input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text-primary);
+    min-width: 100px;
+    flex: 1;
+  }
+  .tag-input::placeholder { color: var(--text-muted); }
+
+  /* Character builder */
+  .char-builder {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .char-builder-header {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+  .char-builder-title {
+    font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 10px;
+    color: var(--text-primary);
+  }
+  .char-avatar-sm {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .char-builder-body {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .char-builder-body .form-group { margin-bottom: 0; }
+  .char-field-full { grid-column: 1 / -1; }
+  .char-builder-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .add-char-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    border: 1px dashed var(--border-mid);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    width: 100%;
+    transition: all var(--transition);
+  }
+  .add-char-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+  /* Toggle switch */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .toggle-row:hover { border-color: var(--border-mid); }
+  .toggle-row-info { display: flex; flex-direction: column; gap: 2px; }
+  .toggle-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .toggle-desc { font-size: 11px; color: var(--text-muted); }
+  .toggle-switch {
+    position: relative;
+    width: 40px; height: 22px;
+    flex-shrink: 0;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border-mid);
+    border-radius: 11px;
+    transition: background 200ms;
+    cursor: pointer;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: white;
+    left: 3px; top: 3px;
+    transition: transform 200ms;
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+  /* Visibility picker */
+  .visibility-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .vis-option {
+    padding: 14px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    transition: all var(--transition);
+    background: var(--bg-card);
+  }
+  .vis-option:hover { border-color: var(--border-hover); }
+  .vis-option.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .vis-option-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 8px;
+  }
+  .vis-option-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+  .vis-option-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+  /* Form row */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Preview panel */
+  .preview-panel {
+    width: 320px;
+    flex-shrink: 0;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .preview-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .preview-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .preview-banner {
+    height: 120px;
+    background: linear-gradient(135deg, #1a0a2e, #16213e, #0f3460);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-body { padding: 14px; }
+  .preview-title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .preview-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .preview-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .preview-tag {
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    background: var(--purple-dim);
+    color: var(--purple);
+  }
+
+  .info-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  /* Navigation buttons */
+  .form-nav {
+    max-width: 780px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    gap: 12px;
+  }
+  .form-nav-left { display: flex; gap: 8px; }
+  .form-nav-right { display: flex; gap: 8px; align-items: center; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 1100px) {
+    .preview-panel { display: none; }
+    :root { --sidebar-w: 200px; }
+  }
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .form-main { padding: 20px 16px; }
+    .char-builder-body { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .visibility-options { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <a href="#" class="logo">
+    <div class="logo-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <span class="logo-text">스토리월드</span>
+  </a>
+
+  <div class="header-sep"></div>
+
+  <div class="breadcrumb">
+    <span class="breadcrumb-item">내 스토리</span>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-item active">새 스토리 만들기</span>
+  </div>
+
+  <div class="header-right">
+    <div class="save-status">
+      <div class="save-dot"></div>
+      자동 저장됨
+    </div>
+    <button class="btn-secondary">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      미리보기
+    </button>
+    <button class="btn-primary" onclick="handlePublish()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      발행하기
+    </button>
+    <button class="btn-icon" id="themeToggle" aria-label="테마">
+      <svg id="themeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- Editor layout -->
+<div class="editor-layout">
+
+  <!-- Sidebar Nav -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">스토리 구성</div>
+
+      <a class="nav-item active" onclick="showSection('basic')">
+        <div class="nav-item-icon" style="background:var(--accent-dim);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        기본 정보
+        <div class="nav-done-check">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </a>
+
+      <a class="nav-item" onclick="showSection('world')">
+        <div class="nav-item-icon" style="background:var(--purple-dim);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        세계관 설정
+        <div class="nav-done-check">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </a>
+
+      <a class="nav-item" onclick="showSection('story')">
+        <div class="nav-item-icon" style="background:rgba(74,184,168,0.12);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ab8a8" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        스토리 설정
+        <div class="nav-required-dot"></div>
+      </a>
+
+      <a class="nav-item" onclick="showSection('characters')">
+        <div class="nav-item-icon" style="background:rgba(224,90,122,0.1);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        캐릭터 등록
+        <div class="nav-required-dot"></div>
+      </a>
+
+      <a class="nav-item" onclick="showSection('rules')">
+        <div class="nav-item-icon" style="background:rgba(197,168,74,0.1);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        규칙 & 제약
+        <span style="font-size:10px;color:var(--text-muted);margin-left:auto;">(선택)</span>
+      </a>
+
+      <a class="nav-item" onclick="showSection('publish')">
+        <div class="nav-item-icon" style="background:var(--green-dim);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        공개 설정
+        <div class="nav-required-dot"></div>
+      </a>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>완성도</span>
+        <span id="progressPct">65%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Form Area -->
+  <div class="form-main">
+
+    <!-- 1. Basic Info -->
+    <div class="form-section active" id="section-basic">
+      <div class="form-section-title">기본 정보</div>
+      <div class="form-section-desc">스토리의 제목, 설명, 태그를 입력하세요. 독자가 처음 보게 되는 정보입니다.</div>
+
+      <div class="form-group">
+        <label class="form-label" for="storyTitle">
+          스토리 제목 <span class="label-required">필수</span>
+        </label>
+        <input class="form-input" id="storyTitle" type="text"
+          value="검과 별의 맹세"
+          placeholder="독자의 시선을 끄는 제목을 입력하세요">
+        <div class="label-hint">최대 50자. 시리즈물은 제목 뒤에 번호를 붙이세요.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="storyDesc">
+          소개 문구 <span class="label-required">필수</span>
+        </label>
+        <textarea class="form-textarea" id="storyDesc" rows="3"
+          placeholder="스토리를 한두 문장으로 소개해주세요. 독자가 읽어보고 싶게 만드는 문구가 효과적입니다.">별이 무너지던 날, 당신은 왕국의 마지막 기사로 각성했습니다. 고대 마법과 철의 의지로 엮인 운명 속에서 진실을 찾아나서는 서사 판타지.</textarea>
+        <div class="char-count" id="descCount">89 / 200</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">태그</label>
+        <div class="tag-input-wrap" id="tagWrap">
+          <div class="tag-pill">판타지 <button onclick="removeTag(this)" aria-label="삭제">×</button></div>
+          <div class="tag-pill">액션 <button onclick="removeTag(this)" aria-label="삭제">×</button></div>
+          <div class="tag-pill">드라마 <button onclick="removeTag(this)" aria-label="삭제">×</button></div>
+          <input class="tag-input" id="tagInput" placeholder="태그 입력 후 Enter..." onkeydown="addTag(event)">
+        </div>
+        <div class="label-hint">최대 8개. 검색과 분류에 활용됩니다.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          캐릭터 이름 <span class="label-optional">(선택)</span>
+        </label>
+        <input class="form-input" type="text"
+          value="아르텐 (변경 가능)"
+          placeholder="플레이어의 기본 캐릭터 이름. 비워두면 플레이어가 직접 입력합니다.">
+        <div class="label-hint">플레이어가 게임 시작 시 변경할 수 있습니다.</div>
+      </div>
+
+      <div class="form-nav">
+        <div class="form-nav-left"></div>
+        <div class="form-nav-right">
+          <button class="btn-primary" onclick="showSection('world')">다음: 세계관 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. World Setting -->
+    <div class="form-section" id="section-world">
+      <div class="form-section-title">세계관 설정</div>
+      <div class="form-section-desc">AI가 이야기를 생성할 때 참조하는 세계의 규칙, 역사, 지리를 설명하세요. 상세할수록 일관성 있는 스토리가 생성됩니다.</div>
+
+      <div class="info-box">
+        세계관은 AI에게 직접 전달되는 지침입니다. "이 세계에서는..." 형태로 서술하면 효과적입니다.
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="worldSetting">
+          세계관 설명 <span class="label-required">필수</span>
+        </label>
+        <textarea class="form-textarea form-textarea-xl" id="worldSetting"
+          placeholder="예: 이 세계는 별자리가 실제 힘의 원천인 마법 세계입니다. 별의 기사단이 왕국을 수호하며, 별자리 봉인이 파괴되면 어둠의 세력이 침략합니다...">이 세계는 별자리가 실제 힘의 원천인 고대 마법 세계 '아르텐시아'입니다.
+
+하늘의 별자리들은 단순한 장식이 아니라, 세계를 유지하는 봉인 체계입니다. 별의 기사단은 대대로 이 봉인을 수호해 왔으며, 왕국 아르텐시아의 이름은 여기서 비롯되었습니다.
+
+최근 어둠의 군주가 봉인을 하나씩 파괴하기 시작했고, 그에 따라 별이 하나씩 사라지고 있습니다. 왕 아르텐은 전투 중 실종되었고, 왕국은 혼란에 빠져 있습니다.
+
+【마법 체계】
+- 별자리 마법: 각 별자리에 해당하는 마법을 사용
+- 검술: 별의 기사들이 검에 별빛을 담아 싸움
+- 금기: 어둠의 마법은 별을 소멸시킴
+
+【지리】
+- 왕도 아르텐시아: 왕국의 수도, 별의 신전이 위치
+- 북쪽 산맥: 어둠의 군주의 근거지
+- 별의 탑: 봉인을 유지하는 고탑들</textarea>
+        <div class="char-count">640 / 3000</div>
+      </div>
+
+      <div class="form-nav">
+        <div class="form-nav-left">
+          <button class="btn-secondary" onclick="showSection('basic')">← 이전</button>
+        </div>
+        <div class="form-nav-right">
+          <button class="btn-primary" onclick="showSection('story')">다음: 스토리 설정 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Story prompt -->
+    <div class="form-section" id="section-story">
+      <div class="form-section-title">스토리 설정</div>
+      <div class="form-section-desc">AI에게 어떤 방식으로 이야기를 진행할지 알려주는 핵심 지침입니다.</div>
+
+      <div class="info-box">
+        스토리 프롬프트는 AI의 행동 지침입니다. 2인칭("당신은...")으로 작성하면 몰입감이 높아집니다.
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="storyPrompt">스토리 프롬프트 <span class="label-required">필수</span></label>
+        <textarea class="form-textarea form-textarea-xl" id="storyPrompt"
+          placeholder="예: 당신은 이 이야기의 나레이터이자 모든 NPC의 역할을 맡은 AI입니다...">당신은 서사 판타지 롤플레이 게임 『검과 별의 맹세』의 이야기를 이끄는 AI 스토리텔러입니다.
+
+【당신의 역할】
+- 나레이터: 장면을 묘사하고 이야기를 전개합니다
+- NPC: 이세라, 카엘 등 모든 조연을 연기합니다
+- 세계: 세계관의 규칙을 일관되게 유지합니다
+
+【이야기 스타일】
+- 몰입도 높은 3인칭 시점으로 서술하되, 대화는 1인칭으로
+- 감각적이고 문학적인 묘사를 사용하세요
+- 선택의 결과는 반드시 이야기에 반영하세요
+- 플레이어의 선택을 존중하되, 세계관에 맞게 조율하세요
+
+【진행 방식】
+1. 장면 묘사 (2-3문장)
+2. NPC 대화 또는 반응
+3. 선택지 또는 자유 입력 유도
+
+갑작스러운 만능 해결사 역할은 피하고, 플레이어가 진정한 모험을 경험할 수 있도록 도전과 긴장감을 유지하세요.</textarea>
+        <div class="char-count">520 / 5000</div>
+      </div>
+
+      <div class="form-nav">
+        <div class="form-nav-left">
+          <button class="btn-secondary" onclick="showSection('world')">← 이전</button>
+        </div>
+        <div class="form-nav-right">
+          <button class="btn-primary" onclick="showSection('characters')">다음: 캐릭터 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Characters -->
+    <div class="form-section" id="section-characters">
+      <div class="form-section-title">캐릭터 등록</div>
+      <div class="form-section-desc">이야기에 등장하는 주요 NPC를 등록하세요. AI가 각 캐릭터의 성격에 맞게 연기합니다.</div>
+
+      <!-- Character 1 -->
+      <div class="char-builder">
+        <div class="char-builder-header">
+          <div class="char-builder-title">
+            <div class="char-avatar-sm" style="background:linear-gradient(135deg,rgba(197,168,74,0.15),rgba(124,109,240,0.15));border:1px solid rgba(197,168,74,0.3);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c5a84a" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
+            </div>
+            이세라
+            <span style="font-size:11px;color:var(--text-muted);font-weight:400;">주요 NPC</span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-secondary" style="height:26px;font-size:11px;">수정</button>
+            <button style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="삭제">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="char-builder-body">
+          <div class="form-group">
+            <label class="form-label" style="font-size:12px;">이름</label>
+            <input class="form-input" type="text" value="이세라" style="font-size:13px;padding:8px 12px;">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size:12px;">역할</label>
+            <input class="form-input" type="text" value="별의 기사단 단장" style="font-size:13px;padding:8px 12px;">
+          </div>
+          <div class="form-group char-field-full">
+            <label class="form-label" style="font-size:12px;">성격 & 특징</label>
+            <textarea class="form-textarea" rows="3" style="font-size:13px;min-height:70px;">냉정하고 단호하지만 정의로운 인물. 별의 기사단을 이끄는 단장으로, 왕국을 지키기 위해 모든 것을 바칠 의지가 있다. 당신(플레이어)을 처음에는 의심하지만 점차 신뢰하게 된다. 말투는 공손하되 권위 있게, 감정을 잘 드러내지 않는다.</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Character 2 -->
+      <div class="char-builder">
+        <div class="char-builder-header">
+          <div class="char-builder-title">
+            <div class="char-avatar-sm" style="background:linear-gradient(135deg,rgba(180,60,60,0.15),rgba(100,20,20,0.2));border:1px solid rgba(180,60,60,0.25);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f07070" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            카엘 다크블레이드
+            <span style="font-size:11px;color:var(--text-muted);font-weight:400;">적대 NPC</span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-secondary" style="height:26px;font-size:11px;">수정</button>
+            <button style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="삭제">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="char-builder-body">
+          <div class="form-group">
+            <label class="form-label" style="font-size:12px;">이름</label>
+            <input class="form-input" type="text" value="카엘 다크블레이드" style="font-size:13px;padding:8px 12px;">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size:12px;">역할</label>
+            <input class="form-input" type="text" value="배신한 기사 / 적대자" style="font-size:13px;padding:8px 12px;">
+          </div>
+          <div class="form-group char-field-full">
+            <label class="form-label" style="font-size:12px;">성격 & 특징</label>
+            <textarea class="form-textarea" rows="3" style="font-size:13px;min-height:70px;">과거 이세라의 동료였으나 어둠의 군주에게 가담한 배신자. 냉혹하고 카리스마 있으며, 자신의 선택을 후회하지 않는다. 이세라에 대한 복잡한 감정이 남아 있다. 말투는 비아냥거리되 품격이 있다.</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add character -->
+      <button class="add-char-btn" onclick="showToast('새 캐릭터 추가')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        캐릭터 추가
+      </button>
+
+      <div class="form-nav" style="margin-top:20px;">
+        <div class="form-nav-left">
+          <button class="btn-secondary" onclick="showSection('story')">← 이전</button>
+        </div>
+        <div class="form-nav-right">
+          <button class="btn-primary" onclick="showSection('rules')">다음: 규칙 & 제약 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Rules -->
+    <div class="form-section" id="section-rules">
+      <div class="form-section-title">규칙 & 제약</div>
+      <div class="form-section-desc">AI가 따라야 할 금지 사항이나 특별한 규칙을 설정하세요.</div>
+
+      <div class="form-group">
+        <label class="form-label" for="rulesText">규칙 목록 <span class="label-optional">(선택)</span></label>
+        <textarea class="form-textarea form-textarea-lg" id="rulesText"
+          placeholder="예:
+- 폭력적인 묘사는 간접적으로만 표현
+- 성인 콘텐츠 생성 금지
+- 현실의 실존 인물을 언급하지 말 것
+- 4번째 벽을 넘는 메타 발언 금지">- 과도하게 잔인한 묘사는 자제하고, 폭력은 서사적으로만 묘사할 것
+- 플레이어의 선택이 세계관을 크게 벗어나는 경우, 자연스럽게 방향을 유도할 것
+- 이세라와 카엘의 관계는 초반에 직접 언급하지 말 것 (복선)
+- 왕 아르텐의 실종 이유는 세션 5 이전에 직접적으로 밝히지 말 것
+- 4번째 벽을 넘는 메타 발언 금지</textarea>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">렌더링 옵션</div>
+        <div class="toggle-row">
+          <div class="toggle-row-info">
+            <div class="toggle-label">LaTeX 수식 렌더링</div>
+            <div class="toggle-desc">수학/과학 관련 스토리에서 수식을 렌더링합니다</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-row-info">
+            <div class="toggle-label">마크다운 렌더링</div>
+            <div class="toggle-desc">**굵게**, *기울임*, 헤더 등 마크다운 문법 지원</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-row-info">
+            <div class="toggle-label">기억 시스템 활성화</div>
+            <div class="toggle-desc">AI가 중요한 정보를 자동으로 추출해 기억합니다</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-nav">
+        <div class="form-nav-left">
+          <button class="btn-secondary" onclick="showSection('characters')">← 이전</button>
+        </div>
+        <div class="form-nav-right">
+          <button class="btn-primary" onclick="showSection('publish')">다음: 공개 설정 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Publish -->
+    <div class="form-section" id="section-publish">
+      <div class="form-section-title">공개 설정</div>
+      <div class="form-section-desc">스토리를 어떻게 공개할지 선택하세요.</div>
+
+      <div class="form-group">
+        <label class="form-label">공개 범위</label>
+        <div class="visibility-options">
+          <div class="vis-option selected" onclick="selectVis(this)">
+            <div class="vis-option-icon" style="background:var(--green-dim);border:1px solid rgba(82,212,138,0.25);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div class="vis-option-title">공개</div>
+            <div class="vis-option-desc">누구나 검색하고 플레이할 수 있습니다</div>
+          </div>
+          <div class="vis-option" onclick="selectVis(this)">
+            <div class="vis-option-icon" style="background:var(--rose-dim);border:1px solid rgba(224,90,122,0.2);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="vis-option-title">비공개</div>
+            <div class="vis-option-desc">나만 볼 수 있습니다</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="toggle-row">
+          <div class="toggle-row-info">
+            <div class="toggle-label">댓글 허용</div>
+            <div class="toggle-desc">다른 플레이어가 피드백을 남길 수 있습니다</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-row-info">
+            <div class="toggle-label">포크 허용</div>
+            <div class="toggle-desc">다른 작가가 이 스토리를 기반으로 새 버전을 만들 수 있습니다</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-nav">
+        <div class="form-nav-left">
+          <button class="btn-secondary" onclick="showSection('rules')">← 이전</button>
+        </div>
+        <div class="form-nav-right">
+          <button class="btn-secondary">임시 저장</button>
+          <button class="btn-primary" onclick="handlePublish()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            스토리 발행
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /form-main -->
+
+  <!-- Preview panel -->
+  <aside class="preview-panel">
+    <div class="preview-label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      미리보기
+    </div>
+    <div class="preview-card">
+      <div class="preview-banner">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(197,168,74,0.5)" stroke-width="1">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="preview-body">
+        <div class="preview-title" id="previewTitle">검과 별의 맹세</div>
+        <div class="preview-desc" id="previewDesc">별이 무너지던 날, 당신은 왕국의 마지막 기사로 각성했습니다. 고대 마법과 철의 의지로 엮인 운명 속에서 진실을 찾아나서는 서사 판타지.</div>
+        <div class="preview-tags" id="previewTags">
+          <span class="preview-tag">판타지</span>
+          <span class="preview-tag">액션</span>
+          <span class="preview-tag">드라마</span>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+      제목과 소개 문구를 입력하면 실시간으로 미리보기가 업데이트됩니다.
+    </div>
+  </aside>
+
+</div><!-- /editor-layout -->
+
+<!-- Toast -->
+<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--text-primary);box-shadow:0 8px 32px rgba(0,0,0,0.5);opacity:0;transition:all 300ms;pointer-events:none;z-index:100;white-space:nowrap;"></div>
+
+<script>
+  // Theme
+  document.getElementById('themeToggle').addEventListener('click', function() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('themeIcon').innerHTML = isDark
+      ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+      : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  });
+
+  // Section nav
+  function showSection(id) {
+    document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-' + id).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    const navItem = document.querySelector(`.nav-item[onclick*="${id}"]`);
+    if(navItem) navItem.classList.add('active');
+    document.querySelector('.form-main').scrollTop = 0;
+  }
+
+  // Tag management
+  function addTag(e) {
+    if(e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const input = document.getElementById('tagInput');
+      const val = input.value.trim().replace(/,$/, '');
+      if(!val) return;
+      const pill = document.createElement('div');
+      pill.className = 'tag-pill';
+      pill.innerHTML = `${val} <button onclick="removeTag(this)" aria-label="삭제">×</button>`;
+      document.getElementById('tagWrap').insertBefore(pill, input);
+      input.value = '';
+      updatePreviewTags();
+    }
+  }
+
+  function removeTag(btn) {
+    btn.closest('.tag-pill').remove();
+    updatePreviewTags();
+  }
+
+  function updatePreviewTags() {
+    const tags = [...document.querySelectorAll('#tagWrap .tag-pill')].map(p => p.childNodes[0].textContent.trim());
+    document.getElementById('previewTags').innerHTML = tags.map(t => `<span class="preview-tag">${t}</span>`).join('');
+  }
+
+  // Live preview
+  document.getElementById('storyTitle')?.addEventListener('input', function() {
+    document.getElementById('previewTitle').textContent = this.value || '스토리 제목';
+  });
+  document.getElementById('storyDesc')?.addEventListener('input', function() {
+    document.getElementById('previewDesc').textContent = this.value;
+    const count = this.value.length;
+    const el = document.getElementById('descCount');
+    el.textContent = count + ' / 200';
+    el.classList.toggle('warn', count > 180);
+  });
+
+  // Visibility
+  function selectVis(el) {
+    document.querySelectorAll('.vis-option').forEach(v => v.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  // Publish
+  function handlePublish() {
+    showToast('스토리가 성공적으로 발행되었습니다!');
+  }
+
+  // Toast
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = '1';
+    t.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(() => {
+      t.style.opacity = '0';
+      t.style.transform = 'translateX(-50%) translateY(10px)';
+    }, 2500);
+  }
+</script>
+</body>
+</html>

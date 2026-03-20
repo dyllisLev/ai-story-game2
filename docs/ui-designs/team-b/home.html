@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스크립토리움 — 이야기의 서재</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   THE SCRIPTORIUM — HOME PAGE
+   Aesthetic: Medieval Manuscript × Digital Noir
+   ============================================ */
+
+:root {
+  --bg-void: #08070A;
+  --bg-deep: #0D0B0F;
+  --bg-surface: #141118;
+  --bg-raised: #1A1722;
+  --bg-elevated: #211E2B;
+  --border-faint: rgba(255,255,255,0.04);
+  --border-subtle: rgba(255,255,255,0.08);
+  --border-medium: rgba(255,255,255,0.14);
+  --border-strong: rgba(255,255,255,0.24);
+  --text-ghost: rgba(255,255,255,0.2);
+  --text-muted: rgba(255,255,255,0.38);
+  --text-dim: rgba(255,255,255,0.55);
+  --text-body: rgba(255,255,255,0.78);
+  --text-heading: rgba(255,255,255,0.92);
+  --text-bright: #FFFFFF;
+  --accent-amber: #D4922A;
+  --accent-amber-glow: rgba(212,146,42,0.15);
+  --accent-amber-soft: rgba(212,146,42,0.08);
+  --accent-amber-bright: #E8A832;
+  --accent-gold: #C4862A;
+  --accent-crimson: #8B2635;
+  --accent-sage: #4A6741;
+  --vellum: #1E1A14;
+  --ink: #0A0908;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+  --font-serif: 'Noto Serif KR', 'Georgia', serif;
+  --font-display: 'Playfair Display', 'Georgia', serif;
+  --font-fell: 'IM Fell English', 'Georgia', serif;
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4);
+  --shadow-glow: 0 0 40px rgba(212,146,42,0.12);
+  --transition: all 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] {
+  --bg-void: #F5F0E8;
+  --bg-deep: #EDE7D9;
+  --bg-surface: #E5DDD0;
+  --bg-raised: #DDD5C4;
+  --bg-elevated: #D5CCBA;
+  --border-faint: rgba(0,0,0,0.04);
+  --border-subtle: rgba(0,0,0,0.08);
+  --border-medium: rgba(0,0,0,0.14);
+  --border-strong: rgba(0,0,0,0.24);
+  --text-ghost: rgba(0,0,0,0.2);
+  --text-muted: rgba(0,0,0,0.38);
+  --text-dim: rgba(0,0,0,0.55);
+  --text-body: rgba(0,0,0,0.78);
+  --text-heading: rgba(0,0,0,0.92);
+  --text-bright: #1A1410;
+  --accent-amber: #A0661A;
+  --accent-amber-glow: rgba(160,102,26,0.12);
+  --accent-amber-soft: rgba(160,102,26,0.06);
+  --vellum: #EDE7D9;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-serif);
+  background: var(--bg-void);
+  color: var(--text-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%23D4922A' opacity='0.7'/%3E%3C/svg%3E") 10 10, auto;
+}
+
+/* Manuscript texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.6;
+}
+
+/* ── NAVIGATION ── */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(8,7,10,0.85);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+}
+
+.nav-seal {
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid var(--accent-amber);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.nav-seal::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 0.5px solid var(--accent-amber);
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+.nav-seal svg { width: 16px; height: 16px; }
+
+.nav-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-heading);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.nav-subtitle {
+  font-family: var(--font-fell);
+  font-size: 10px;
+  color: var(--accent-amber);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.nav-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.nav-search {
+  position: relative;
+  width: 360px;
+}
+
+.nav-search-input {
+  width: 100%;
+  height: 36px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-medium);
+  border-radius: 18px;
+  padding: 0 16px 0 40px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--text-body);
+  outline: none;
+  transition: var(--transition);
+}
+
+.nav-search-input::placeholder { color: var(--text-muted); }
+
+.nav-search-input:focus {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 0 3px var(--accent-amber-soft);
+}
+
+.nav-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 24px;
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-raised);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.btn-icon:hover {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+  background: var(--accent-amber-soft);
+}
+
+.btn-primary {
+  height: 36px;
+  padding: 0 18px;
+  background: var(--accent-amber);
+  color: #0D0B0F;
+  border: none;
+  border-radius: 18px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  background: var(--accent-amber-bright);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(212,146,42,0.3);
+}
+
+/* ── HERO ── */
+.hero {
+  padding: 120px 40px 60px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(212,146,42,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Decorative rule */
+.hero-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.rule-line {
+  height: 1px;
+  width: 80px;
+  background: linear-gradient(90deg, transparent, var(--accent-amber), transparent);
+}
+
+.rule-ornament {
+  font-family: var(--font-fell);
+  color: var(--accent-amber);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.hero-eyebrow {
+  font-family: var(--font-fell);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  color: var(--accent-amber);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 900;
+  color: var(--text-heading);
+  line-height: 1.1;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--accent-amber);
+}
+
+.hero-desc {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  max-width: 480px;
+  margin: 0 auto 40px;
+  font-weight: 300;
+}
+
+.hero-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-num {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-family: var(--font-fell);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--border-medium);
+}
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  padding: 0 40px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filter-bar::-webkit-scrollbar { display: none; }
+
+.filter-label {
+  font-family: var(--font-fell);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.chip {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--border-medium);
+  border-radius: 16px;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--bg-raised);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip:hover {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+  background: var(--accent-amber-soft);
+}
+
+.chip.active {
+  background: var(--accent-amber);
+  border-color: var(--accent-amber);
+  color: #0D0B0F;
+  font-weight: 600;
+}
+
+.chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.filter-sort {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sort-select {
+  height: 32px;
+  padding: 0 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-medium);
+  border-radius: 16px;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: var(--text-dim);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+/* ── FEATURED SECTION ── */
+.section-header {
+  padding: 0 40px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-heading);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 20px;
+  background: var(--accent-amber);
+  border-radius: 2px;
+}
+
+.section-count {
+  font-family: var(--font-fell);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.section-more {
+  margin-left: auto;
+  font-family: var(--font-fell);
+  font-size: 12px;
+  color: var(--accent-amber);
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.section-more:hover { opacity: 0.7; }
+
+/* ── FEATURED CARD (LARGE) ── */
+.featured-grid {
+  padding: 0 40px 48px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.card-featured {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+}
+
+.card-featured:hover {
+  border-color: var(--accent-amber);
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.card-featured-image {
+  position: relative;
+  height: 200px;
+  background: linear-gradient(135deg, #1A1210 0%, #2A1A10 50%, #1A1218 100%);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Decorative patterns for card backgrounds */
+.card-featured-image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 30% 50%, rgba(212,146,42,0.12) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(139,38,53,0.1) 0%, transparent 50%);
+}
+
+.card-featured-image::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(transparent, var(--bg-surface));
+}
+
+.featured-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  height: 24px;
+  padding: 0 10px;
+  background: var(--accent-amber);
+  color: #0D0B0F;
+  border-radius: 12px;
+  font-family: var(--font-fell);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 1;
+}
+
+.featured-ornament {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-fell);
+  font-size: 80px;
+  color: rgba(212,146,42,0.08);
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+
+.card-body {
+  padding: 20px 24px 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-genre {
+  font-family: var(--font-fell);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-genre::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 1px;
+  background: var(--accent-amber);
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.3;
+  margin-bottom: 10px;
+}
+
+.card-excerpt {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  margin-bottom: 16px;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-weight: 300;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-faint);
+}
+
+.meta-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.author-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: #0D0B0F;
+  flex-shrink: 0;
+}
+
+.author-name {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.meta-divider { height: 12px; width: 1px; background: var(--border-medium); }
+
+.meta-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-fell);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.meta-stat svg { opacity: 0.6; }
+
+.card-play-btn {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-amber);
+  background: transparent;
+  color: var(--accent-amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.card-play-btn:hover {
+  background: var(--accent-amber);
+  color: #0D0B0F;
+}
+
+/* Side stack */
+.featured-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-side {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-side:hover {
+  border-color: var(--accent-amber);
+  box-shadow: var(--shadow-card);
+  transform: translateX(3px);
+}
+
+.card-side::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-amber);
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.card-side:hover::before { opacity: 1; }
+
+.card-side-num {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--accent-amber);
+  opacity: 0.15;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: -4px;
+}
+
+.card-side-content { flex: 1; }
+
+.card-side-genre {
+  font-family: var(--font-fell);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 6px;
+}
+
+.card-side-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+
+.card-side-excerpt {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── MAIN GRID ── */
+.stories-section {
+  padding: 0 40px 80px;
+}
+
+.stories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.card-story {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-story:hover {
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-3px);
+}
+
+.card-story-accent {
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-amber), var(--accent-crimson));
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.card-story:hover .card-story-accent { opacity: 1; }
+
+.card-story-thumb {
+  height: 120px;
+  background: var(--bg-raised);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.thumb-pattern {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-fell);
+  font-size: 60px;
+  opacity: 0.06;
+  color: var(--accent-amber);
+  user-select: none;
+}
+
+.thumb-gradient {
+  position: absolute;
+  inset: 0;
+}
+
+.card-story-body {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-story-genre {
+  font-family: var(--font-fell);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.card-story-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.card-story-excerpt {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.65;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-weight: 300;
+}
+
+.card-story-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid var(--border-faint);
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-stat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-fell);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.card-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.tag {
+  height: 18px;
+  padding: 0 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  font-family: var(--font-fell);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+}
+
+/* Rating stars */
+.rating {
+  display: flex;
+  gap: 2px;
+  color: var(--accent-amber);
+  font-size: 10px;
+}
+
+/* ── DECORATIVE DIVIDER ── */
+.ornamental-divider {
+  padding: 0 40px 32px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.div-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-medium), transparent);
+}
+
+.div-ornament {
+  font-family: var(--font-fell);
+  font-size: 20px;
+  color: var(--accent-amber);
+  opacity: 0.5;
+  line-height: 1;
+}
+
+/* ── RECENT PLAYS ── */
+.recent-section {
+  padding: 0 40px 48px;
+}
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--border-faint);
+}
+
+.recent-item {
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+}
+
+.recent-item:hover {
+  background: var(--bg-raised);
+}
+
+.recent-item:hover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-amber);
+}
+
+.recent-cover {
+  width: 48px;
+  height: 64px;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recent-cover-inner {
+  font-family: var(--font-fell);
+  font-size: 24px;
+  opacity: 0.3;
+  color: var(--accent-amber);
+}
+
+.recent-info { flex: 1; }
+
+.recent-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 4px;
+}
+
+.recent-meta {
+  font-family: var(--font-fell);
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.recent-progress {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.progress-label {
+  font-family: var(--font-fell);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-align: right;
+}
+
+.progress-bar {
+  height: 3px;
+  background: var(--border-medium);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-amber), var(--accent-amber-bright));
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.recent-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--accent-amber);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--accent-amber);
+  font-family: var(--font-serif);
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.recent-btn:hover {
+  background: var(--accent-amber);
+  color: #0D0B0F;
+}
+
+/* ── FOOTER ── */
+.footer {
+  border-top: 1px solid var(--border-subtle);
+  padding: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-brand {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.footer-text {
+  font-family: var(--font-fell);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-link {
+  font-family: var(--font-fell);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  transition: var(--transition);
+}
+
+.footer-link:hover { color: var(--accent-amber); }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.hero { animation: fadeInUp 0.6s ease both; }
+.filter-bar { animation: fadeInUp 0.6s ease 0.1s both; }
+.featured-grid { animation: fadeInUp 0.6s ease 0.2s both; }
+.stories-grid { animation: fadeInUp 0.6s ease 0.3s both; }
+
+/* Genre colors */
+.genre-fantasy { color: #7B68EE; }
+.genre-romance { color: #E87F9C; }
+.genre-thriller { color: #E8A04A; }
+.genre-scifi { color: #4AAFE8; }
+.genre-horror { color: #C45C5C; }
+.genre-mystery { color: #9C8FD4; }
+.genre-historical { color: #D4922A; }
+
+.thumb-fantasy { background: linear-gradient(135deg, #1A1230 0%, #2A1A3A 100%); }
+.thumb-romance { background: linear-gradient(135deg, #2A1018 0%, #3A1020 100%); }
+.thumb-thriller { background: linear-gradient(135deg, #1A1208 0%, #2A1C08 100%); }
+.thumb-scifi { background: linear-gradient(135deg, #081820 0%, #082030 100%); }
+.thumb-horror { background: linear-gradient(135deg, #1A0808 0%, #250808 100%); }
+.thumb-mystery { background: linear-gradient(135deg, #100A1A 0%, #180A28 100%); }
+
+/* Notification badge */
+.notif-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent-amber);
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-void);
+}
+
+/* User avatar */
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-crimson) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  border: 2px solid var(--border-medium);
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.user-avatar:hover { border-color: var(--accent-amber); }
+
+/* Light mode toggle */
+#theme-toggle { cursor: pointer; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-amber); }
+
+/* Mobile */
+@media (max-width: 900px) {
+  .nav { padding: 0 20px; }
+  .nav-center { display: none; }
+  .hero { padding: 100px 20px 40px; }
+  .filter-bar { padding: 0 20px 24px; }
+  .section-header { padding: 0 20px 20px; }
+  .featured-grid { padding: 0 20px 36px; grid-template-columns: 1fr; }
+  .featured-side { flex-direction: row; }
+  .stories-section { padding: 0 20px 60px; }
+  .stories-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .ornamental-divider { padding: 0 20px 24px; }
+  .recent-section { padding: 0 20px 36px; }
+  .footer { padding: 24px 20px; flex-direction: column; gap: 20px; text-align: center; }
+}
+
+@media (max-width: 600px) {
+  .featured-side { flex-direction: column; }
+  .hero-stats { gap: 20px; }
+  .recent-item { flex-wrap: wrap; }
+  .recent-progress { width: 100%; order: 3; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <a href="#" class="nav-brand">
+    <div class="nav-seal">
+      <svg fill="currentColor" style="color:var(--accent-amber)" viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="nav-title">Scriptorium</div>
+      <div class="nav-subtitle">이야기의 서재</div>
+    </div>
+  </a>
+
+  <div class="nav-center">
+    <div class="nav-search">
+      <div class="nav-search-icon">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      </div>
+      <input class="nav-search-input" type="text" placeholder="스토리, 작가, 태그 검색...">
+    </div>
+  </div>
+
+  <div class="nav-actions">
+    <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()" title="테마 전환">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      </svg>
+    </button>
+
+    <div style="position:relative">
+      <button class="btn-icon" title="알림">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+      </button>
+      <div class="notif-badge"></div>
+    </div>
+
+    <a href="editor.html" class="btn-primary">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      새 스토리
+    </a>
+
+    <div class="user-avatar" title="내 서재">유</div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-rule">
+    <div class="rule-line"></div>
+    <div class="rule-ornament">✦</div>
+    <div class="rule-line"></div>
+  </div>
+  <p class="hero-eyebrow">The Scriptorium · 이야기의 서재</p>
+  <h1 class="hero-title">당신의 <em>이야기</em>가<br>살아 숨쉬는 곳</h1>
+  <p class="hero-desc">
+    AI와 함께 펼치는 무한한 서사의 세계.<br>
+    당신이 선택하는 모든 순간이 새로운 챕터를 만든다.
+  </p>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num">2,847</div>
+      <div class="stat-label">스토리</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-num">48.3K</div>
+      <div class="stat-label">독자</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-num">312K</div>
+      <div class="stat-label">세션</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">가능성</div>
+    </div>
+  </div>
+</section>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <span class="filter-label">장르</span>
+  <div class="filter-chips">
+    <button class="chip active">
+      <span class="chip-dot"></span>전체
+    </button>
+    <button class="chip genre-fantasy">
+      <span class="chip-dot"></span>판타지
+    </button>
+    <button class="chip genre-romance">
+      <span class="chip-dot"></span>로맨스
+    </button>
+    <button class="chip genre-thriller">
+      <span class="chip-dot"></span>스릴러
+    </button>
+    <button class="chip genre-scifi">
+      <span class="chip-dot"></span>SF
+    </button>
+    <button class="chip genre-horror">
+      <span class="chip-dot"></span>공포
+    </button>
+    <button class="chip genre-mystery">
+      <span class="chip-dot"></span>미스터리
+    </button>
+    <button class="chip genre-historical">
+      <span class="chip-dot"></span>역사
+    </button>
+    <button class="chip">무협</button>
+    <button class="chip">현대</button>
+    <button class="chip">이세계</button>
+  </div>
+  <div class="filter-sort">
+    <select class="sort-select">
+      <option>인기순</option>
+      <option>최신순</option>
+      <option>평점순</option>
+      <option>세션순</option>
+    </select>
+  </div>
+</div>
+
+<!-- Featured Section -->
+<div class="section-header">
+  <div>
+    <div class="section-title">이번 주 추천</div>
+    <div class="section-count">에디터 엄선 스토리</div>
+  </div>
+  <a class="section-more">전체 보기 →</a>
+</div>
+
+<div class="featured-grid">
+  <!-- Main featured card -->
+  <a class="card-featured" href="play.html">
+    <div class="card-featured-image thumb-fantasy">
+      <div class="featured-badge">⭐ 에디터 픽</div>
+      <div class="featured-ornament">꿈</div>
+    </div>
+    <div class="card-body">
+      <div class="card-genre">판타지 · 로맨스</div>
+      <h2 class="card-title">황혼의 마법사와 잃어버린 별</h2>
+      <p class="card-excerpt">
+        천년 전 봉인된 고대 마법사 하린이 현대에 깨어난다. 기억을 잃은 그녀에게
+        남은 것은 오직 하나의 주문과 낯선 도시의 밤하늘뿐. 당신은 그 별을 되찾아 줄 수 있는가.
+      </p>
+      <div class="card-tags">
+        <span class="tag">마법</span>
+        <span class="tag">기억상실</span>
+        <span class="tag">현대판타지</span>
+        <span class="tag">러브라인</span>
+      </div>
+      <div class="card-meta" style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border-faint)">
+        <div class="meta-author">
+          <div class="author-avatar">별</div>
+          <span class="author-name">별빛작가</span>
+        </div>
+        <div class="meta-divider"></div>
+        <div class="meta-stat">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          12.4K
+        </div>
+        <div class="meta-stat">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          4.8K
+        </div>
+        <div class="rating" style="margin-left:4px">★★★★★</div>
+        <button class="card-play-btn">
+          <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+      </div>
+    </div>
+  </a>
+
+  <!-- Side cards -->
+  <div class="featured-side">
+    <div class="card-side" onclick="location.href='play.html'">
+      <div class="card-side-num">02</div>
+      <div class="card-side-content">
+        <div class="card-side-genre genre-thriller">스릴러 · 미스터리</div>
+        <div class="card-side-title">붉은 밀실의 탐정</div>
+        <div class="card-side-excerpt">봉인된 저택, 12개의 비밀, 그리고 당신만이 알고 있는 진실. 살인자는 아직 그 안에 있다.</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+          <div class="rating">★★★★☆</div>
+          <span style="font-family:var(--font-fell);font-size:10px;color:var(--text-muted)">8.2K 플레이</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-side" onclick="location.href='play.html'">
+      <div class="card-side-num">03</div>
+      <div class="card-side-content">
+        <div class="card-side-genre genre-romance">로맨스 · 현대</div>
+        <div class="card-side-title">오후 세시의 서점</div>
+        <div class="card-side-excerpt">비가 오는 날이면 반드시 찾아오는 손님. 그는 매번 같은 책을 펼치지만 읽지 않는다.</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+          <div class="rating">★★★★★</div>
+          <span style="font-family:var(--font-fell);font-size:10px;color:var(--text-muted)">15.7K 플레이</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-side" onclick="location.href='play.html'">
+      <div class="card-side-num">04</div>
+      <div class="card-side-content">
+        <div class="card-side-genre genre-scifi">SF · 철학</div>
+        <div class="card-side-title">마지막 인간의 일기</div>
+        <div class="card-side-excerpt">2847년, AI가 모든 것을 관리하는 세상에서 당신은 감정을 가진 마지막 존재다.</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+          <div class="rating">★★★★☆</div>
+          <span style="font-family:var(--font-fell);font-size:10px;color:var(--text-muted)">6.1K 플레이</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ornamental Divider -->
+<div class="ornamental-divider">
+  <div class="div-line"></div>
+  <div class="div-ornament">✦ ✦ ✦</div>
+  <div class="div-line"></div>
+</div>
+
+<!-- All Stories -->
+<div class="section-header">
+  <div>
+    <div class="section-title">모든 스토리</div>
+    <div class="section-count">2,847개의 이야기</div>
+  </div>
+</div>
+
+<div class="stories-section">
+  <div class="stories-grid">
+
+    <!-- Card 1 -->
+    <div class="card-story" onclick="location.href='play.html'">
+      <div class="card-story-accent"></div>
+      <div class="card-story-thumb thumb-fantasy">
+        <div class="thumb-pattern">✦</div>
+        <div class="thumb-gradient" style="background:radial-gradient(circle at 30% 60%, rgba(123,104,238,0.2) 0%, transparent 70%)"></div>
+      </div>
+      <div class="card-story-body">
+        <div class="card-story-genre genre-fantasy">판타지</div>
+        <div class="card-story-title">용사가 마왕이 되기까지</div>
+        <div class="card-story-excerpt">세상을 구한 용사는 왜 10년 후 마왕성에 앉아 있는가. 기억 속 영웅의 다른 얼굴.</div>
+        <div class="card-tags">
+          <span class="tag">반전</span><span class="tag">다크판타지</span>
+        </div>
+        <div class="card-story-footer">
+          <div class="footer-left">
+            <div class="footer-stat">
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              3.2K
+            </div>
+            <div class="footer-stat">
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              847
+            </div>
+          </div>
+          <div class="rating" style="font-size:9px">★★★★☆</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="card-story" onclick="location.href='play.html'">
+      <div class="card-story-accent"></div>
+      <div class="card-story-thumb thumb-romance">
+        <div class="thumb-pattern">♡</div>
+        <div class="thumb-gradient" style="background:radial-gradient(circle at 70% 40%, rgba(232,127,156,0.18) 0%, transparent 70%)"></div>
+      </div>
+      <div class="card-story-body">
+        <div class="card-story-genre genre-romance">로맨스</div>
+        <div class="card-story-title">계약결혼의 조건</div>
+        <div class="card-story-excerpt">3개월, 2천만 원, 그리고 절대 감정을 갖지 않을 것. 하지만 그 조건은 처음부터 깨질 운명이었다.</div>
+        <div class="card-tags">
+          <span class="tag">계약</span><span class="tag">재벌</span><span class="tag">TL</span>
+        </div>
+        <div class="card-story-footer">
+          <div class="footer-left">
+            <div class="footer-stat">
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              21.8K
+            </div>
+          </div>
+          <div class="rating" style="font-size:9px">★★★★★</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="card-story" onclick="location.href='play.html'">
+      <div class="card-story-accent"></div>
+      <div class="card-story-thumb thumb-thriller">
+        <div class="thumb-pattern">⚠</div>
+        <div class="thumb-gradient" style="background:radial-gradient(circle at 50% 50%, rgba(232,160,74,0.12) 0%, transparent 70%)"></div>
+      </div>
+      <div class="card-story-body">
+        <div class="card-story-genre genre-thriller">스릴러</div>
+        <div class="card-story-title">거짓말 탐지기</div>
+        <div class="card-story-excerpt">당신이 대답하는 모든 말을 AI가 분석하고 있다. 무죄를 증명하려면 진실만 말해야 한다. 하지만 진실은 무엇인가.</div>
+        <div class="card-tags">
+          <span class="tag">심문</span><span class="tag">반전</span>
+        </div>
+        <div class="card-story-footer">
+          <div class="footer-left">
+            <div class="footer-stat">
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              7.3K
+            </div>
+          </div>
+          <div class="rating" style="font-size:9px">★★★★☆</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="card-story" onclick="location.href='play.html'">
+      <div class="card-story-accent"></div>
+      <div class="card-story-thumb thumb-scifi">
+        <div class="thumb-pattern">◈</div>
+        <div class="thumb-gradient" style="background:radial-gradient(circle at 60% 30%, rgba(74,175,232,0.15) 0%, transparent 70%)"></div>
+      </div>
+      <div class="card-story-body">
+        <div class="card-story-genre genre-scifi">SF · 사이버펑크</div>
+        <div class="card-story-title">뉴로링크: 각성</div>
+        <div class="card-story-excerpt">뇌에 직접 연결된 AI. 생각이 데이터가 되는 세상에서 당신만의 비밀을 지킬 수 있는가.</div>
+        <div class="card-tags">
+          <span class="tag">사이버펑크</span><span class="tag">AI</span>
+        </div>
+        <div class="card-story-footer">
+          <div class="footer-left">
+            <div class="footer-stat">
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              5.6K
+            </div>
+          </div>
+          <div class="rating" style="font-size:9px">★★★★☆</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="card-story" onclick="location.href='play.html'">
+      <div class="card-story-accent"></div>
+      <div class="card-story-thumb thumb-horror">
+        <div class="thumb-pattern">☽</div>
+        <div class="thumb-gradient" style="background:radial-gradient(circle at 40% 60%, rgba(196,92,92,0.12) 0%, transparent 70%)"></div>
+      </div>
+      <div class="card-story-body">
+        <div class="card-story-genre genre-horror">공포 · 심리</div>
+        <div class="card-story-title">거울 너머의 방</div>
+        <div class="card-story-excerpt">밤마다 거울 속 당신의 그림자가 1초 늦게 움직인다. 세 번째 밤이 오면 그것이 밖으로 나온다.</div>
+        <div class="card-tags">
+          <span class="tag">심리공포</span><span class="tag">초자연</span>
+        </div>
+        <div class="card-story-footer">
+          <div class="footer-left">
+            <div class="footer-stat">
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              4.1K
+            </div>
+          </div>
+          <div class="rating" style="font-size:9px">★★★★★</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6 -->
+    <div class="card-story" onclick="location.href='play.html'">
+      <div class="card-story-accent"></div>
+      <div class="card-story-thumb" style="background:linear-gradient(135deg, #0A1410 0%, #0C2010 100%)">
+        <div class="thumb-pattern" style="color:var(--accent-sage)">劍</div>
+        <div class="thumb-gradient" style="background:radial-gradient(circle at 50% 50%, rgba(74,103,65,0.15) 0%, transparent 70%)"></div>
+      </div>
+      <div class="card-story-body">
+        <div class="card-story-genre" style="color:var(--accent-sage)">무협 · 액션</div>
+        <div class="card-story-title">천하제일 검을 든 자</div>
+        <div class="card-story-excerpt">무림의 패자가 되기 위해 당신은 스승을 배신했다. 10년 후, 그 검이 당신을 향한다.</div>
+        <div class="card-tags">
+          <span class="tag">무협</span><span class="tag">복수</span><span class="tag">성장</span>
+        </div>
+        <div class="card-story-footer">
+          <div class="footer-left">
+            <div class="footer-stat">
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              9.8K
+            </div>
+          </div>
+          <div class="rating" style="font-size:9px">★★★★☆</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7 -->
+    <div class="card-story" onclick="location.href='play.html'">
+      <div class="card-story-accent"></div>
+      <div class="card-story-thumb" style="background:linear-gradient(135deg, #0E1020 0%, #141030 100%)">
+        <div class="thumb-pattern" style="color:#8B88CC">∞</div>
+        <div class="thumb-gradient" style="background:radial-gradient(circle at 50% 50%, rgba(139,136,204,0.12) 0%, transparent 70%)"></div>
+      </div>
+      <div class="card-story-body">
+        <div class="card-story-genre genre-mystery">미스터리 · 시간여행</div>
+        <div class="card-story-title">루프: 화요일의 저주</div>
+        <div class="card-story-excerpt">당신은 같은 화요일을 2,847번째 반복하고 있다. 이번에는 다를 것이라고 믿는 이유가 있다.</div>
+        <div class="card-tags">
+          <span class="tag">타임루프</span><span class="tag">퍼즐</span>
+        </div>
+        <div class="card-story-footer">
+          <div class="footer-left">
+            <div class="footer-stat">
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              2.9K
+            </div>
+          </div>
+          <div class="rating" style="font-size:9px">★★★★★</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8 -->
+    <div class="card-story" onclick="location.href='play.html'">
+      <div class="card-story-accent"></div>
+      <div class="card-story-thumb" style="background:linear-gradient(135deg, #141008 0%, #201808 100%)">
+        <div class="thumb-pattern">朝</div>
+        <div class="thumb-gradient" style="background:radial-gradient(circle at 50% 50%, rgba(212,146,42,0.1) 0%, transparent 70%)"></div>
+      </div>
+      <div class="card-story-body">
+        <div class="card-story-genre genre-historical">역사 · 궁중</div>
+        <div class="card-story-title">후궁에서 왕후까지</div>
+        <div class="card-story-excerpt">조선의 마지막 왕. 그의 곁에서 살아남기 위해 당신이 선택할 수 있는 패가 있다.</div>
+        <div class="card-tags">
+          <span class="tag">궁중</span><span class="tag">정치</span><span class="tag">생존</span>
+        </div>
+        <div class="card-story-footer">
+          <div class="footer-left">
+            <div class="footer-stat">
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              11.2K
+            </div>
+          </div>
+          <div class="rating" style="font-size:9px">★★★★★</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /stories-grid -->
+</div><!-- /stories-section -->
+
+<!-- Recent Plays -->
+<div class="section-header" style="padding-top:8px">
+  <div>
+    <div class="section-title">이어서 읽기</div>
+    <div class="section-count">3개의 진행 중인 스토리</div>
+  </div>
+</div>
+
+<div class="recent-section">
+  <div class="recent-list">
+
+    <div class="recent-item">
+      <div class="recent-cover">
+        <div class="recent-cover-inner">꿈</div>
+      </div>
+      <div class="recent-info">
+        <div class="recent-title">황혼의 마법사와 잃어버린 별</div>
+        <div class="recent-meta">
+          <span>챕터 7 · 황혼의 탑</span>
+          <span style="color:var(--border-medium)">·</span>
+          <span>3일 전</span>
+        </div>
+      </div>
+      <div class="recent-progress">
+        <div class="progress-label">34%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:34%"></div></div>
+      </div>
+      <button class="recent-btn" onclick="location.href='play.html'">이어서 →</button>
+    </div>
+
+    <div class="recent-item">
+      <div class="recent-cover">
+        <div class="recent-cover-inner" style="color:var(--accent-crimson)">血</div>
+      </div>
+      <div class="recent-info">
+        <div class="recent-title">붉은 밀실의 탐정</div>
+        <div class="recent-meta">
+          <span>3번째 용의자 심문</span>
+          <span style="color:var(--border-medium)">·</span>
+          <span>1주 전</span>
+        </div>
+      </div>
+      <div class="recent-progress">
+        <div class="progress-label">67%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:67%"></div></div>
+      </div>
+      <button class="recent-btn" onclick="location.href='play.html'">이어서 →</button>
+    </div>
+
+    <div class="recent-item">
+      <div class="recent-cover">
+        <div class="recent-cover-inner" style="color:#E87F9C">♡</div>
+      </div>
+      <div class="recent-info">
+        <div class="recent-title">오후 세시의 서점</div>
+        <div class="recent-meta">
+          <span>두 번째 만남</span>
+          <span style="color:var(--border-medium)">·</span>
+          <span>오늘</span>
+        </div>
+      </div>
+      <div class="recent-progress">
+        <div class="progress-label">12%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:12%"></div></div>
+      </div>
+      <button class="recent-btn" onclick="location.href='play.html'">이어서 →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <div>
+    <div class="footer-brand">Scriptorium</div>
+    <div class="footer-text">이야기가 살아 숨쉬는 곳 · 2026</div>
+  </div>
+  <div class="footer-links">
+    <a class="footer-link" href="#">소개</a>
+    <a class="footer-link" href="#">이용약관</a>
+    <a class="footer-link" href="#">개인정보처리방침</a>
+    <a class="footer-link" href="admin.html">관리자</a>
+  </div>
+</footer>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+}
+
+// Chip filter interaction
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', function() {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Card hover — ink drop effect
+document.querySelectorAll('.card-story, .card-featured, .card-side').forEach(card => {
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    card.style.setProperty('--mouse-x', x + '%');
+    card.style.setProperty('--mouse-y', y + '%');
+  });
+});
+</script>
+</body>
+</html>

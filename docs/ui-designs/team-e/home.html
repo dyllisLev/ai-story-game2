@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team E — 홈 | AI 스토리 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;700&family=Cinzel:wght@400;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deepest:   #0a0908;
+  --bg-deep:      #0f0e0d;
+  --bg-panel:     #141210;
+  --bg-surface:   #1c1915;
+  --bg-elevated:  #242018;
+  --bg-hover:     #2a2520;
+  --bg-card:      #1a1714;
+
+  --ink-primary:  #d4c5a9;
+  --ink-muted:    #8a7d6a;
+  --ink-faint:    #4a4035;
+  --ink-accent:   #e8a838;
+  --ink-red:      #c0392b;
+  --ink-red-soft: #e05040;
+
+  --border-faint: rgba(212, 197, 169, 0.08);
+  --border-soft:  rgba(212, 197, 169, 0.15);
+  --border-med:   rgba(212, 197, 169, 0.25);
+
+  --font-display: 'Cinzel', 'Noto Serif KR', serif;
+  --font-body: 'Noto Serif KR', serif;
+  --font-ui: 'JetBrains Mono', monospace;
+}
+[data-theme="light"] {
+  --bg-deepest: #f5f0e8; --bg-deep: #f0ebe0; --bg-panel: #ebe4d6;
+  --bg-surface: #e4dcc8; --bg-elevated: #dcd3bc; --bg-hover: #d4c9b0; --bg-card: #ede7d9;
+  --ink-primary: #2a2015; --ink-muted: #6a5c44; --ink-faint: #b0a080;
+  --border-faint: rgba(42,32,21,0.08); --border-soft: rgba(42,32,21,0.15); --border-med: rgba(42,32,21,0.25);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg-deepest);
+  color: var(--ink-primary);
+  font-family: var(--font-body);
+  min-height: 100vh;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+/* ── HEADER ── */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-deepest);
+  border-bottom: 1px solid var(--border-faint);
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  backdrop-filter: blur(8px);
+}
+
+.header-logo {
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  color: var(--ink-accent);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Search bar */
+.header-search {
+  flex: 1;
+  max-width: 480px;
+  position: relative;
+}
+.search-input {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 8px 36px 8px 36px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-primary);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-input::placeholder { color: var(--ink-faint); }
+.search-input:focus {
+  border-color: rgba(232, 168, 56, 0.4);
+  box-shadow: 0 0 0 3px rgba(232, 168, 56, 0.06);
+}
+.search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+.search-shortcut {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-faint);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-faint);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-btn {
+  background: none;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.header-btn:hover { color: var(--ink-primary); border-color: var(--border-med); }
+.header-btn.primary {
+  background: var(--ink-red);
+  border-color: transparent;
+  color: #fff;
+}
+.header-btn.primary:hover { background: var(--ink-red-soft); }
+
+.user-avatar-sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ink-red), var(--ink-accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: #fff;
+  cursor: pointer;
+  border: 2px solid var(--border-soft);
+  transition: border-color 0.2s;
+}
+.user-avatar-sm:hover { border-color: var(--ink-accent); }
+
+/* ── HERO / BANNER ── */
+.hero {
+  border-bottom: 1px solid var(--border-faint);
+  padding: 48px 32px 40px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(232, 168, 56, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hero-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-accent);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 48px);
+  letter-spacing: 0.04em;
+  color: var(--ink-primary);
+  line-height: 1.2;
+  margin-bottom: 16px;
+}
+.hero-title em {
+  font-style: normal;
+  color: var(--ink-accent);
+}
+
+.hero-desc {
+  font-size: 15px;
+  color: var(--ink-muted);
+  max-width: 480px;
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero-stat-val {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--ink-primary);
+}
+.hero-stat-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border-faint);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  background: var(--bg-panel);
+}
+.filter-bar::-webkit-scrollbar { height: 0; }
+
+.filter-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.filter-chip {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filter-chip:hover { border-color: var(--border-med); color: var(--ink-primary); }
+.filter-chip.active {
+  background: rgba(232, 168, 56, 0.12);
+  border-color: rgba(232, 168, 56, 0.4);
+  color: var(--ink-accent);
+}
+
+.filter-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-faint);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+.sort-select {
+  margin-left: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+
+/* ── MAIN CONTENT ── */
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 32px 64px;
+}
+
+/* Section heading */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  color: var(--ink-primary);
+}
+.section-count {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+}
+.section-link {
+  margin-left: auto;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.section-link:hover { color: var(--ink-accent); }
+
+/* FEATURED carousel */
+.featured-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+@media (max-width: 900px) {
+  .featured-row { grid-template-columns: 1fr; }
+}
+
+.featured-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-faint);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  text-decoration: none;
+  display: block;
+  position: relative;
+}
+.featured-card:hover {
+  border-color: var(--border-soft);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+
+.featured-banner {
+  height: 160px;
+  background: linear-gradient(135deg, #1a0e04 0%, #2e1a08 50%, #0d1a12 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  position: relative;
+  overflow: hidden;
+}
+.featured-banner::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, var(--bg-card));
+}
+
+.featured-body {
+  padding: 16px 20px 20px;
+}
+
+.story-genre-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.genre-tag {
+  font-family: var(--font-ui);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-accent);
+  background: rgba(232, 168, 56, 0.1);
+  border: 1px solid rgba(232, 168, 56, 0.2);
+  border-radius: 3px;
+  padding: 2px 7px;
+}
+.genre-tag.dark { color: var(--ink-red-soft); background: rgba(192,57,43,0.1); border-color: rgba(192,57,43,0.2); }
+.genre-tag.blue { color: #7ab5d5; background: rgba(74,127,165,0.1); border-color: rgba(74,127,165,0.2); }
+
+.story-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  color: var(--ink-primary);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.story-desc {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  line-height: 1.6;
+  margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.story-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.story-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+
+.play-btn {
+  margin-left: auto;
+  background: var(--ink-red);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.play-btn:hover { background: var(--ink-red-soft); }
+
+/* STORY GRID */
+.story-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 48px;
+}
+
+.story-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-faint);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  text-decoration: none;
+  display: block;
+}
+.story-card:hover {
+  border-color: var(--border-soft);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+.card-thumb {
+  height: 100px;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  position: relative;
+}
+
+.card-body {
+  padding: 12px;
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  color: var(--ink-primary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-genre {
+  font-family: var(--font-ui);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--ink-accent);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-faint);
+}
+
+/* Continue playing */
+.continue-section {
+  margin-bottom: 48px;
+}
+
+.continue-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-faint);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-decoration: none;
+}
+.continue-item:hover {
+  border-color: var(--border-soft);
+  background: var(--bg-elevated);
+}
+
+.continue-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.continue-info { flex: 1; min-width: 0; }
+.continue-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--ink-primary);
+  margin-bottom: 3px;
+}
+.continue-sub {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+}
+
+/* Progress bar */
+.progress-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.progress-bar {
+  flex: 1;
+  height: 2px;
+  background: var(--border-faint);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--ink-accent);
+  border-radius: 1px;
+}
+.progress-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.continue-resume {
+  flex-shrink: 0;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--ink-faint);
+}
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+.empty-desc { font-size: 13px; }
+
+/* ── FOOTER ── */
+.site-footer {
+  border-top: 1px solid var(--border-faint);
+  padding: 24px 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  color: var(--ink-faint);
+}
+.footer-logo {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink-accent);
+  opacity: 0.5;
+}
+.footer-links {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+}
+.footer-link {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-link:hover { color: var(--ink-muted); }
+
+/* ── MOBILE ── */
+@media (max-width: 640px) {
+  .site-header { padding: 0 16px; gap: 12px; }
+  .hero { padding: 32px 16px 28px; }
+  .filter-bar { padding: 12px 16px; }
+  .main-content { padding: 24px 16px 48px; }
+  .hero-stats { gap: 20px; }
+  .story-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .header-btn:not(.primary) { display: none; }
+}
+
+/* Animations */
+.story-card, .featured-card, .continue-item {
+  animation: card-in 0.4s ease-out both;
+}
+.story-card:nth-child(1) { animation-delay: 0.05s; }
+.story-card:nth-child(2) { animation-delay: 0.1s; }
+.story-card:nth-child(3) { animation-delay: 0.15s; }
+.story-card:nth-child(4) { animation-delay: 0.2s; }
+.story-card:nth-child(5) { animation-delay: 0.25s; }
+.story-card:nth-child(6) { animation-delay: 0.3s; }
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <a href="home.html" class="header-logo">STORY ENGINE</a>
+
+  <div class="header-search">
+    <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="search" class="search-input" placeholder="스토리 검색..." id="searchInput" oninput="filterStories(this.value)" aria-label="스토리 검색">
+    <span class="search-shortcut">/</span>
+  </div>
+
+  <div class="header-actions">
+    <button class="header-btn" onclick="toggleTheme()">테마 전환</button>
+    <a href="editor.html" class="header-btn">에디터</a>
+    <a href="editor.html" class="header-btn primary">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      스토리 만들기
+    </a>
+    <div class="user-avatar-sm" title="프로필">K</div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">AI-Powered Interactive Fiction</div>
+    <h1 class="hero-title">당신이 <em>이야기</em>의<br>주인공이 되는 곳</h1>
+    <p class="hero-desc">AI와 함께 펼쳐지는 무한한 가능성의 세계. 선택하고, 행동하고, 이야기를 만들어가세요.</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-val">2,847</span>
+        <span class="hero-stat-label">스토리</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-val">12.4K</span>
+        <span class="hero-stat-label">플레이어</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-val">98K</span>
+        <span class="hero-stat-label">플레이 세션</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <span class="filter-label">장르</span>
+  <button class="filter-chip active" onclick="toggleFilter(this)">전체</button>
+  <button class="filter-chip" onclick="toggleFilter(this)">판타지</button>
+  <button class="filter-chip" onclick="toggleFilter(this)">미스터리</button>
+  <button class="filter-chip" onclick="toggleFilter(this)">SF</button>
+  <button class="filter-chip" onclick="toggleFilter(this)">로맨스</button>
+  <button class="filter-chip" onclick="toggleFilter(this)">공포</button>
+  <button class="filter-chip" onclick="toggleFilter(this)">역사</button>
+  <button class="filter-chip" onclick="toggleFilter(this)">현대</button>
+  <div class="filter-sep"></div>
+  <button class="filter-chip" onclick="toggleFilter(this)">초보자 친화</button>
+  <button class="filter-chip" onclick="toggleFilter(this)">성인용</button>
+  <select class="sort-select" aria-label="정렬">
+    <option>최신순</option>
+    <option>인기순</option>
+    <option>플레이 수</option>
+    <option>평점순</option>
+  </select>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="main-content">
+
+  <!-- Continue playing -->
+  <section class="continue-section">
+    <div class="section-head">
+      <h2 class="section-title">이어서 플레이</h2>
+      <span class="section-count">2 세션</span>
+    </div>
+    <a href="play.html" class="continue-item">
+      <div class="continue-thumb">🏛️</div>
+      <div class="continue-info">
+        <div class="continue-title">봉인된 신들의 이름</div>
+        <div class="continue-sub">금서고의 비밀 · 23턴</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar"><div class="progress-fill" style="width:35%"></div></div>
+          <span class="progress-label">3장 중 1장</span>
+        </div>
+      </div>
+      <div class="continue-resume">
+        <span class="play-btn">이어하기 →</span>
+      </div>
+    </a>
+    <a href="play.html" class="continue-item">
+      <div class="continue-thumb">🌌</div>
+      <div class="continue-info">
+        <div class="continue-title">별의 항해사</div>
+        <div class="continue-sub">심연의 부름 · 47턴</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar"><div class="progress-fill" style="width:68%"></div></div>
+          <span class="progress-label">5장 중 3장</span>
+        </div>
+      </div>
+      <div class="continue-resume">
+        <span class="play-btn">이어하기 →</span>
+      </div>
+    </a>
+  </section>
+
+  <!-- Featured -->
+  <section>
+    <div class="section-head">
+      <h2 class="section-title">추천 스토리</h2>
+      <a href="#" class="section-link">전체 보기 →</a>
+    </div>
+    <div class="featured-row">
+      <a href="play.html" class="featured-card">
+        <div class="featured-banner" style="background: linear-gradient(135deg,#0d1a12,#1a2e18,#0d1a12)">🌿</div>
+        <div class="featured-body">
+          <div class="story-genre-tags">
+            <span class="genre-tag">판타지</span>
+            <span class="genre-tag blue">미스터리</span>
+          </div>
+          <div class="story-title">봉인된 신들의 이름</div>
+          <div class="story-desc">고대 왕국의 금서고에서 시작된 금지된 진실을 향한 여정. 신들의 이름에는 힘이 깃들어 있다.</div>
+          <div class="story-meta-row">
+            <span class="story-meta-item">⭐ 4.9</span>
+            <span class="story-meta-item">🎮 2.1K 플레이</span>
+            <span class="story-meta-item">🕐 60-90분</span>
+            <a href="play.html" class="play-btn">플레이 →</a>
+          </div>
+        </div>
+      </a>
+      <a href="play.html" class="featured-card">
+        <div class="featured-banner" style="background: linear-gradient(135deg,#0a0e1a,#111a2e,#0a0e1a)">🌌</div>
+        <div class="featured-body">
+          <div class="story-genre-tags">
+            <span class="genre-tag">SF</span>
+            <span class="genre-tag dark">심리</span>
+          </div>
+          <div class="story-title">별의 항해사</div>
+          <div class="story-desc">무너지는 우주선, 신뢰할 수 없는 AI, 그리고 당신의 기억이 조작되었다는 의심. 진실은 무엇인가.</div>
+          <div class="story-meta-row">
+            <span class="story-meta-item">⭐ 4.8</span>
+            <span class="story-meta-item">🎮 1.8K 플레이</span>
+            <span class="story-meta-item">🕐 90-120분</span>
+            <a href="play.html" class="play-btn">플레이 →</a>
+          </div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- All stories grid -->
+  <section id="storiesSection">
+    <div class="section-head">
+      <h2 class="section-title">모든 스토리</h2>
+      <span class="section-count" id="storyCount">6개</span>
+    </div>
+    <div class="story-grid" id="storyGrid">
+      <a href="play.html" class="story-card" data-title="붉은 여왕의 궁전" data-genre="판타지 로맨스">
+        <div class="card-thumb" style="background: linear-gradient(135deg,#1a0d12,#2e1018)">🌹</div>
+        <div class="card-body">
+          <div class="card-genre">판타지 · 로맨스</div>
+          <div class="card-title">붉은 여왕의 궁전</div>
+          <div class="card-meta"><span>⭐ 4.7</span><span>·</span><span>1.4K</span></div>
+        </div>
+      </a>
+      <a href="play.html" class="story-card" data-title="탐정 유현의 밤" data-genre="미스터리 현대">
+        <div class="card-thumb" style="background: linear-gradient(135deg,#0d0f1a,#12151a)">🔍</div>
+        <div class="card-body">
+          <div class="card-genre">미스터리 · 현대</div>
+          <div class="card-title">탐정 유현의 밤</div>
+          <div class="card-meta"><span>⭐ 4.6</span><span>·</span><span>987</span></div>
+        </div>
+      </a>
+      <a href="play.html" class="story-card" data-title="조선 검객" data-genre="역사 액션">
+        <div class="card-thumb" style="background: linear-gradient(135deg,#1a1008,#2e1e0c)">⚔️</div>
+        <div class="card-body">
+          <div class="card-genre">역사 · 액션</div>
+          <div class="card-title">조선 검객</div>
+          <div class="card-meta"><span>⭐ 4.5</span><span>·</span><span>756</span></div>
+        </div>
+      </a>
+      <a href="play.html" class="story-card" data-title="도서관의 마지막 사서" data-genre="공포 미스터리">
+        <div class="card-thumb" style="background: linear-gradient(135deg,#0f0d0a,#1a1208)">📚</div>
+        <div class="card-body">
+          <div class="card-genre">공포 · 미스터리</div>
+          <div class="card-title">도서관의 마지막 사서</div>
+          <div class="card-meta"><span>⭐ 4.8</span><span>·</span><span>2.3K</span></div>
+        </div>
+      </a>
+      <a href="play.html" class="story-card" data-title="화성 식민지 17호" data-genre="SF 생존">
+        <div class="card-thumb" style="background: linear-gradient(135deg,#1a0a08,#2e1208)">🔴</div>
+        <div class="card-body">
+          <div class="card-genre">SF · 생존</div>
+          <div class="card-title">화성 식민지 17호</div>
+          <div class="card-meta"><span>⭐ 4.4</span><span>·</span><span>634</span></div>
+        </div>
+      </a>
+      <a href="play.html" class="story-card" data-title="바다 아래 왕국" data-genre="판타지 모험">
+        <div class="card-thumb" style="background: linear-gradient(135deg,#081218,#0c1e2e)">🌊</div>
+        <div class="card-body">
+          <div class="card-genre">판타지 · 모험</div>
+          <div class="card-title">바다 아래 왕국</div>
+          <div class="card-meta"><span>⭐ 4.6</span><span>·</span><span>891</span></div>
+        </div>
+      </a>
+    </div>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">검색 결과 없음</div>
+      <div class="empty-desc">다른 키워드로 검색해보세요</div>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <span class="footer-logo">STORY ENGINE</span>
+  <span style="font-family: var(--font-ui); font-size: 9px; letter-spacing:0.04em;">Team E Design</span>
+  <div class="footer-links">
+    <a href="admin.html" class="footer-link">관리자</a>
+    <a href="#" class="footer-link">도움말</a>
+    <a href="#" class="footer-link">이용약관</a>
+  </div>
+</footer>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+
+function toggleFilter(btn) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function filterStories(query) {
+  const q = query.toLowerCase().trim();
+  const cards = document.querySelectorAll('#storyGrid .story-card');
+  let visible = 0;
+  cards.forEach(card => {
+    const title = card.dataset.title.toLowerCase();
+    const genre = card.dataset.genre.toLowerCase();
+    const match = !q || title.includes(q) || genre.includes(q);
+    card.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  document.getElementById('storyCount').textContent = visible + '개';
+  document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+}
+
+// Keyboard shortcut: / focuses search
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== document.getElementById('searchInput')) {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
+</script>
+</body>
+</html>

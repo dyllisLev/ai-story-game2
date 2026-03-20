@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team E — 플레이 | AI 스토리 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;700&family=Cinzel:wght@400;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════
+   DESIGN TOKENS — INK & ATMOSPHERE
+═══════════════════════════════════════════════════ */
+:root {
+  --bg-deepest:   #0a0908;
+  --bg-deep:      #0f0e0d;
+  --bg-panel:     #141210;
+  --bg-surface:   #1c1915;
+  --bg-elevated:  #242018;
+  --bg-hover:     #2a2520;
+  --bg-active:    #322c24;
+
+  --ink-primary:  #d4c5a9;
+  --ink-muted:    #8a7d6a;
+  --ink-faint:    #4a4035;
+  --ink-accent:   #e8a838;
+  --ink-red:      #c0392b;
+  --ink-red-soft: #e05040;
+  --ink-blue:     #4a7fa5;
+  --ink-green:    #4a8c5c;
+
+  --border-faint: rgba(212, 197, 169, 0.08);
+  --border-soft:  rgba(212, 197, 169, 0.15);
+  --border-med:   rgba(212, 197, 169, 0.25);
+
+  --shadow-deep: 0 8px 32px rgba(0,0,0,0.6);
+  --shadow-panel: 4px 0 24px rgba(0,0,0,0.5);
+
+  --panel-left-w: 260px;
+  --panel-right-w: 300px;
+  --panel-transition: 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --font-display: 'Cinzel', 'Noto Serif KR', serif;
+  --font-body: 'Noto Serif KR', serif;
+  --font-ui: 'JetBrains Mono', monospace;
+}
+
+[data-theme="light"] {
+  --bg-deepest:   #f5f0e8;
+  --bg-deep:      #f0ebe0;
+  --bg-panel:     #ebe4d6;
+  --bg-surface:   #e4dcc8;
+  --bg-elevated:  #dcd3bc;
+  --bg-hover:     #d4c9b0;
+  --bg-active:    #cbbfa4;
+  --ink-primary:  #2a2015;
+  --ink-muted:    #6a5c44;
+  --ink-faint:    #b0a080;
+  --border-faint: rgba(42, 32, 21, 0.08);
+  --border-soft:  rgba(42, 32, 21, 0.15);
+  --border-med:   rgba(42, 32, 21, 0.25);
+  --shadow-deep: 0 8px 32px rgba(0,0,0,0.15);
+  --shadow-panel: 4px 0 24px rgba(0,0,0,0.12);
+}
+
+/* ═══════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-deepest);
+  color: var(--ink-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+/* ═══════════════════════════════════════════════════
+   MAIN LAYOUT — 3 PANELS
+═══════════════════════════════════════════════════ */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+/* ── LEFT PANEL: Sessions ── */
+.panel-left {
+  width: var(--panel-left-w);
+  min-width: var(--panel-left-w);
+  height: 100%;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-faint);
+  display: flex;
+  flex-direction: column;
+  transition: width var(--panel-transition), min-width var(--panel-transition), opacity var(--panel-transition);
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+  box-shadow: var(--shadow-panel);
+}
+
+.panel-left.collapsed {
+  width: 0;
+  min-width: 0;
+  opacity: 0;
+}
+
+/* ── CENTER PANEL: Story Content ── */
+.panel-center {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-deep);
+  position: relative;
+}
+
+/* ── RIGHT PANEL: Settings/Character ── */
+.panel-right {
+  width: var(--panel-right-w);
+  min-width: var(--panel-right-w);
+  height: 100%;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-faint);
+  display: flex;
+  flex-direction: column;
+  transition: width var(--panel-transition), min-width var(--panel-transition), opacity var(--panel-transition);
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+
+.panel-right.collapsed {
+  width: 0;
+  min-width: 0;
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   LEFT PANEL CONTENTS
+═══════════════════════════════════════════════════ */
+.left-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-faint);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.left-header .logo-mark {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: var(--ink-accent);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.left-header .home-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+.left-header .home-btn:hover { color: var(--ink-primary); }
+
+.new-session-btn {
+  margin: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  color: var(--ink-primary);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+.new-session-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-med);
+}
+.new-session-btn .shortcut {
+  margin-left: auto;
+  color: var(--ink-faint);
+  font-size: 10px;
+}
+
+.sessions-label {
+  padding: 8px 16px 4px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+.sessions-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px;
+}
+.sessions-list::-webkit-scrollbar { width: 3px; }
+.sessions-list::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 2px; }
+
+.session-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+.session-item:hover { background: var(--bg-hover); }
+.session-item.active {
+  background: var(--bg-active);
+}
+.session-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 60%;
+  background: var(--ink-accent);
+  border-radius: 0 2px 2px 0;
+}
+
+.session-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.session-info { flex: 1; min-width: 0; }
+.session-title {
+  font-size: 13px;
+  color: var(--ink-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.session-meta {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+.session-item .del-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 2px;
+  transition: opacity 0.2s, color 0.2s;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.session-item:hover .del-btn { opacity: 1; }
+.session-item .del-btn:hover { color: var(--ink-red-soft); }
+
+.left-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-faint);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ink-red) 0%, var(--ink-accent) 100%);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #fff;
+  font-family: var(--font-display);
+}
+.user-name {
+  font-size: 12px;
+  color: var(--ink-primary);
+}
+.theme-toggle {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border-soft);
+  color: var(--ink-muted);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.2s;
+}
+.theme-toggle:hover { color: var(--ink-primary); border-color: var(--border-med); }
+
+/* ═══════════════════════════════════════════════════
+   CENTER PANEL — TOP BAR
+═══════════════════════════════════════════════════ */
+.center-topbar {
+  height: 52px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-faint);
+  gap: 8px;
+  background: var(--bg-panel);
+}
+
+.panel-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+.panel-toggle-btn:hover {
+  color: var(--ink-primary);
+  background: var(--bg-hover);
+}
+.panel-toggle-btn.active {
+  color: var(--ink-accent);
+}
+
+.story-title-area {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.story-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--ink-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.story-subtitle {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+/* Memory badge */
+.memory-badge-btn {
+  position: relative;
+  background: none;
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  padding: 5px 12px 5px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--ink-muted);
+  letter-spacing: 0.06em;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.memory-badge-btn:hover {
+  border-color: var(--ink-accent);
+  color: var(--ink-accent);
+  background: rgba(232, 168, 56, 0.05);
+}
+.memory-badge-btn.has-memory {
+  border-color: rgba(232, 168, 56, 0.4);
+  color: var(--ink-accent);
+}
+.memory-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-accent);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s, background 0.2s;
+}
+.icon-btn:hover {
+  color: var(--ink-primary);
+  background: var(--bg-hover);
+}
+
+/* ═══════════════════════════════════════════════════
+   CENTER PANEL — STORY FEED
+═══════════════════════════════════════════════════ */
+.story-feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 0;
+  scroll-behavior: smooth;
+}
+.story-feed::-webkit-scrollbar { width: 4px; }
+.story-feed::-webkit-scrollbar-thumb { background: var(--border-faint); border-radius: 2px; }
+
+.feed-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Message bubbles */
+.msg {
+  margin-bottom: 28px;
+  animation: msg-appear 0.4s ease-out;
+}
+@keyframes msg-appear {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.msg-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.msg-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.msg-avatar.narrator {
+  background: linear-gradient(135deg, #2a1a0a 0%, #4a2e10 100%);
+  border-color: rgba(232, 168, 56, 0.3);
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--ink-accent);
+  letter-spacing: 0.05em;
+}
+.msg-name {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+.msg-time {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-faint);
+}
+
+.msg-body {
+  padding-left: 42px;
+}
+.msg-body p {
+  font-size: 14.5px;
+  line-height: 1.85;
+  color: var(--ink-primary);
+  margin-bottom: 8px;
+}
+.msg-body p:last-child { margin-bottom: 0; }
+
+/* Narrator messages */
+.msg.narrator-msg .msg-body p {
+  color: var(--ink-primary);
+  font-style: italic;
+  opacity: 0.92;
+}
+
+/* Player messages */
+.msg.player-msg {
+  padding-left: 42px;
+}
+.msg.player-msg .msg-body {
+  padding-left: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-faint);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.msg.player-msg .msg-body p {
+  font-style: normal;
+  color: var(--ink-primary);
+}
+
+/* AI streaming indicator */
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--ink-accent);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 0.8s step-end infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Message actions */
+.msg-actions {
+  padding-left: 42px;
+  margin-top: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.msg:hover .msg-actions { opacity: 1; }
+.msg-action-btn {
+  background: none;
+  border: 1px solid var(--border-faint);
+  border-radius: 4px;
+  color: var(--ink-faint);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.msg-action-btn:hover {
+  color: var(--ink-muted);
+  border-color: var(--border-soft);
+  background: var(--bg-hover);
+}
+
+/* Dividers */
+.chapter-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 32px 0;
+  color: var(--ink-faint);
+}
+.chapter-divider::before,
+.chapter-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-faint);
+}
+.chapter-divider span {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════
+   CENTER PANEL — INPUT AREA
+═══════════════════════════════════════════════════ */
+.input-area {
+  border-top: 1px solid var(--border-faint);
+  background: var(--bg-panel);
+  padding: 12px 16px 16px;
+}
+
+/* Suggested replies */
+.suggested-replies {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.suggested-replies::-webkit-scrollbar { height: 2px; }
+.suggested-replies::-webkit-scrollbar-thumb { background: var(--border-faint); }
+
+.suggest-btn {
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  padding: 5px 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.suggest-btn:hover {
+  background: var(--bg-hover);
+  border-color: rgba(232, 168, 56, 0.4);
+  color: var(--ink-primary);
+}
+
+/* Input wrapper */
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: border-color 0.2s;
+}
+.input-wrapper:focus-within {
+  border-color: rgba(232, 168, 56, 0.5);
+  box-shadow: 0 0 0 3px rgba(232, 168, 56, 0.06);
+}
+
+.story-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--ink-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  max-height: 160px;
+  min-height: 24px;
+  overflow-y: auto;
+}
+.story-input::placeholder { color: var(--ink-faint); }
+.story-input::-webkit-scrollbar { width: 2px; }
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.input-action-btn {
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+.input-action-btn:hover { color: var(--ink-primary); }
+
+.send-btn {
+  background: var(--ink-red);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  padding: 7px 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s, transform 0.1s;
+}
+.send-btn:hover { background: var(--ink-red-soft); }
+.send-btn:active { transform: scale(0.96); }
+.send-btn .shortcut-hint {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* Input footer */
+.input-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 0 2px;
+}
+.input-meta {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+}
+.char-count {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-faint);
+  margin-left: auto;
+}
+
+/* Stop generation button */
+.stop-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  color: var(--ink-muted);
+  padding: 6px 12px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: 0 auto;
+  margin-bottom: 8px;
+}
+.stop-btn:hover { border-color: var(--ink-red-soft); color: var(--ink-red-soft); }
+.stop-btn.visible { display: flex; }
+
+/* ═══════════════════════════════════════════════════
+   RIGHT PANEL — CHARACTER & SETTINGS
+═══════════════════════════════════════════════════ */
+.right-panel-header {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-faint);
+  gap: 2px;
+}
+
+.right-tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  margin-bottom: -1px;
+}
+.right-tab-btn.active {
+  color: var(--ink-accent);
+  border-bottom-color: var(--ink-accent);
+}
+
+.right-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.right-panel-content::-webkit-scrollbar { width: 3px; }
+.right-panel-content::-webkit-scrollbar-thumb { background: var(--border-faint); }
+
+/* Tab panels */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Character card */
+.char-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.char-portrait {
+  width: 100%;
+  height: 120px;
+  background: linear-gradient(160deg, #1a0e04 0%, #2e1a08 50%, #1a0e04 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  position: relative;
+}
+.char-portrait::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, var(--bg-elevated));
+}
+
+.char-info {
+  padding: 12px 14px 14px;
+}
+.char-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: var(--ink-primary);
+}
+.char-role {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--ink-accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.char-desc {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+/* Stats bars */
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.stat-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--ink-muted);
+  width: 50px;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.stat-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--border-faint);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.stat-fill {
+  height: 100%;
+  background: var(--ink-accent);
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.stat-val {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--ink-muted);
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Section heading */
+.section-heading {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-faint);
+}
+
+/* Memory panel */
+.memory-categories {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.memory-cat {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-faint);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.memory-cat:hover {
+  border-color: var(--border-soft);
+  background: var(--bg-hover);
+}
+.memory-cat-icon { font-size: 16px; margin-bottom: 4px; }
+.memory-cat-name {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+.memory-cat-count {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-primary);
+  margin-top: 2px;
+}
+
+.memory-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-faint);
+  border-left: 2px solid var(--ink-accent);
+  border-radius: 0 6px 6px 0;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.memory-item-tag {
+  font-family: var(--font-ui);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--ink-accent);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+/* Settings tab */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-faint);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-label {
+  font-size: 12px;
+  color: var(--ink-primary);
+}
+.setting-desc {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle input:checked + .toggle-track {
+  background: rgba(232, 168, 56, 0.3);
+  border-color: var(--ink-accent);
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  background: var(--ink-muted);
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+.toggle input:checked + .toggle-track::after {
+  transform: translateX(16px);
+  background: var(--ink-accent);
+}
+
+/* Slider */
+.setting-slider {
+  width: 100%;
+  margin-top: 8px;
+  -webkit-appearance: none;
+  height: 3px;
+  background: var(--border-soft);
+  border-radius: 2px;
+  outline: none;
+}
+.setting-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink-accent);
+  cursor: pointer;
+  border: 2px solid var(--bg-panel);
+}
+
+/* ═══════════════════════════════════════════════════
+   MEMORY OVERLAY / NOTEBOOK
+═══════════════════════════════════════════════════ */
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.overlay-backdrop.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.memory-notebook {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.94);
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  max-height: 80vh;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+  box-shadow: var(--shadow-deep);
+}
+.memory-notebook.visible {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  pointer-events: all;
+}
+
+.notebook-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-faint);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.notebook-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  color: var(--ink-primary);
+}
+.notebook-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+.notebook-close:hover { color: var(--ink-primary); }
+
+.notebook-tabs {
+  display: flex;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-faint);
+  gap: 0;
+}
+.notebook-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.notebook-tab.active {
+  color: var(--ink-accent);
+  border-bottom-color: var(--ink-accent);
+}
+.notebook-tab .nb-count {
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 1px 5px;
+  font-size: 8px;
+  color: var(--ink-muted);
+}
+.notebook-tab.active .nb-count {
+  background: rgba(232, 168, 56, 0.15);
+  color: var(--ink-accent);
+}
+
+.notebook-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+.notebook-body::-webkit-scrollbar { width: 3px; }
+.notebook-body::-webkit-scrollbar-thumb { background: var(--border-faint); }
+
+.nb-entry {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-faint);
+  animation: nb-enter 0.3s ease-out;
+}
+@keyframes nb-enter {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.nb-entry:last-child { border-bottom: none; }
+.nb-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.nb-content { flex: 1; }
+.nb-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.nb-text {
+  font-size: 13px;
+  color: var(--ink-primary);
+  line-height: 1.6;
+}
+.nb-meta {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-faint);
+  margin-top: 4px;
+}
+
+.notebook-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-faint);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-secondary {
+  background: none;
+  border: 1px solid var(--border-soft);
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-secondary:hover { border-color: var(--border-med); color: var(--ink-primary); }
+
+.btn-primary {
+  background: var(--ink-red);
+  border: 1px solid transparent;
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-primary:hover { background: var(--ink-red-soft); }
+
+/* ═══════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS TOOLTIP
+═══════════════════════════════════════════════════ */
+.shortcuts-panel {
+  position: fixed;
+  bottom: 80px;
+  right: 320px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 14px 16px;
+  z-index: 50;
+  min-width: 220px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: var(--shadow-deep);
+}
+.shortcuts-panel.visible {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+.shortcuts-title {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+.shortcut-desc {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.kbd kbd {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--ink-muted);
+  box-shadow: 0 1px 0 var(--border-soft);
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE STYLES
+═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .panel-left {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 200;
+    transform: translateX(-100%);
+    width: var(--panel-left-w) !important;
+    min-width: var(--panel-left-w) !important;
+    opacity: 1 !important;
+    transition: transform var(--panel-transition);
+    box-shadow: var(--shadow-deep);
+  }
+  .panel-left.mobile-open {
+    transform: translateX(0);
+  }
+
+  .panel-right {
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100%;
+    z-index: 200;
+    transform: translateX(100%);
+    width: 85vw !important;
+    min-width: unset !important;
+    opacity: 1 !important;
+    transition: transform var(--panel-transition);
+    box-shadow: calc(-1 * var(--shadow-panel));
+  }
+  .panel-right.mobile-open {
+    transform: translateX(0);
+  }
+
+  .mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 199;
+    display: none;
+  }
+  .mobile-backdrop.visible { display: block; }
+
+  .feed-inner { padding: 0 16px; }
+
+  .shortcuts-panel { right: 16px; bottom: 100px; }
+}
+
+/* ═══════════════════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════════════════ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile backdrop -->
+<div class="mobile-backdrop" id="mobileBg" onclick="closeMobilePanels()"></div>
+
+<!-- OVERLAY: Memory Notebook -->
+<div class="overlay-backdrop" id="notebookBg" onclick="closeNotebook()"></div>
+<div class="memory-notebook" id="memoryNotebook" role="dialog" aria-label="기억 노트" aria-modal="true">
+  <div class="notebook-header">
+    <span style="font-size:18px">📖</span>
+    <span class="notebook-title">기억 노트</span>
+    <button class="notebook-close" onclick="closeNotebook()" aria-label="닫기">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="notebook-tabs">
+    <button class="notebook-tab active" onclick="switchNbTab(this, 'nb-npc')">인물 <span class="nb-count">4</span></button>
+    <button class="notebook-tab" onclick="switchNbTab(this, 'nb-place')">장소 <span class="nb-count">2</span></button>
+    <button class="notebook-tab" onclick="switchNbTab(this, 'nb-event')">사건 <span class="nb-count">5</span></button>
+    <button class="notebook-tab" onclick="switchNbTab(this, 'nb-info')">정보 <span class="nb-count">3</span></button>
+  </div>
+  <div class="notebook-body">
+    <!-- NPC tab -->
+    <div id="nb-npc" class="nb-tab-content">
+      <div class="nb-entry">
+        <div class="nb-icon">👤</div>
+        <div class="nb-content">
+          <div class="nb-label">주요 인물</div>
+          <div class="nb-text">레오나르드 블랙우드 — 왕립 도서관의 수석 사서. 50대 초반, 안경을 쓴 온화한 인상이나 눈빛은 예리하다.</div>
+          <div class="nb-meta">3턴 전 등장 · 호감도: 중립</div>
+        </div>
+      </div>
+      <div class="nb-entry">
+        <div class="nb-icon">👥</div>
+        <div class="nb-content">
+          <div class="nb-label">동행</div>
+          <div class="nb-text">엘리나 — 도서관 견습생. 주인공을 돕고 싶어하며 고대 언어에 능통하다.</div>
+          <div class="nb-meta">처음부터 동행 · 호감도: 우호</div>
+        </div>
+      </div>
+      <div class="nb-entry">
+        <div class="nb-icon">⚔️</div>
+        <div class="nb-content">
+          <div class="nb-label">적대 세력</div>
+          <div class="nb-text">황제의 비밀 경찰 "밤의 눈" — 금서를 수집하는 것으로 알려져 있음. 정체 불명.</div>
+          <div class="nb-meta">소문으로만 파악</div>
+        </div>
+      </div>
+    </div>
+    <!-- Place tab -->
+    <div id="nb-place" class="nb-tab-content" style="display:none">
+      <div class="nb-entry">
+        <div class="nb-icon">🏛️</div>
+        <div class="nb-content">
+          <div class="nb-label">현재 위치</div>
+          <div class="nb-text">왕립 도서관 금서고 — 지하 3층. 특별 열람증 없이는 진입 불가. 레오나르드의 협조로 접근 중.</div>
+          <div class="nb-meta">현재 위치</div>
+        </div>
+      </div>
+      <div class="nb-entry">
+        <div class="nb-icon">🗺️</div>
+        <div class="nb-content">
+          <div class="nb-label">다음 목적지</div>
+          <div class="nb-text">북쪽 산맥의 폐허 수도원 — 최초 봉인 장소로 추정. 3일 거리.</div>
+          <div class="nb-meta">미방문</div>
+        </div>
+      </div>
+    </div>
+    <!-- Event tab -->
+    <div id="nb-event" class="nb-tab-content" style="display:none">
+      <div class="nb-entry">
+        <div class="nb-icon">📜</div>
+        <div class="nb-content">
+          <div class="nb-label">중요 사건</div>
+          <div class="nb-text">금서고에서 발견한 지도 — 고대 문자로 적힌 봉인 위치 표시. 현재 소지 중.</div>
+          <div class="nb-meta">방금 발생</div>
+        </div>
+      </div>
+    </div>
+    <!-- Info tab -->
+    <div id="nb-info" class="nb-tab-content" style="display:none">
+      <div class="nb-entry">
+        <div class="nb-icon">💡</div>
+        <div class="nb-content">
+          <div class="nb-label">세계관 정보</div>
+          <div class="nb-text">봉인된 신들의 이름을 직접 부르면 안 된다 — 이름 자체가 소환 주문이 됨.</div>
+          <div class="nb-meta">레오나르드에게 들음</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notebook-footer">
+    <button class="btn-secondary" onclick="closeNotebook()">닫기</button>
+    <button class="btn-primary">메모 추가</button>
+  </div>
+</div>
+
+<!-- SHORTCUTS PANEL -->
+<div class="shortcuts-panel" id="shortcutsPanel">
+  <div class="shortcuts-title">키보드 단축키</div>
+  <div class="shortcut-row">
+    <span class="shortcut-desc">메시지 전송</span>
+    <span class="kbd"><kbd>Enter</kbd></span>
+  </div>
+  <div class="shortcut-row">
+    <span class="shortcut-desc">줄바꿈</span>
+    <span class="kbd"><kbd>Shift</kbd><kbd>Enter</kbd></span>
+  </div>
+  <div class="shortcut-row">
+    <span class="shortcut-desc">왼쪽 패널 열기/닫기</span>
+    <span class="kbd"><kbd>⌘</kbd><kbd>[</kbd></span>
+  </div>
+  <div class="shortcut-row">
+    <span class="shortcut-desc">오른쪽 패널 열기/닫기</span>
+    <span class="kbd"><kbd>⌘</kbd><kbd>]</kbd></span>
+  </div>
+  <div class="shortcut-row">
+    <span class="shortcut-desc">기억 노트 열기</span>
+    <span class="kbd"><kbd>⌘</kbd><kbd>M</kbd></span>
+  </div>
+  <div class="shortcut-row">
+    <span class="shortcut-desc">생성 중지</span>
+    <span class="kbd"><kbd>Esc</kbd></span>
+  </div>
+  <div class="shortcut-row">
+    <span class="shortcut-desc">새 세션</span>
+    <span class="kbd"><kbd>⌘</kbd><kbd>N</kbd></span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════════════ -->
+<div class="app-shell">
+
+  <!-- LEFT PANEL: Sessions -->
+  <aside class="panel-left" id="panelLeft" aria-label="세션 목록">
+    <div class="left-header">
+      <span class="logo-mark">Story Engine</span>
+      <button class="home-btn icon-btn" title="홈으로" onclick="location.href='home.html'" aria-label="홈">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      </button>
+    </div>
+
+    <button class="new-session-btn" onclick="newSession()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      새 세션
+      <span class="shortcut">⌘N</span>
+    </button>
+
+    <div class="sessions-label">이 스토리</div>
+    <div class="sessions-list">
+      <div class="session-item active" tabindex="0">
+        <div class="session-icon">🏛️</div>
+        <div class="session-info">
+          <div class="session-title">금서고의 비밀</div>
+          <div class="session-meta">방금 전 · 23턴</div>
+        </div>
+        <button class="del-btn" title="삭제" aria-label="세션 삭제">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/></svg>
+        </button>
+      </div>
+      <div class="session-item" tabindex="0">
+        <div class="session-icon">🌙</div>
+        <div class="session-info">
+          <div class="session-title">첫 번째 만남</div>
+          <div class="session-meta">어제 · 15턴</div>
+        </div>
+        <button class="del-btn" title="삭제" aria-label="세션 삭제">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/></svg>
+        </button>
+      </div>
+      <div class="session-item" tabindex="0">
+        <div class="session-icon">⚔️</div>
+        <div class="session-info">
+          <div class="session-title">시험대에 오르다</div>
+          <div class="session-meta">3일 전 · 41턴</div>
+        </div>
+        <button class="del-btn" title="삭제" aria-label="세션 삭제">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="left-footer">
+      <div class="user-avatar">K</div>
+      <span class="user-name">김민준</span>
+      <button class="theme-toggle" onclick="toggleTheme()">테마</button>
+    </div>
+  </aside>
+
+  <!-- CENTER PANEL -->
+  <main class="panel-center" role="main">
+
+    <!-- Top bar -->
+    <div class="center-topbar">
+      <!-- Left panel toggle -->
+      <button class="panel-toggle-btn active" id="leftToggleBtn" onclick="toggleLeft()" title="세션 목록 (⌘[)" aria-label="왼쪽 패널 열기/닫기">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <line x1="9" y1="3" x2="9" y2="21"/>
+        </svg>
+      </button>
+
+      <!-- Story info -->
+      <div class="story-title-area">
+        <div class="story-title">봉인된 신들의 이름</div>
+        <div class="story-subtitle">판타지 · 미스터리 · 금서고의 비밀</div>
+      </div>
+
+      <!-- Memory badge -->
+      <button class="memory-badge-btn has-memory" onclick="openNotebook()" title="기억 노트 (⌘M)" aria-label="기억 노트 열기">
+        <div class="memory-dot"></div>
+        기억 14
+      </button>
+
+      <!-- Topbar actions -->
+      <div class="topbar-actions">
+        <button class="icon-btn" onclick="toggleShortcuts()" title="단축키" aria-label="단축키 표시">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M8 14h8"/></svg>
+        </button>
+        <!-- Right panel toggle -->
+        <button class="panel-toggle-btn active" id="rightToggleBtn" onclick="toggleRight()" title="설정 패널 (⌘])" aria-label="오른쪽 패널 열기/닫기">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="15" y1="3" x2="15" y2="21"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Story feed -->
+    <div class="story-feed" id="storyFeed">
+      <div class="feed-inner">
+
+        <div class="chapter-divider"><span>제 1장 — 금서고</span></div>
+
+        <!-- Narrator message -->
+        <div class="msg narrator-msg">
+          <div class="msg-header">
+            <div class="msg-avatar narrator">N</div>
+            <span class="msg-name">서술자</span>
+            <span class="msg-time">오후 2:14</span>
+          </div>
+          <div class="msg-body">
+            <p>왕립 도서관 지하 3층. 레오나르드가 무거운 철문을 열자 퀴퀴한 양피지 냄새와 함께 어둠이 쏟아져 나왔다. 그는 촛불을 들어 입구를 밝혔다.</p>
+            <p>"이곳에 들어올 수 있는 사람은 왕과 대사제, 그리고 저뿐입니다. 오늘은 특별히..." 그는 말을 잇지 못했다.</p>
+          </div>
+          <div class="msg-actions">
+            <button class="msg-action-btn">🔄 재생성</button>
+            <button class="msg-action-btn">📋 복사</button>
+            <button class="msg-action-btn">📖 기억에 저장</button>
+          </div>
+        </div>
+
+        <!-- Player message -->
+        <div class="msg player-msg">
+          <div class="msg-header">
+            <div class="msg-avatar">🧑</div>
+            <span class="msg-name">나</span>
+            <span class="msg-time">오후 2:15</span>
+          </div>
+          <div class="msg-body">
+            <p>"고맙습니다, 레오나르드 씨. 이 빚은 꼭 갚겠습니다." 나는 조심스럽게 안으로 발을 내딛으며 말했다. "찾는 것은 '태초의 계약'에 관한 기록입니다."</p>
+          </div>
+          <div class="msg-actions">
+            <button class="msg-action-btn">✏️ 수정</button>
+            <button class="msg-action-btn">📋 복사</button>
+          </div>
+        </div>
+
+        <!-- Narrator response (streaming demo) -->
+        <div class="msg narrator-msg" id="streamingMsg">
+          <div class="msg-header">
+            <div class="msg-avatar narrator">N</div>
+            <span class="msg-name">서술자</span>
+            <span class="msg-time">오후 2:16</span>
+          </div>
+          <div class="msg-body" id="streamingBody">
+            <p>레오나르드의 표정이 굳었다. 촛불이 바람 없이도 흔들렸다. "태초의 계약..." 그가 낮은 목소리로 되뇌었다. "그 이름을 직접 입에 올린 사람은 당신이 처음입니다. 보통 사람들은 그 존재를 모르거든요."</p>
+            <p>그는 천천히 안쪽 서가로 향했다. 발걸음마다 먼지가 일었다. 가장 깊숙한 곳, 철제 자물쇠가 달린 진열장 앞에서 그가 멈췄다.<span class="streaming-cursor" id="cursor" style="display:none"></span></p>
+          </div>
+          <div class="msg-actions">
+            <button class="msg-action-btn">🔄 재생성</button>
+            <button class="msg-action-btn">📋 복사</button>
+            <button class="msg-action-btn">📖 기억에 저장</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Stop generation button -->
+    <div style="padding: 0 16px;">
+      <button class="stop-btn" id="stopBtn" onclick="stopGeneration()">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        생성 중지
+        <span style="color: var(--ink-faint); font-size:9px;">(Esc)</span>
+      </button>
+    </div>
+
+    <!-- Input area -->
+    <div class="input-area">
+      <!-- Suggested replies -->
+      <div class="suggested-replies" id="suggestedReplies">
+        <button class="suggest-btn" onclick="useSuggestion(this)">자물쇠를 살펴본다</button>
+        <button class="suggest-btn" onclick="useSuggestion(this)">레오나르드에게 어떻게 아냐고 묻는다</button>
+        <button class="suggest-btn" onclick="useSuggestion(this)">"사실 저도 그 계약의 당사자입니다"</button>
+        <button class="suggest-btn" onclick="useSuggestion(this)">뒤를 돌아 입구를 확인한다</button>
+      </div>
+
+      <!-- Input wrapper -->
+      <div class="input-wrapper">
+        <textarea
+          class="story-input"
+          id="storyInput"
+          placeholder="다음 행동이나 대사를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
+          rows="1"
+          oninput="autoResize(this); updateCharCount(this)"
+          onkeydown="handleInputKey(event)"
+          aria-label="스토리 입력"
+        ></textarea>
+        <div class="input-actions">
+          <button class="input-action-btn" title="파일 첨부" aria-label="파일 첨부">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <button class="send-btn" onclick="sendMessage()">
+            전송
+            <span class="shortcut-hint">Enter</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="input-footer">
+        <span class="input-meta">Gemini 2.0 Flash · 스트리밍</span>
+        <span class="char-count" id="charCount">0 / 2000</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL: Character & Settings -->
+  <aside class="panel-right" id="panelRight" aria-label="캐릭터 및 설정">
+    <div class="right-panel-header">
+      <button class="right-tab-btn active" onclick="switchRightTab(this, 'tab-char')">캐릭터</button>
+      <button class="right-tab-btn" onclick="switchRightTab(this, 'tab-memory')">기억</button>
+      <button class="right-tab-btn" onclick="switchRightTab(this, 'tab-settings')">설정</button>
+    </div>
+
+    <div class="right-panel-content">
+
+      <!-- Character tab -->
+      <div class="tab-panel active" id="tab-char">
+        <div class="char-card">
+          <div class="char-portrait">🧙</div>
+          <div class="char-info">
+            <div class="char-name">레오나르드 블랙우드</div>
+            <div class="char-role">왕립 도서관 수석 사서</div>
+            <div class="char-desc">50대 초반. 평생을 금서고 연구에 바쳤으나 진실의 일부만 알고 있다. 주인공에게 조심스러운 호기심을 보인다.</div>
+          </div>
+        </div>
+
+        <div class="section-heading" style="margin-bottom:12px;">관계 상태</div>
+        <div class="stat-row">
+          <span class="stat-label">호감</span>
+          <div class="stat-bar"><div class="stat-fill" style="width:45%; background: var(--ink-green)"></div></div>
+          <span class="stat-val">45</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">신뢰</span>
+          <div class="stat-bar"><div class="stat-fill" style="width:30%"></div></div>
+          <span class="stat-val">30</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">경계</span>
+          <div class="stat-bar"><div class="stat-fill" style="width:60%; background: var(--ink-red-soft)"></div></div>
+          <span class="stat-val">60</span>
+        </div>
+
+        <div style="margin-top:20px;">
+          <div class="section-heading">현재 장면의 인물</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="session-item" style="padding: 8px 10px; border-radius:6px; background: var(--bg-elevated);">
+              <div class="session-icon" style="width:24px;height:24px;font-size:12px;">🧙</div>
+              <div class="session-info">
+                <div class="session-title" style="font-size:12px;">레오나르드</div>
+                <div class="session-meta">긴장, 경계</div>
+              </div>
+            </div>
+            <div class="session-item" style="padding: 8px 10px; border-radius:6px; background: var(--bg-elevated);">
+              <div class="session-icon" style="width:24px;height:24px;font-size:12px;">👩</div>
+              <div class="session-info">
+                <div class="session-title" style="font-size:12px;">엘리나</div>
+                <div class="session-meta">호기심, 긴장</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Memory tab -->
+      <div class="tab-panel" id="tab-memory">
+        <div class="section-heading">기억 요약</div>
+        <div class="memory-categories">
+          <div class="memory-cat" onclick="openNotebook()">
+            <div class="memory-cat-icon">👤</div>
+            <div class="memory-cat-name">인물</div>
+            <div class="memory-cat-count">4</div>
+          </div>
+          <div class="memory-cat" onclick="openNotebook()">
+            <div class="memory-cat-icon">🗺️</div>
+            <div class="memory-cat-name">장소</div>
+            <div class="memory-cat-count">2</div>
+          </div>
+          <div class="memory-cat" onclick="openNotebook()">
+            <div class="memory-cat-icon">⚡</div>
+            <div class="memory-cat-name">사건</div>
+            <div class="memory-cat-count">5</div>
+          </div>
+          <div class="memory-cat" onclick="openNotebook()">
+            <div class="memory-cat-icon">💡</div>
+            <div class="memory-cat-name">정보</div>
+            <div class="memory-cat-count">3</div>
+          </div>
+        </div>
+        <div class="section-heading">최근 기억</div>
+        <div class="memory-item">
+          <div class="memory-item-tag">사건</div>
+          금서고에서 '태초의 계약' 지도 발견
+        </div>
+        <div class="memory-item" style="border-left-color: var(--ink-green);">
+          <div class="memory-item-tag" style="color: var(--ink-green);">인물</div>
+          레오나르드 — 계약의 존재를 알고 있음
+        </div>
+        <div class="memory-item" style="border-left-color: var(--ink-blue);">
+          <div class="memory-item-tag" style="color: var(--ink-blue);">정보</div>
+          신들의 이름을 직접 부르면 소환 주문이 됨
+        </div>
+        <button class="btn-secondary" style="width:100%; margin-top:12px; text-align:center;" onclick="openNotebook()">전체 기억 보기 →</button>
+      </div>
+
+      <!-- Settings tab -->
+      <div class="tab-panel" id="tab-settings">
+        <div class="section-heading">생성 설정</div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">마크다운 렌더링</div>
+            <div class="setting-desc">굵기, 기울기, 목록 표시</div>
+          </div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">LaTeX 수식</div>
+            <div class="setting-desc">KaTeX 렌더링 활성화</div>
+          </div>
+          <label class="toggle"><input type="checkbox"><div class="toggle-track"></div></label>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">스트리밍</div>
+            <div class="setting-desc">텍스트 실시간 출력</div>
+          </div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label>
+        </div>
+
+        <div style="padding: 10px 0;">
+          <div class="setting-label" style="margin-bottom:8px;">창의성 (Temperature)</div>
+          <input type="range" class="setting-slider" min="0" max="100" value="70" oninput="updateSliderLabel(this, 'tempVal')">
+          <div style="display:flex; justify-content:space-between; margin-top:4px;">
+            <span class="input-meta">정확</span>
+            <span class="input-meta" id="tempVal">0.7</span>
+            <span class="input-meta">창의적</span>
+          </div>
+        </div>
+
+        <div style="padding: 10px 0; border-top: 1px solid var(--border-faint);">
+          <div class="setting-label" style="margin-bottom:8px;">최대 길이</div>
+          <input type="range" class="setting-slider" min="0" max="100" value="50" oninput="updateSliderLabel(this, 'lenVal', 'tokens')">
+          <div style="display:flex; justify-content:space-between; margin-top:4px;">
+            <span class="input-meta">짧게</span>
+            <span class="input-meta" id="lenVal">1024 tokens</span>
+            <span class="input-meta">길게</span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <div class="section-heading">표시 설정</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">다크 테마</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked onchange="toggleTheme()"><div class="toggle-track"></div></label>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">타임스탬프 표시</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">추천 답변</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked onchange="toggleSuggestions(this)"><div class="toggle-track"></div></label>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════ */
+let leftOpen = true;
+let rightOpen = true;
+let shortcutsVisible = false;
+let streamingActive = false;
+let isMobile = () => window.innerWidth <= 768;
+
+/* ═══════════════════════════════════════════════════
+   PANEL TOGGLES
+═══════════════════════════════════════════════════ */
+function toggleLeft() {
+  if (isMobile()) {
+    const panel = document.getElementById('panelLeft');
+    panel.classList.toggle('mobile-open');
+    document.getElementById('mobileBg').classList.toggle('visible', panel.classList.contains('mobile-open'));
+  } else {
+    leftOpen = !leftOpen;
+    document.getElementById('panelLeft').classList.toggle('collapsed', !leftOpen);
+    document.getElementById('leftToggleBtn').classList.toggle('active', leftOpen);
+  }
+}
+
+function toggleRight() {
+  if (isMobile()) {
+    const panel = document.getElementById('panelRight');
+    panel.classList.toggle('mobile-open');
+    document.getElementById('mobileBg').classList.toggle('visible', panel.classList.contains('mobile-open'));
+  } else {
+    rightOpen = !rightOpen;
+    document.getElementById('panelRight').classList.toggle('collapsed', !rightOpen);
+    document.getElementById('rightToggleBtn').classList.toggle('active', rightOpen);
+  }
+}
+
+function closeMobilePanels() {
+  document.getElementById('panelLeft').classList.remove('mobile-open');
+  document.getElementById('panelRight').classList.remove('mobile-open');
+  document.getElementById('mobileBg').classList.remove('visible');
+}
+
+/* ═══════════════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════════════ */
+function switchRightTab(btn, tabId) {
+  document.querySelectorAll('.right-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+function switchNbTab(btn, tabId) {
+  document.querySelectorAll('.notebook-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nb-tab-content').forEach(p => p.style.display = 'none');
+  btn.classList.add('active');
+  document.getElementById(tabId).style.display = 'block';
+}
+
+/* ═══════════════════════════════════════════════════
+   MEMORY NOTEBOOK
+═══════════════════════════════════════════════════ */
+function openNotebook() {
+  document.getElementById('notebookBg').classList.add('visible');
+  document.getElementById('memoryNotebook').classList.add('visible');
+}
+
+function closeNotebook() {
+  document.getElementById('notebookBg').classList.remove('visible');
+  document.getElementById('memoryNotebook').classList.remove('visible');
+}
+
+/* ═══════════════════════════════════════════════════
+   SHORTCUTS
+═══════════════════════════════════════════════════ */
+function toggleShortcuts() {
+  shortcutsVisible = !shortcutsVisible;
+  document.getElementById('shortcutsPanel').classList.toggle('visible', shortcutsVisible);
+}
+
+/* ═══════════════════════════════════════════════════
+   INPUT
+═══════════════════════════════════════════════════ */
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+function updateCharCount(el) {
+  document.getElementById('charCount').textContent = el.value.length + ' / 2000';
+}
+
+function handleInputKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function sendMessage() {
+  const input = document.getElementById('storyInput');
+  const text = input.value.trim();
+  if (!text || streamingActive) return;
+
+  // Add player message
+  addPlayerMessage(text);
+  input.value = '';
+  input.style.height = 'auto';
+  updateCharCount(input);
+
+  // Simulate streaming AI response
+  simulateStreaming();
+}
+
+function addPlayerMessage(text) {
+  const feed = document.getElementById('storyFeed').querySelector('.feed-inner');
+  const msg = document.createElement('div');
+  msg.className = 'msg player-msg';
+  msg.innerHTML = `
+    <div class="msg-header">
+      <div class="msg-avatar">🧑</div>
+      <span class="msg-name">나</span>
+      <span class="msg-time">${getTime()}</span>
+    </div>
+    <div class="msg-body"><p>${escHtml(text)}</p></div>
+    <div class="msg-actions">
+      <button class="msg-action-btn">✏️ 수정</button>
+      <button class="msg-action-btn">📋 복사</button>
+    </div>`;
+  feed.appendChild(msg);
+  scrollToBottom();
+}
+
+function simulateStreaming() {
+  streamingActive = true;
+  document.getElementById('stopBtn').classList.add('visible');
+
+  const feed = document.getElementById('storyFeed').querySelector('.feed-inner');
+  const msgEl = document.createElement('div');
+  msgEl.className = 'msg narrator-msg';
+
+  const cursor = '<span class="streaming-cursor" id="liveCursor"></span>';
+  msgEl.innerHTML = `
+    <div class="msg-header">
+      <div class="msg-avatar narrator">N</div>
+      <span class="msg-name">서술자</span>
+      <span class="msg-time">${getTime()}</span>
+    </div>
+    <div class="msg-body" id="liveBody"><p>${cursor}</p></div>
+    <div class="msg-actions" style="opacity:0">
+      <button class="msg-action-btn">🔄 재생성</button>
+      <button class="msg-action-btn">📋 복사</button>
+      <button class="msg-action-btn">📖 기억에 저장</button>
+    </div>`;
+  feed.appendChild(msgEl);
+  scrollToBottom();
+
+  const fullText = `잠시 침묵이 흘렀다. 레오나르드가 자물쇠를 바라보며 무언가를 생각하는 듯했다. 그의 손가락이 진열장 표면을 천천히 쓰다듬었다.\n\n"이 안에 있는 것은... 지식이 아닙니다." 그가 낮고 무거운 목소리로 말했다. "이것은 봉인입니다. 누군가 당신을 이곳으로 보냈군요."`;
+
+  let i = 0;
+  const body = msgEl.querySelector('.msg-body');
+  body.innerHTML = '<p></p>';
+  const p = body.querySelector('p');
+
+  const interval = setInterval(() => {
+    if (!streamingActive) {
+      clearInterval(interval);
+      finalizeStream(msgEl);
+      return;
+    }
+    if (i < fullText.length) {
+      if (fullText[i] === '\n' && fullText[i+1] === '\n') {
+        body.innerHTML += '<p></p>';
+        i += 2;
+      } else {
+        const lastP = body.querySelectorAll('p');
+        const currentP = lastP[lastP.length - 1];
+        currentP.textContent += fullText[i];
+        i++;
+      }
+      scrollToBottom();
+    } else {
+      clearInterval(interval);
+      finalizeStream(msgEl);
+    }
+  }, 28);
+}
+
+function finalizeStream(msgEl) {
+  streamingActive = false;
+  document.getElementById('stopBtn').classList.remove('visible');
+  msgEl.querySelector('.msg-actions').style.opacity = '';
+}
+
+function stopGeneration() {
+  streamingActive = false;
+}
+
+function scrollToBottom() {
+  const feed = document.getElementById('storyFeed');
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function getTime() {
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? '오후' : '오전';
+  return `${ampm} ${h % 12 || 12}:${m}`;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ═══════════════════════════════════════════════════
+   SUGGESTED REPLIES
+═══════════════════════════════════════════════════ */
+function useSuggestion(btn) {
+  const input = document.getElementById('storyInput');
+  input.value = btn.textContent;
+  autoResize(input);
+  updateCharCount(input);
+  input.focus();
+}
+
+function toggleSuggestions(toggle) {
+  document.getElementById('suggestedReplies').style.display = toggle.checked ? 'flex' : 'none';
+}
+
+/* ═══════════════════════════════════════════════════
+   THEME
+═══════════════════════════════════════════════════ */
+function toggleTheme() {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+
+/* ═══════════════════════════════════════════════════
+   SETTINGS SLIDERS
+═══════════════════════════════════════════════════ */
+function updateSliderLabel(el, labelId, suffix = '') {
+  const val = (el.value / 100).toFixed(1);
+  if (suffix === 'tokens') {
+    const tokens = Math.round(el.value / 100 * 2048);
+    document.getElementById(labelId).textContent = tokens + ' tokens';
+  } else {
+    document.getElementById(labelId).textContent = val;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   SESSION ACTIONS
+═══════════════════════════════════════════════════ */
+function newSession() {
+  alert('새 세션을 시작합니다 (⌘N)');
+}
+
+/* ═══════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+═══════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  // Close overlays
+  if (e.key === 'Escape') {
+    if (document.getElementById('memoryNotebook').classList.contains('visible')) {
+      closeNotebook(); return;
+    }
+    if (shortcutsVisible) { toggleShortcuts(); return; }
+    if (streamingActive) { stopGeneration(); return; }
+  }
+  // Cmd shortcuts
+  if ((e.metaKey || e.ctrlKey)) {
+    if (e.key === '[') { e.preventDefault(); toggleLeft(); }
+    if (e.key === ']') { e.preventDefault(); toggleRight(); }
+    if (e.key === 'm' || e.key === 'M') { e.preventDefault(); openNotebook(); }
+    if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newSession(); }
+  }
+});
+
+// Close shortcuts panel when clicking outside
+document.addEventListener('click', e => {
+  if (shortcutsVisible && !e.target.closest('#shortcutsPanel') && !e.target.closest('[onclick="toggleShortcuts()"]')) {
+    shortcutsVisible = false;
+    document.getElementById('shortcutsPanel').classList.remove('visible');
+  }
+});
+</script>
+</body>
+</html>
