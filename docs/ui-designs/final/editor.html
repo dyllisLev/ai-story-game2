@@ -1,0 +1,2233 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스토리 에디터 — AI 스토리 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0f;
+  --bg-surface: #0e0e16;
+  --bg-panel: #111118;
+  --bg-card: #16161f;
+  --bg-input: #13131c;
+  --border: rgba(255,255,255,0.07);
+  --border-mid: rgba(255,255,255,0.1);
+  --border-focus: rgba(197,168,74,0.5);
+  --text-primary: #f0eff8;
+  --text-secondary: #9896b0;
+  --text-muted: #5c5a72;
+  --accent: #c5a84a;
+  --accent-dim: rgba(197,168,74,0.12);
+  --accent-glow: rgba(197,168,74,0.25);
+  --purple: #7c6df0;
+  --purple-dim: rgba(124,109,240,0.12);
+  --rose: #e05a7a;
+  --rose-dim: rgba(224,90,122,0.1);
+  --green: #52d48a;
+  --green-dim: rgba(82,212,138,0.1);
+  --radius: 10px;
+  --transition: 180ms cubic-bezier(0.4,0,0.2,1);
+  --sidebar-w: 220px;
+  --header-h: 52px;
+  --actionbar-h: 56px;
+}
+
+[data-theme="light"] {
+  --bg: #f2f1f8;
+  --bg-surface: #eceaf5;
+  --bg-panel: #ffffff;
+  --bg-card: #f8f7ff;
+  --bg-input: #ffffff;
+  --border: rgba(0,0,0,0.07);
+  --border-mid: rgba(0,0,0,0.1);
+  --border-focus: rgba(168,136,30,0.5);
+  --text-primary: #1a1826;
+  --text-secondary: #5a5870;
+  --text-muted: #9896b0;
+  --accent: #a8881e;
+  --accent-dim: rgba(168,136,30,0.1);
+  --accent-glow: rgba(168,136,30,0.2);
+  --purple: #6254d4;
+  --purple-dim: rgba(98,84,212,0.1);
+}
+
+html { height: 100%; }
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── HEADER ─── */
+.header {
+  height: var(--header-h);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 8px;
+  text-decoration: none; flex-shrink: 0;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-text {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 14px; font-weight: 700;
+  color: var(--text-primary);
+}
+
+.header-sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+
+.breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px;
+}
+.breadcrumb-item { color: var(--text-muted); cursor: pointer; transition: color var(--transition); }
+.breadcrumb-item:hover { color: var(--text-secondary); }
+.breadcrumb-item.active { color: var(--text-primary); font-weight: 500; }
+.breadcrumb-sep { color: var(--text-muted); }
+
+.header-right {
+  display: flex; align-items: center; gap: 8px;
+  margin-left: auto;
+}
+
+.save-status {
+  font-size: 11px;
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  transition: all var(--transition);
+}
+.save-status.saved { color: var(--green); background: var(--green-dim); }
+.save-status.saving { color: var(--accent); background: var(--accent-dim); }
+.save-status.unsaved { color: var(--text-muted); }
+.save-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.save-status.saving .save-dot { animation: pulse-dot 1s infinite; }
+
+.btn-icon {
+  width: 32px; height: 32px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.btn-icon:hover { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-mid); }
+
+.btn-sm {
+  height: 32px; padding: 0 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.btn-sm:hover { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-mid); }
+.btn-sm.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0a0a0f;
+  font-weight: 700;
+}
+.btn-sm.primary:hover { background: #d4b85a; box-shadow: 0 0 16px var(--accent-glow); }
+.btn-sm.purple {
+  background: var(--purple-dim);
+  border-color: rgba(124,109,240,0.3);
+  color: var(--purple);
+}
+.btn-sm.purple:hover { background: rgba(124,109,240,0.2); }
+
+/* ─── MAIN LAYOUT ─── */
+.editor-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width var(--transition);
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 10px;
+}
+
+.sidebar-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  padding: 8px 8px 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+  border: 1px solid transparent;
+  position: relative;
+  text-decoration: none;
+  user-select: none;
+}
+.nav-item:hover { background: var(--bg-card); color: var(--text-primary); }
+.nav-item.active {
+  background: var(--bg-card);
+  border-color: var(--border-mid);
+  color: var(--text-primary);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 7px; bottom: 7px;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.nav-item-icon {
+  width: 20px; height: 20px;
+  border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.nav-item-name { flex: 1; }
+.nav-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.nav-badge.new { background: var(--purple-dim); color: var(--purple); }
+.nav-badge.done {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--green-dim);
+  border: 1px solid rgba(82,212,138,0.3);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--green);
+  padding: 0;
+}
+
+.sidebar-progress {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.progress-track {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 65%;
+  background: linear-gradient(90deg, var(--accent), var(--purple));
+  border-radius: 2px;
+  transition: width 500ms ease;
+}
+
+/* ─── MAIN CONTENT (center split 50/50) ─── */
+.form-main {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.form-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+  padding-bottom: calc(var(--actionbar-h) + 16px);
+}
+
+.prompt-live {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--bg-surface);
+  padding: 24px 20px;
+  padding-bottom: calc(var(--actionbar-h) + 16px);
+}
+
+.prompt-live-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prompt-live-body {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  font-family: 'Noto Serif KR', serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 20px;
+}
+
+.form-inner {
+  padding: 28px 24px 0;
+}
+
+/* ─── SECTION HEADER ─── */
+.section-header {
+  margin-bottom: 28px;
+}
+.section-title {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 5px;
+}
+.section-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ─── FORM ELEMENTS ─── */
+.form-group { margin-bottom: 22px; }
+.form-group:last-child { margin-bottom: 0; }
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.label-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.label-badge.required { background: var(--rose-dim); color: var(--rose); }
+.label-badge.optional { background: var(--border); color: var(--text-muted); font-weight: 400; }
+
+.form-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 5px;
+  line-height: 1.5;
+}
+
+.form-input, .form-select {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-mid);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  appearance: none;
+}
+.form-input::placeholder { color: var(--text-muted); }
+.form-input:focus, .form-select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c5a72' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.form-textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-mid);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: 'Noto Serif KR', serif;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--text-primary);
+  outline: none;
+  resize: vertical;
+  min-height: 130px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.form-textarea::placeholder { color: var(--text-muted); font-family: 'Noto Sans KR', sans-serif; font-size: 13px; }
+.form-textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.form-textarea.lg { min-height: 220px; }
+.form-textarea.xl { min-height: 300px; }
+
+.textarea-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.char-count {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.char-count.warn { color: var(--rose); }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ─── DIVIDER ─── */
+.section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 32px 0;
+}
+
+/* ─── TOGGLE ROW ─── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all var(--transition);
+  gap: 16px;
+}
+.toggle-row:hover { border-color: var(--border-mid); background: var(--bg-surface); }
+.toggle-row-info { flex: 1; min-width: 0; }
+.toggle-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.toggle-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.toggle-switch {
+  position: relative;
+  width: 40px; height: 22px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border-mid);
+  border-radius: 11px;
+  transition: background 200ms;
+  cursor: pointer;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: white;
+  left: 3px; top: 3px;
+  transition: transform 200ms;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+.toggle-switch input:focus-visible + .toggle-slider { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ─── CHARACTER CARDS ─── */
+.char-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  transition: border-color var(--transition);
+}
+.char-card:hover { border-color: var(--border-mid); }
+.char-card-header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  background: var(--bg-card);
+  user-select: none;
+}
+.char-avatar {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.char-card-name {
+  font-size: 13px; font-weight: 600;
+  flex: 1;
+  color: var(--text-primary);
+}
+.char-card-role {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+.char-collapse-icon {
+  color: var(--text-muted);
+  transition: transform var(--transition);
+  flex-shrink: 0;
+}
+.char-card.open .char-collapse-icon { transform: rotate(180deg); }
+.char-card-body {
+  display: none;
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+}
+.char-card.open .char-card-body { display: block; padding-top: 16px; }
+.char-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.char-grid .form-group { margin-bottom: 0; }
+.char-full { grid-column: 1 / -1; }
+.char-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-dashed {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px;
+  padding: 11px;
+  border: 1px dashed var(--border-mid);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit; font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-dashed:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* ─── STATUS WINDOW SECTION ─── */
+.status-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.preset-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-mid);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.preset-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.preset-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0a0a0f;
+  font-weight: 700;
+}
+.preset-chip.custom.active {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: white;
+}
+
+.status-attrs-header {
+  display: grid;
+  grid-template-columns: 1fr 140px 90px 32px 32px;
+  gap: 8px;
+  padding: 0 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.attr-row {
+  display: grid;
+  grid-template-columns: 1fr 140px 90px 32px 32px;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 4px;
+  border-radius: 7px;
+  transition: background var(--transition);
+  animation: fadeIn 180ms ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.attr-row:hover { background: var(--bg-card); }
+.attr-row.dragging { opacity: 0.4; }
+
+.attr-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border-mid);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition);
+  width: 100%;
+}
+.attr-input:focus { border-color: var(--border-focus); }
+.attr-input::placeholder { color: var(--text-muted); font-size: 12px; }
+
+.attr-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-mid);
+  border-radius: 6px;
+  padding: 7px 26px 7px 10px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%235c5a72' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color var(--transition);
+}
+.attr-select:focus { border-color: var(--border-focus); }
+
+.attr-max {
+  background: var(--bg-input);
+  border: 1px solid var(--border-mid);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  width: 100%;
+  transition: border-color var(--transition), opacity var(--transition);
+}
+.attr-max:focus { border-color: var(--border-focus); }
+.attr-max:disabled { opacity: 0.3; cursor: not-allowed; }
+.attr-max::placeholder { color: var(--text-muted); font-size: 12px; }
+
+.attr-btn {
+  width: 32px; height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.attr-btn.delete:hover { background: var(--rose-dim); color: var(--rose); border-color: rgba(224,90,122,0.3); }
+.attr-btn.drag { cursor: grab; }
+.attr-btn.drag:hover { background: var(--bg-card); color: var(--text-secondary); }
+.attr-btn.drag:active { cursor: grabbing; }
+
+.attrs-hint {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--purple);
+  border-radius: 0 7px 7px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ─── OUTPUT SETTINGS ─── */
+.stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  margin-bottom: 8px;
+}
+.stepper-info { flex: 1; }
+.stepper-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.stepper-desc { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.stepper-ctrl {
+  display: flex; align-items: center; gap: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border-mid);
+  border-radius: 7px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.stepper-btn {
+  width: 30px; height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  font-size: 15px;
+}
+.stepper-btn:hover { background: var(--bg-card); color: var(--text-primary); }
+.stepper-val {
+  min-width: 60px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 0 8px;
+  height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* ─── VISIBILITY ─── */
+.vis-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.vis-option {
+  padding: 16px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--bg-card);
+}
+.vis-option:hover { border-color: var(--border-mid); }
+.vis-option.selected { border-color: var(--accent); background: var(--accent-dim); }
+.vis-option-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
+}
+.vis-option-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+.vis-option-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+/* ─── ACTION BAR ─── */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  height: var(--actionbar-h);
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 8px;
+  z-index: 40;
+  backdrop-filter: blur(10px);
+}
+
+.action-bar-primary {
+  height: 38px; padding: 0 20px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #0a0a0f;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: all var(--transition);
+}
+.action-bar-primary:hover { background: #d4b85a; box-shadow: 0 0 20px var(--accent-glow); }
+
+.action-bar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+.action-bar-btn {
+  height: 36px; padding: 0 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: all var(--transition);
+}
+.action-bar-btn:hover { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-mid); }
+.action-bar-btn.danger:hover { background: var(--rose-dim); color: var(--rose); border-color: rgba(224,90,122,0.3); }
+
+.action-bar-right { margin-left: auto; }
+
+/* ─── PREVIEW PANEL ─── */
+.preview-panel {
+  width: 340px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.preview-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.preview-title-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.preview-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+.preview-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.preview-block-label {
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.preview-block-label .token-count {
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.preview-block-body {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-family: 'Noto Serif KR', serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── STATUS WINDOW PREVIEW ─── */
+.status-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 12px;
+}
+.status-preview-item {
+  background: var(--bg-input);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.status-preview-name {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.status-preview-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.status-preview-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--purple));
+}
+.status-preview-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ─── INFO BOX ─── */
+.info-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-mid); }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1200px) {
+  .preview-panel { display: none !important; }
+}
+@media (max-width: 900px) {
+  :root { --sidebar-w: 56px; }
+  .nav-item-name, .nav-badge, .sidebar-group-label, .sidebar-progress { display: none; }
+  .nav-item { justify-content: center; padding: 10px; }
+  .nav-item-icon { margin: 0; }
+}
+@media (max-width: 600px) {
+  .sidebar { display: none; }
+  .form-inner { padding: 20px 16px 0; }
+  .char-grid { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .vis-options { grid-template-columns: 1fr; }
+  .status-attrs-header, .attr-row { grid-template-columns: 1fr 100px 32px 32px; }
+  .status-attrs-header > *:nth-child(3),
+  .attr-row > *:nth-child(3) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ─── PANEL COLLAPSE ─── */
+/* preview panel is always visible on desktop */
+
+/* ─── GENRE CHIPS ─── */
+.genre-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.genre-chip {
+  padding: 5px 13px;
+  border-radius: 20px;
+  border: 1px solid var(--border-mid);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.genre-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.genre-chip.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0a0a0f;
+  font-weight: 700;
+}
+
+/* ─── STORY ICON GRID ─── */
+.icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.icon-btn {
+  width: 38px; height: 38px;
+  border-radius: 8px;
+  border: 1px solid var(--border-mid);
+  background: var(--bg-input);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+.icon-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+.icon-btn.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+/* ─── RELATION SELECT (character card) ─── */
+.relation-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-mid);
+  border-radius: 6px;
+  padding: 7px 26px 7px 10px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 12px;
+  color: var(--text-primary);
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%235c5a72' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color var(--transition);
+}
+.relation-select:focus { border-color: var(--border-focus); }
+.relation-select[data-val="우호적"] { color: var(--green); border-color: rgba(82,212,138,0.35); background-color: var(--green-dim); }
+.relation-select[data-val="적대"] { color: var(--rose); border-color: rgba(224,90,122,0.35); background-color: var(--rose-dim); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="header">
+  <a href="home.html" class="logo">
+    <div class="logo-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <span class="logo-text">스토리월드</span>
+  </a>
+
+  <div class="header-sep"></div>
+
+  <div class="breadcrumb">
+    <span class="breadcrumb-item">내 스토리</span>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-item active" id="headerTitle">협풍검객 — 흑룡의 검</span>
+  </div>
+
+  <div class="header-right">
+    <div class="save-status saved" id="saveStatus">
+      <div class="save-dot"></div>
+      <span id="saveText">자동 저장됨</span>
+    </div>
+    <button class="btn-sm" onclick="togglePreview()" title="프롬프트 미리보기">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      미리보기
+    </button>
+    <button class="btn-icon" id="themeToggle" onclick="toggleTheme()" aria-label="테마 전환">
+      <svg id="themeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════ EDITOR LAYOUT ═══════════════ -->
+<div class="editor-layout">
+
+  <!-- ─── SIDEBAR ─── -->
+  <nav class="sidebar">
+    <div class="sidebar-scroll">
+      <div class="sidebar-group-label">스토리 구성</div>
+
+      <a class="nav-item active" onclick="showSection('basic', this)">
+        <div class="nav-item-icon" style="background:var(--accent-dim);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        </div>
+        <span class="nav-item-name">기본 설정</span>
+        <span class="nav-badge done">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+      </a>
+
+      <a class="nav-item" onclick="showSection('rules', this)">
+        <div class="nav-item-icon" style="background:rgba(224,90,122,0.1);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        </div>
+        <span class="nav-item-name">시스템 규칙</span>
+        <span class="nav-badge done">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+      </a>
+
+      <a class="nav-item" onclick="showSection('world', this)">
+        <div class="nav-item-icon" style="background:var(--purple-dim);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
+        <span class="nav-item-name">세계관</span>
+        <span class="nav-badge done">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+      </a>
+
+      <a class="nav-item" onclick="showSection('story', this)">
+        <div class="nav-item-icon" style="background:var(--accent-dim);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        </div>
+        <span class="nav-item-name">스토리</span>
+        <span class="nav-badge done">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+      </a>
+
+      <a class="nav-item" onclick="showSection('chars', this)">
+        <div class="nav-item-icon" style="background:var(--purple-dim);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <span class="nav-item-name">등장인물</span>
+        <span class="nav-badge done">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+      </a>
+
+      <a class="nav-item" onclick="showSection('status', this)">
+        <div class="nav-item-icon" style="background:var(--purple-dim);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h1v6H9z"/><path d="M12 6h1v9h-1z"/><path d="M15 11h1v4h-1z"/></svg>
+        </div>
+        <span class="nav-item-name">상태창 설정</span>
+        <span class="nav-badge new">NEW</span>
+      </a>
+
+      <a class="nav-item" onclick="showSection('output', this)">
+        <div class="nav-item-icon" style="background:var(--accent-dim);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <span class="nav-item-name">출력 설정</span>
+      </a>
+
+      <a class="nav-item" onclick="showSection('visibility', this)">
+        <div class="nav-item-icon" style="background:var(--green-dim);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <span class="nav-item-name">공개 설정</span>
+      </a>
+    </div>
+
+    <div class="sidebar-progress">
+      <div class="progress-row">
+        <span>완성도</span>
+        <span id="progressPct">65%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressBar" style="width:65%"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─── MAIN FORM (center 50/50 split) ─── -->
+  <main class="form-main" id="formMain">
+  <div class="form-scroll">
+
+    <!-- ══ 1. 기본 설정 ══ -->
+    <div class="form-inner" id="section-basic">
+      <div class="section-header">
+        <h2 class="section-title">기본 설정</h2>
+        <p class="section-desc">스토리의 기본 정보와 프리셋을 선택하세요.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          프리셋 선택
+          <span class="label-badge optional">선택</span>
+        </label>
+        <select class="form-select" id="presetSelect" onchange="onPresetSelect(this.value)">
+          <option value="">— 프리셋 없이 시작 —</option>
+          <option value="moo" selected>⚔️ 무협 — 협풍검객</option>
+          <option value="fantasy">🧙 판타지 — 마법사의 탑</option>
+          <option value="modern">🏙️ 현대 — 도시 생활</option>
+          <option value="space">🚀 SF — 우주 탐험</option>
+        </select>
+        <p class="form-hint">프리셋은 세계관·스토리·캐릭터 등 기본값을 자동으로 채워줍니다. 이후 자유롭게 수정 가능합니다.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          장르 태그
+          <span class="label-badge optional">선택</span>
+        </label>
+        <div class="genre-chips">
+          <button class="genre-chip selected" onclick="this.parentElement.querySelectorAll('.genre-chip').forEach(c=>c.classList.remove('selected'));this.classList.add('selected')">무협</button>
+          <button class="genre-chip" onclick="this.parentElement.querySelectorAll('.genre-chip').forEach(c=>c.classList.remove('selected'));this.classList.add('selected')">판타지</button>
+          <button class="genre-chip" onclick="this.parentElement.querySelectorAll('.genre-chip').forEach(c=>c.classList.remove('selected'));this.classList.add('selected')">현대</button>
+          <button class="genre-chip" onclick="this.parentElement.querySelectorAll('.genre-chip').forEach(c=>c.classList.remove('selected'));this.classList.add('selected')">로맨스</button>
+          <button class="genre-chip" onclick="this.parentElement.querySelectorAll('.genre-chip').forEach(c=>c.classList.remove('selected'));this.classList.add('selected')">공포</button>
+          <button class="genre-chip" onclick="this.parentElement.querySelectorAll('.genre-chip').forEach(c=>c.classList.remove('selected'));this.classList.add('selected')">SF</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          스토리 아이콘
+          <span class="label-badge optional">선택</span>
+        </label>
+        <div class="icon-grid">
+          <button class="icon-btn" onclick="this.closest('.icon-grid').querySelectorAll('.icon-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" title="사원">🏛️</button>
+          <button class="icon-btn selected" onclick="this.closest('.icon-grid').querySelectorAll('.icon-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" title="검">⚔️</button>
+          <button class="icon-btn" onclick="this.closest('.icon-grid').querySelectorAll('.icon-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" title="마법사">🧙</button>
+          <button class="icon-btn" onclick="this.closest('.icon-grid').querySelectorAll('.icon-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" title="도시">🏙️</button>
+          <button class="icon-btn" onclick="this.closest('.icon-grid').querySelectorAll('.icon-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" title="해골">💀</button>
+          <button class="icon-btn" onclick="this.closest('.icon-grid').querySelectorAll('.icon-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" title="로켓">🚀</button>
+          <button class="icon-btn" onclick="this.closest('.icon-grid').querySelectorAll('.icon-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" title="유령">👻</button>
+          <button class="icon-btn" onclick="this.closest('.icon-grid').querySelectorAll('.icon-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" title="하트">💕</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="aiModelSelect">
+          AI 모델
+          <span class="label-badge optional">선택</span>
+        </label>
+        <select class="form-select" id="aiModelSelect">
+          <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
+          <option value="gemini-2.0-pro">Gemini 2.0 Pro</option>
+          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+        </select>
+        <p class="form-hint">Flash는 빠른 응답, Pro는 더 정교한 서술에 적합합니다.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="storyTitle">
+          스토리 제목
+          <span class="label-badge required">필수</span>
+        </label>
+        <input class="form-input" id="storyTitle" type="text" value="협풍검객 — 흑룡의 검" placeholder="스토리 제목을 입력하세요" oninput="onTitleChange(this.value)">
+      </div>
+    </div>
+
+    <div class="section-divider" style="max-width:760px;margin:0 auto 32px;"></div>
+
+    <!-- ══ 2. 시스템 규칙 ══ -->
+    <div class="form-inner" id="section-rules">
+      <div class="section-header">
+        <h2 class="section-title">시스템 규칙</h2>
+        <p class="section-desc">AI의 출력 방식과 금지사항, 대사 형식을 설정합니다.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="systemRules">AI 출력 규칙 &amp; 금지사항</label>
+        <textarea class="form-textarea xl" id="systemRules" placeholder="예: 폭력적인 묘사는 간접적으로 표현하고, 19세 이상 콘텐츠는 금지합니다..."
+>당신은 무협 세계의 이야기꾼입니다. 다음 규칙을 반드시 따르세요.
+
+[기본 규칙]
+• 1인칭 서술자 시점으로 진행하되, 주인공 '나'의 행동과 감정에 집중하세요.
+• 각 응답은 3~4문단의 묘사로 구성하고, 마지막에 반드시 선택지 3개를 제시하세요.
+• 선택지 형식: ▶ [선택지 내용]
+
+[금지사항]
+• 과도하게 잔인하거나 선정적인 묘사 금지
+• 메타 발언(AI임을 언급하거나 게임 시스템을 직접 언급) 금지
+• 플레이어의 선택을 무시하고 임의로 스토리를 전개하는 행위 금지
+
+[대사 형식]
+• 대화는 큰따옴표(" ") 사용
+• 내면의 독백은 작은따옴표(' ') 또는 이탤릭체
+• 무공 기술명은 【 】로 감싸기</textarea>
+        <div class="textarea-footer">
+          <span class="char-count" id="rulesCount">0자</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider" style="max-width:760px;margin:0 auto 32px;"></div>
+
+    <!-- ══ 3. 세계관 ══ -->
+    <div class="form-inner" id="section-world">
+      <div class="section-header">
+        <h2 class="section-title">세계관</h2>
+        <p class="section-desc">게임이 펼쳐지는 세계의 배경과 설정을 상세히 기술하세요.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="worldDesc">세계관 설명</label>
+        <textarea class="form-textarea xl" id="worldDesc"
+>무림(武林)이 지배하는 가상의 중원(中原). 왕조는 쇠락하고, 각지의 무림 세력들이 패권을 다투는 혼란의 시대다.
+
+[지리]
+• 중원 — 한족의 영역. 오대 문파가 자리 잡고 있다.
+• 서역 — 사막과 초원 지대. 마교(魔敎)의 근거지.
+• 북방 — 초원 유목민족과 전쟁 중인 국경 지대.
+
+[주요 세력]
+• 정파(正派) 오대 문파 — 소림, 무당, 화산, 아미, 崆峒
+• 마교(魔敎) — 흑룡교(黑龍敎). 강력한 사교 집단.
+• 강호(江湖) 산적단 — 경계 지역을 지배하는 크고 작은 집단.
+• 황실 금군(禁軍) — 쇠락하는 왕조를 지키는 최후의 근위대.
+
+[무공 체계]
+내공(內功)을 바탕으로 외공(外功)과 경공(輕功)을 수련. 최고 경지인 화경(化境)에 이르면 자연과 하나가 된다.</textarea>
+        <div class="textarea-footer">
+          <span class="char-count" id="worldCount">0자</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider" style="max-width:760px;margin:0 auto 32px;"></div>
+
+    <!-- ══ 4. 스토리 ══ -->
+    <div class="form-inner" id="section-story">
+      <div class="section-header">
+        <h2 class="section-title">스토리</h2>
+        <p class="section-desc">메인 줄거리와 시작 상황을 작성하세요.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mainStory">메인 스토리 / 줄거리</label>
+        <textarea class="form-textarea xl" id="mainStory"
+>강호를 떠돌던 무명의 검객 '나'는 우연히 흑룡교가 훔친 전설의 검보(劍譜) '흑룡결(黑龍訣)'을 손에 넣게 된다.
+
+흑룡결은 사용자를 무적으로 만들지만, 동시에 내면의 마성(魔性)을 깨운다는 위험한 비급이다. 흑룡교의 교주 '흑룡자(黑龍子)'는 검보를 되찾기 위해 부하들을 풀고, 정파 오대 문파 역시 검보의 행방을 추적한다.
+
+[주요 목표]
+• 흑룡결의 비밀을 해석하여 내공을 극성으로 끌어올리기
+• 흑룡교의 추적을 피하면서 동료를 모으기
+• 과거 스승의 죽음에 얽힌 진실 파헤치기
+• 화경(化境) 달성 — 검과 하나가 되는 궁극의 경지
+
+[시작 장면]
+황사가 몰아치는 사막의 외딴 주막. 나는 다리에 화살을 맞은 채로 쓰러져 있다. 옆에는 피 묻은 봉투 하나 — 그 안에 흑룡결이 들어 있었다.</textarea>
+        <div class="textarea-footer">
+          <span class="char-count" id="storyCount">0자</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider" style="max-width:760px;margin:0 auto 32px;"></div>
+
+    <!-- ══ 5. 등장인물 ══ -->
+    <div class="form-inner" id="section-chars">
+      <div class="section-header">
+        <h2 class="section-title">등장인물</h2>
+        <p class="section-desc">이야기에 등장하는 NPC와 주요 인물을 정의하세요.</p>
+      </div>
+
+      <div id="charList">
+        <!-- Character 1 -->
+        <div class="char-card open" data-char="0">
+          <div class="char-card-header" onclick="toggleChar(this.closest('.char-card'))">
+            <div class="char-avatar" style="background:var(--rose-dim); color:var(--rose); font-size:16px;">🧑‍🦱</div>
+            <div>
+              <div class="char-card-name">흑룡자 <span class="char-card-role">— 흑룡교 교주 · 악당</span></div>
+            </div>
+            <svg class="char-collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="char-card-body">
+            <div class="char-grid">
+              <div class="form-group">
+                <label class="form-label">이름</label>
+                <input class="form-input" value="흑룡자 (黑龍子)" placeholder="이름">
+              </div>
+              <div class="form-group">
+                <label class="form-label">역할</label>
+                <input class="form-input" value="흑룡교 교주, 메인 빌런" placeholder="역할">
+              </div>
+              <div class="form-group">
+                <label class="form-label">성격</label>
+                <input class="form-input" value="냉혹하고 야망 넘침. 목적을 위해선 수단 가리지 않음" placeholder="성격">
+              </div>
+              <div class="form-group">
+                <label class="form-label">무공 수준</label>
+                <input class="form-input" value="화경(化境) 일보 직전. 흑룡결이 있어야 완성" placeholder="무공 수준">
+              </div>
+              <div class="form-group">
+                <label class="form-label">초기 관계</label>
+                <select class="relation-select" data-val="적대" onchange="this.dataset.val=this.value">
+                  <option value="우호적">우호적</option>
+                  <option value="중립">중립</option>
+                  <option value="적대" selected>적대</option>
+                </select>
+              </div>
+              <div class="form-group char-full">
+                <label class="form-label">상세 설명</label>
+                <textarea class="form-textarea" style="min-height:90px;" placeholder="캐릭터 설명...">과거 정파 무사였으나 사문에서 쫓겨난 후 마도에 입문. 흑룡교를 창설해 중원을 손에 넣으려 한다. 주인공의 스승을 죽인 진범이기도 하다. 외모는 단정하고 사려 깊어 보이나 내면은 차갑다.</textarea>
+              </div>
+            </div>
+            <div class="char-card-footer">
+              <button class="btn-sm" style="color:var(--rose);" onclick="this.closest('.char-card').remove()">삭제</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Character 2 -->
+        <div class="char-card" data-char="1">
+          <div class="char-card-header" onclick="toggleChar(this.closest('.char-card'))">
+            <div class="char-avatar" style="background:var(--accent-dim); color:var(--accent); font-size:16px;">👩</div>
+            <div>
+              <div class="char-card-name">소화령 <span class="char-card-role">— 의원 · 조력자</span></div>
+            </div>
+            <svg class="char-collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="char-card-body">
+            <div class="char-grid">
+              <div class="form-group">
+                <label class="form-label">이름</label>
+                <input class="form-input" value="소화령 (蘇花玲)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">역할</label>
+                <input class="form-input" value="유랑 의원, 주인공 조력자">
+              </div>
+              <div class="form-group">
+                <label class="form-label">성격</label>
+                <input class="form-input" value="따뜻하고 호기심 많음. 정의감 강함">
+              </div>
+              <div class="form-group">
+                <label class="form-label">특기</label>
+                <input class="form-input" value="독 치료, 의술, 경공 기초">
+              </div>
+              <div class="form-group">
+                <label class="form-label">초기 관계</label>
+                <select class="relation-select" data-val="우호적" onchange="this.dataset.val=this.value">
+                  <option value="우호적" selected>우호적</option>
+                  <option value="중립">중립</option>
+                  <option value="적대">적대</option>
+                </select>
+              </div>
+              <div class="form-group char-full">
+                <label class="form-label">상세 설명</label>
+                <textarea class="form-textarea" style="min-height:90px;">황폐해진 주막에서 주인공을 치료해준 유랑 의원. 사실 그녀는 과거 흑룡교에 의해 가족을 잃은 이력이 있어 흑룡교에 대한 적개심이 강하다.</textarea>
+              </div>
+            </div>
+            <div class="char-card-footer">
+              <button class="btn-sm" style="color:var(--rose);" onclick="this.closest('.char-card').remove()">삭제</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-dashed" style="margin-top:4px;" onclick="addChar()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        캐릭터 추가
+      </button>
+    </div>
+
+    <div class="section-divider" style="max-width:760px;margin:0 auto 32px;"></div>
+
+    <!-- ══ 6. 상태창 설정 ══ -->
+    <div class="form-inner" id="section-status">
+      <div class="section-header">
+        <h2 class="section-title">상태창 설정</h2>
+        <p class="section-desc">플레이어의 스탯과 상태를 표시할 상태창을 구성하세요.</p>
+      </div>
+
+      <div class="form-group">
+        <div class="toggle-row" onclick="toggleStatusWindow()">
+          <div class="toggle-row-info">
+            <div class="toggle-label">상태창 사용</div>
+            <div class="toggle-desc">게임 플레이 화면에 캐릭터 상태창을 표시합니다</div>
+          </div>
+          <label class="toggle-switch" onclick="event.stopPropagation()">
+            <input type="checkbox" id="statusWindowToggle" checked onchange="onStatusWindowToggle(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div id="statusWindowConfig">
+        <div class="form-group">
+          <label class="form-label">프리셋 선택</label>
+          <div class="status-presets">
+            <button class="preset-chip active" data-preset="moo" onclick="selectStatusPreset('moo', this)">⚔️ 무협</button>
+            <button class="preset-chip" data-preset="fantasy" onclick="selectStatusPreset('fantasy', this)">🧙 판타지</button>
+            <button class="preset-chip" data-preset="modern" onclick="selectStatusPreset('modern', this)">🏙️ 현대</button>
+            <button class="preset-chip custom" data-preset="custom" onclick="selectStatusPreset('custom', this)">✏️ 직접 만들기</button>
+          </div>
+          <p class="form-hint">프리셋을 선택하면 기본 속성이 채워집니다. 이후 자유롭게 수정·추가·삭제할 수 있습니다.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">속성 목록</label>
+          <div class="status-attrs-header">
+            <span>속성 이름</span>
+            <span>타입</span>
+            <span>최대값</span>
+            <span></span>
+            <span></span>
+          </div>
+          <div id="attrList"></div>
+          <button class="btn-dashed" style="margin-top:8px;" onclick="addAttr()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            속성 추가
+          </button>
+          <div class="attrs-hint">
+            프리셋의 속성을 자유롭게 수정할 수 있습니다. 이름 변경, 타입 변경, 최대값 조정 모두 가능합니다. 드래그(≡)로 순서를 바꿀 수 있습니다.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider" style="max-width:760px;margin:0 auto 32px;"></div>
+
+    <!-- ══ 7. 출력 설정 ══ -->
+    <div class="form-inner" id="section-output">
+      <div class="section-header">
+        <h2 class="section-title">출력 설정</h2>
+        <p class="section-desc">AI 응답의 분량과 형식을 조정하세요.</p>
+      </div>
+
+      <div class="stepper-row">
+        <div class="stepper-info">
+          <div class="stepper-label">서술 분량</div>
+          <div class="stepper-desc">AI가 한 번에 서술하는 문단 수</div>
+        </div>
+        <div class="stepper-ctrl">
+          <button class="stepper-btn" onclick="changeParagraphs(-1)">−</button>
+          <div class="stepper-val" id="paragraphVal">3문단</div>
+          <button class="stepper-btn" onclick="changeParagraphs(1)">+</button>
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-row-info">
+          <div class="toggle-label">LaTeX 연출</div>
+          <div class="toggle-desc">수식이나 특수 기호를 LaTeX로 렌더링합니다</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="latexToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-row-info">
+          <div class="toggle-label">프롬프트 캐시</div>
+          <div class="toggle-desc">시스템 프롬프트를 캐시하여 응답 속도를 높이고 비용을 줄입니다</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="cacheToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="section-divider" style="max-width:760px;margin:0 auto 32px;"></div>
+
+    <!-- ══ 10. 공개 설정 ══ -->
+    <div class="form-inner" id="section-visibility" style="padding-bottom:0;">
+      <div class="section-header">
+        <h2 class="section-title">공개 설정</h2>
+        <p class="section-desc">스토리 공개 여부와 접근 방식을 설정하세요.</p>
+      </div>
+
+      <div class="form-group">
+        <div class="vis-options">
+          <div class="vis-option selected" onclick="selectVisibility('private', this)">
+            <div class="vis-option-icon" style="background:var(--bg-input);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            </div>
+            <div class="vis-option-title">비공개</div>
+            <div class="vis-option-desc">나만 접근 가능합니다</div>
+          </div>
+          <div class="vis-option" onclick="selectVisibility('public', this)">
+            <div class="vis-option-icon" style="background:var(--bg-input);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            </div>
+            <div class="vis-option-title">공개</div>
+            <div class="vis-option-desc">누구나 목록에서 찾아 플레이할 수 있습니다</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="passwordSection" style="display:none;">
+        <div class="form-group">
+          <label class="form-label" for="storyPassword">
+            비밀번호
+            <span class="label-badge optional">선택</span>
+          </label>
+          <input class="form-input" id="storyPassword" type="password" placeholder="설정 시 비밀번호가 있는 사람만 플레이 가능">
+          <p class="form-hint">비워두면 비밀번호 없이 누구나 접근 가능합니다.</p>
+        </div>
+      </div>
+
+      <div style="height:32px;"></div>
+    </div>
+
+  </div><!-- /form-scroll -->
+
+  <!-- ─── PROMPT LIVE PREVIEW (center right 50%) ─── -->
+  <div class="prompt-live" id="promptLive">
+    <div class="prompt-live-title">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      전체 프롬프트 미리보기
+      <span style="margin-left:auto;color:var(--accent);font-size:10px;font-weight:500;text-transform:none;letter-spacing:0;">약 745 토큰</span>
+    </div>
+    <div class="prompt-live-body">당신은 무협 세계의 이야기꾼입니다. 다음 규칙을 반드시 따르세요.
+
+[기본 규칙]
+• 1인칭 서술자 시점으로 진행하되, 주인공 '나'의 행동과 감정에 집중하세요.
+• 각 응답은 3~4문단의 묘사로 구성하고, 마지막에 반드시 선택지 3개를 제시하세요.
+• 선택지 형식: ▸ [선택지 내용]
+
+[금지사항]
+• 과도하게 잔인하거나 선정적인 묘사 금지
+• 메타 발언(AI임을 언급하거나 게임 시스템을 직접 언급) 금지
+• 플레이어의 선택을 무시하고 임의로 스토리를 전개하는 행위 금지
+
+[대사 형식]
+• 대화는 큰따옴표(" ") 사용
+• 내면의 독백은 작은따옴표(' ') 또는 이탤릭체
+• 무공 기술명은 【 】로 감싸기
+
+[세계관]
+무림(武林)이 지배하는 가상의 중원(中原). 왕조는 쇠락하고, 각지의 무림 세력들이 패권을 다투는 혼란의 시대이다. 정파와 사파의 경계가 흐려지고 있으며, 전설적인 비급과 보물을 둘러싼 쟁탈이 끊이지 않는다.
+
+[스토리]
+수십 년간 봉인되어 있던 천마신교가 부활의 조짐을 보이고 있다. 주인공은 사부의 유언을 따라 천마신교의 부활을 막기 위한 여정을 시작한다.
+
+[등장인물]
+흑풍자 — 흑룡교 교주. 냉혹하고 야망 넘침.
+소화영 — 유랑 의원. 따뜻하고 호기심 많음.
+
+[주인공]
+이름: 협풍검객
+설정: 바람처럼 자유로운 검객. 스승에게 풍운검법을 전수받았으나, 과거의 트라우마로 검을 봉인하고 있다.
+
+[유저노트]
+무협 특유의 비장하면서도 활극적인 분위기. 내공 수련, 비급 습득, 문파 갈등 등 전통 무협 요소를 적극 활용.
+
+[서술 분량]
+반드시 매 응답마다 지문/묘사 문단을 정확히 3문단으로 작성하세요.
+
+[상태창 규칙]
+매 응답 끝에 반드시 아래 형식으로 현재 상태를 출력하세요.
+```status
+경지: (텍스트)
+내공: (0~100 숫자)
+외공: (0~100 숫자)
+경공: (텍스트)
+검법: (텍스트)
+심법: (텍스트)
+세력: (텍스트)
+직책: (텍스트)
+장소: (텍스트)
+임무: (텍스트)
+상황: (텍스트)
+```
+이야기 진행에 따라 값을 적절히 변경하세요.
+상태 블록 외에 본문에서 상태창을 텍스트로 출력하지 마세요.</div>
+  </div>
+
+  </main><!-- /form-main -->
+
+  <!-- ─── PREVIEW PANEL ─── -->
+  <aside class="preview-panel" id="previewPanel">
+    <div class="preview-header">
+      <div class="preview-title-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>상태창 & 캐릭터</span>
+      </div>
+      <button class="btn-icon" onclick="togglePreview()" title="패널 닫기" style="width:24px;height:24px;border:none;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="preview-scroll">
+
+      <div class="preview-block" id="statusPreviewBlock">
+        <div class="preview-block-label">
+          상태창 프롬프트
+          <span class="token-count">약 120 토큰</span>
+        </div>
+        <div class="status-preview-grid" id="statusPreviewGrid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div class="preview-block">
+        <div class="preview-block-label">
+          캐릭터 정보
+          <span class="token-count">약 180 토큰</span>
+        </div>
+        <div class="preview-block-body">흑룡자 — 흑룡교 교주
+냉혹하고 야망 넘침...
+
+소화령 — 유랑 의원
+따뜻하고 호기심 많음...</div>
+      </div>
+
+      <div style="padding:0 0 4px; font-size:11px; color:var(--text-muted);">
+        총 예상 토큰: <strong style="color:var(--accent);" id="totalTokens">약 680 토큰</strong>
+      </div>
+
+    </div>
+  </aside>
+
+</div><!-- /editor-layout -->
+
+<!-- ─── ACTION BAR ─── -->
+<div class="action-bar">
+  <button class="action-bar-primary" onclick="startGame()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    게임 시작
+  </button>
+
+  <div class="action-bar-sep"></div>
+
+  <button class="action-bar-btn" onclick="saveStory()">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    저장
+  </button>
+  <button class="action-bar-btn" onclick="loadStory()">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    불러오기
+  </button>
+  <button class="action-bar-btn danger" onclick="deleteStory()">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+    삭제
+  </button>
+  <button class="action-bar-btn" onclick="shareStory()">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    공유
+  </button>
+
+  <div class="action-bar-right">
+    <span style="font-size:11px;color:var(--text-muted);">마지막 저장: <span id="lastSaved">방금 전</span></span>
+  </div>
+</div>
+
+<script>
+// ═══════════════ DATA ═══════════════
+const STATUS_PRESETS = {
+  moo: [
+    { name: '경지', type: 'text', max: '' },
+    { name: '내공', type: 'bar', max: '100' },
+    { name: '외공', type: 'bar', max: '100' },
+    { name: '경공', type: 'text', max: '' },
+    { name: '검법', type: 'list', max: '' },
+    { name: '심법', type: 'list', max: '' },
+    { name: '세력', type: 'text', max: '' },
+    { name: '직책', type: 'text', max: '' },
+    { name: '장소', type: 'text', max: '' },
+    { name: '임무', type: 'text', max: '' },
+    { name: '상황', type: 'text', max: '' },
+  ],
+  fantasy: [
+    { name: '체력', type: 'bar', max: '100' },
+    { name: '마나', type: 'bar', max: '100' },
+    { name: '경험치', type: 'percent', max: '' },
+    { name: '레벨', type: 'number', max: '' },
+    { name: '힘', type: 'number', max: '' },
+    { name: '민첩', type: 'number', max: '' },
+    { name: '지능', type: 'number', max: '' },
+    { name: '장비', type: 'list', max: '' },
+    { name: '스킬', type: 'list', max: '' },
+    { name: '골드', type: 'number', max: '' },
+    { name: '장소', type: 'text', max: '' },
+    { name: '퀘스트', type: 'text', max: '' },
+  ],
+  modern: [
+    { name: '체력', type: 'bar', max: '100' },
+    { name: '스트레스', type: 'bar', max: '100' },
+    { name: '소지금', type: 'number', max: '' },
+    { name: '호감도', type: 'percent', max: '' },
+    { name: '직업', type: 'text', max: '' },
+    { name: '장소', type: 'text', max: '' },
+    { name: '상황', type: 'text', max: '' },
+  ],
+  custom: []
+};
+
+const TYPE_LABELS = {
+  bar: '수치바',
+  percent: '퍼센트',
+  number: '숫자',
+  text: '텍스트',
+  list: '목록',
+};
+
+let currentAttrs = [];
+let paragraphCount = 3;
+let isStatusEnabled = true;
+let currentVisibility = 'private';
+let saveTimer = null;
+let charCount = 0;
+
+// ═══════════════ INIT ═══════════════
+document.addEventListener('DOMContentLoaded', () => {
+  selectStatusPreset('moo', document.querySelector('.preset-chip[data-preset="moo"]'));
+  updateAllCharcounts();
+  bindTextareaCounters();
+  updatePromptPreview();
+  updateStatusPreview();
+  scheduleAutosave();
+});
+
+// ═══════════════ NAVIGATION ═══════════════
+function showSection(id, navEl) {
+  // Update active nav item
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+
+  // Smooth scroll to section
+  const target = document.getElementById('section-' + id);
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// Intersection observer for auto-highlighting nav
+const observerOptions = { rootMargin: '-20% 0px -70% 0px', threshold: 0 };
+const sectionObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id.replace('section-', '');
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        const onclick = item.getAttribute('onclick') || '';
+        if (onclick.includes("'" + id + "'")) item.classList.add('active');
+      });
+    }
+  });
+}, observerOptions);
+
+document.querySelectorAll('[id^="section-"]').forEach(s => sectionObserver.observe(s));
+
+// ═══════════════ THEME ═══════════════
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.dataset.theme === 'dark';
+  html.dataset.theme = isDark ? 'light' : 'dark';
+  const icon = document.getElementById('themeIcon');
+  if (isDark) {
+    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  } else {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  }
+}
+
+// ═══════════════ PROMPT LIVE PREVIEW TOGGLE ═══════════════
+function togglePreview() {
+  const promptLive = document.getElementById('promptLive');
+  const isHidden = promptLive.style.display === 'none';
+  promptLive.style.display = isHidden ? '' : 'none';
+}
+
+// ═══════════════ TITLE ═══════════════
+function onTitleChange(val) {
+  const el = document.getElementById('headerTitle');
+  if (el) el.textContent = val || '새 스토리';
+  triggerAutosave();
+}
+
+// ═══════════════ PRESET SELECT ═══════════════
+function onPresetSelect(val) {
+  triggerAutosave();
+}
+
+// ═══════════════ CHARACTER CARDS ═══════════════
+function toggleChar(card) {
+  card.classList.toggle('open');
+}
+
+function addChar() {
+  charCount++;
+  const emojis = ['🧙','⚔️','🏹','🛡️','🗡️','👁️','🔥','🌙'];
+  const emoji = emojis[charCount % emojis.length];
+  const colors = [
+    'var(--purple-dim)', 'var(--accent-dim)', 'var(--rose-dim)', 'var(--green-dim)'
+  ];
+  const textColors = ['var(--purple)', 'var(--accent)', 'var(--rose)', 'var(--green)'];
+  const ci = charCount % 4;
+
+  const div = document.createElement('div');
+  div.className = 'char-card open';
+  div.innerHTML = `
+    <div class="char-card-header" onclick="toggleChar(this.closest('.char-card'))">
+      <div class="char-avatar" style="background:${colors[ci]};color:${textColors[ci]};font-size:16px;">${emoji}</div>
+      <div><div class="char-card-name">새 캐릭터 <span class="char-card-role">— 역할 미정</span></div></div>
+      <svg class="char-collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="char-card-body" style="display:block;padding-top:16px;">
+      <div class="char-grid">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input class="form-input" placeholder="이름" oninput="triggerAutosave()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">역할</label>
+          <input class="form-input" placeholder="역할" oninput="triggerAutosave()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">성격</label>
+          <input class="form-input" placeholder="성격" oninput="triggerAutosave()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">특기/능력</label>
+          <input class="form-input" placeholder="특기" oninput="triggerAutosave()">
+        </div>
+        <div class="form-group char-full">
+          <label class="form-label">상세 설명</label>
+          <textarea class="form-textarea" style="min-height:90px;" placeholder="캐릭터 설명..." oninput="triggerAutosave()"></textarea>
+        </div>
+      </div>
+      <div class="char-card-footer">
+        <button class="btn-sm" style="color:var(--rose);" onclick="this.closest('.char-card').remove()">삭제</button>
+      </div>
+    </div>`;
+  document.getElementById('charList').appendChild(div);
+  triggerAutosave();
+}
+
+// ═══════════════ STATUS WINDOW ═══════════════
+function toggleStatusWindow() {
+  const toggle = document.getElementById('statusWindowToggle');
+  toggle.checked = !toggle.checked;
+  onStatusWindowToggle(toggle.checked);
+}
+
+function onStatusWindowToggle(enabled) {
+  isStatusEnabled = enabled;
+  const config = document.getElementById('statusWindowConfig');
+  config.style.opacity = enabled ? '1' : '0.4';
+  config.style.pointerEvents = enabled ? '' : 'none';
+  const block = document.getElementById('statusPreviewBlock');
+  if (block) block.style.display = enabled ? '' : 'none';
+  triggerAutosave();
+}
+
+function selectStatusPreset(preset, btn) {
+  // Update chip styles
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  if (preset === 'custom') {
+    // Don't overwrite; just allow editing
+    return;
+  }
+
+  currentAttrs = (STATUS_PRESETS[preset] || []).map(a => ({...a}));
+  renderAttrList();
+  updateStatusPreview();
+  triggerAutosave();
+}
+
+function renderAttrList() {
+  const list = document.getElementById('attrList');
+  list.innerHTML = '';
+  currentAttrs.forEach((attr, i) => {
+    const row = document.createElement('div');
+    row.className = 'attr-row';
+    row.draggable = true;
+    row.dataset.index = i;
+    row.innerHTML = `
+      <input class="attr-input" value="${escHtml(attr.name)}" placeholder="속성 이름" oninput="updateAttr(${i},'name',this.value)">
+      <select class="attr-select" onchange="updateAttr(${i},'type',this.value)">
+        ${Object.entries(TYPE_LABELS).map(([v,l]) => `<option value="${v}"${attr.type===v?' selected':''}>${l}</option>`).join('')}
+      </select>
+      <input class="attr-max" type="number" min="1" value="${escHtml(attr.max)}" placeholder="최대값" ${attr.type !== 'bar' ? 'disabled' : ''} oninput="updateAttr(${i},'max',this.value)">
+      <button class="attr-btn delete" onclick="removeAttr(${i})" title="삭제">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+      </button>
+      <button class="attr-btn drag" title="순서 변경">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>`;
+
+    // Drag & drop
+    row.addEventListener('dragstart', onDragStart);
+    row.addEventListener('dragover', onDragOver);
+    row.addEventListener('drop', onDrop);
+    row.addEventListener('dragend', onDragEnd);
+
+    list.appendChild(row);
+  });
+}
+
+function updateAttr(i, field, value) {
+  currentAttrs[i][field] = value;
+  if (field === 'type') {
+    // Enable/disable max input
+    const row = document.querySelector(`.attr-row[data-index="${i}"]`);
+    if (row) {
+      const maxInput = row.querySelector('.attr-max');
+      maxInput.disabled = value !== 'bar';
+      if (value !== 'bar') maxInput.value = '';
+      currentAttrs[i].max = value !== 'bar' ? '' : currentAttrs[i].max;
+    }
+  }
+  updateStatusPreview();
+  triggerAutosave();
+}
+
+function removeAttr(i) {
+  currentAttrs.splice(i, 1);
+  renderAttrList();
+  updateStatusPreview();
+  triggerAutosave();
+}
+
+function addAttr() {
+  currentAttrs.push({ name: '', type: 'text', max: '' });
+  renderAttrList();
+  // Focus new name input
+  const rows = document.querySelectorAll('.attr-row');
+  if (rows.length) rows[rows.length-1].querySelector('.attr-input').focus();
+  triggerAutosave();
+}
+
+// ─── Drag & Drop ───
+let dragSrcIndex = null;
+
+function onDragStart(e) {
+  dragSrcIndex = parseInt(this.dataset.index);
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function onDrop(e) {
+  e.stopPropagation();
+  const dropIndex = parseInt(this.dataset.index);
+  if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+    const moved = currentAttrs.splice(dragSrcIndex, 1)[0];
+    currentAttrs.splice(dropIndex, 0, moved);
+    renderAttrList();
+    updateStatusPreview();
+  }
+  return false;
+}
+
+function onDragEnd() {
+  document.querySelectorAll('.attr-row').forEach(r => r.classList.remove('dragging'));
+  dragSrcIndex = null;
+}
+
+// ═══════════════ STATUS PREVIEW ═══════════════
+function updateStatusPreview() {
+  const grid = document.getElementById('statusPreviewGrid');
+  if (!grid || !isStatusEnabled) return;
+
+  const sampleValues = {
+    bar: () => Math.floor(Math.random() * 60) + 30,
+    percent: () => Math.floor(Math.random() * 70) + 10,
+    number: () => Math.floor(Math.random() * 50) + 1,
+    text: () => ['통맥 3단계', '사막 주막', '복수', '강호 유랑'][Math.floor(Math.random()*4)],
+    list: () => '검법, 내공술',
+  };
+
+  grid.innerHTML = currentAttrs.slice(0, 8).map(attr => {
+    const val = sampleValues[attr.type] ? sampleValues[attr.type]() : '—';
+    if (attr.type === 'bar') {
+      const max = parseInt(attr.max) || 100;
+      const pct = Math.min(100, Math.round((val / max) * 100));
+      return `<div class="status-preview-item">
+        <div class="status-preview-name">${escHtml(attr.name || '속성')}</div>
+        <div class="status-preview-val">${val} / ${max}</div>
+        <div class="status-preview-bar"><div class="status-preview-bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }
+    return `<div class="status-preview-item">
+      <div class="status-preview-name">${escHtml(attr.name || '속성')}</div>
+      <div class="status-preview-val" style="font-size:11px;color:var(--text-secondary);">${val}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════ OUTPUT SETTINGS ═══════════════
+function changeParagraphs(delta) {
+  paragraphCount = Math.max(1, Math.min(10, paragraphCount + delta));
+  document.getElementById('paragraphVal').textContent = paragraphCount + '문단';
+  triggerAutosave();
+}
+
+// ═══════════════ VISIBILITY ═══════════════
+function selectVisibility(type, el) {
+  currentVisibility = type;
+  document.querySelectorAll('.vis-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  const pwSection = document.getElementById('passwordSection');
+  pwSection.style.display = type === 'public' ? 'block' : 'none';
+  triggerAutosave();
+}
+
+// ═══════════════ AUTOSAVE ═══════════════
+function triggerAutosave() {
+  const status = document.getElementById('saveStatus');
+  const text = document.getElementById('saveText');
+  status.className = 'save-status saving';
+  text.textContent = '저장 중...';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    status.className = 'save-status saved';
+    text.textContent = '자동 저장됨';
+    document.getElementById('lastSaved').textContent = '방금 전';
+  }, 1200);
+}
+
+function scheduleAutosave() {
+  setInterval(triggerAutosave, 60000);
+}
+
+// ═══════════════ PROMPT PREVIEW ═══════════════
+function updatePromptPreview() {
+  const rules = document.getElementById('systemRules');
+  const world = document.getElementById('worldDesc');
+  const story = document.getElementById('mainStory');
+  const preview = document.getElementById('sysPromptPreview');
+  if (preview && rules) {
+    const combined = [rules.value, world ? world.value : '', story ? story.value : '']
+      .filter(Boolean)
+      .join('\n\n')
+      .slice(0, 400);
+    preview.textContent = combined + (combined.length >= 400 ? '...' : '');
+    // Update token count (rough estimate: 1 token ≈ 1.5 Korean chars)
+    const totalChars = (rules.value.length + (world ? world.value.length : 0) + (story ? story.value.length : 0));
+    const tokens = Math.round(totalChars / 1.5);
+    const el = document.getElementById('sysTokenCount');
+    if (el) el.textContent = '약 ' + tokens + ' 토큰';
+    const total = document.getElementById('totalTokens');
+    if (total) total.textContent = '약 ' + (tokens + 300) + ' 토큰';
+  }
+}
+
+// ═══════════════ CHAR COUNTS ═══════════════
+function bindTextareaCounters() {
+  const pairs = [
+    ['systemRules', 'rulesCount'],
+    ['worldDesc', 'worldCount'],
+    ['mainStory', 'storyCount'],
+  ];
+  pairs.forEach(([textareaId, countId]) => {
+    const ta = document.getElementById(textareaId);
+    const counter = document.getElementById(countId);
+    if (!ta || !counter) return;
+    const update = () => {
+      const len = ta.value.length;
+      counter.textContent = len.toLocaleString() + '자';
+      counter.className = 'char-count' + (len > 4000 ? ' warn' : '');
+      updatePromptPreview();
+      triggerAutosave();
+    };
+    ta.addEventListener('input', update);
+    update();
+  });
+}
+
+function updateAllCharcounts() {
+  ['systemRules', 'worldDesc', 'mainStory'].forEach(id => {
+    const ta = document.getElementById(id);
+    if (ta) {
+      const event = new Event('input');
+      ta.dispatchEvent(event);
+    }
+  });
+}
+
+// ═══════════════ ACTION BAR ═══════════════
+function startGame() {
+  alert('게임을 시작합니다!\n(실제 구현에서는 플레이 페이지로 이동합니다)');
+}
+
+function saveStory() {
+  triggerAutosave();
+  const status = document.getElementById('saveStatus');
+  const text = document.getElementById('saveText');
+  status.className = 'save-status saved';
+  text.textContent = '저장 완료';
+}
+
+function loadStory() {
+  alert('저장된 스토리를 불러옵니다.');
+}
+
+function deleteStory() {
+  if (confirm('이 스토리를 삭제하시겠습니까? 되돌릴 수 없습니다.')) {
+    alert('삭제되었습니다.');
+  }
+}
+
+function shareStory() {
+  const url = 'https://storyworld.app/play/heophung-gumgaek';
+  navigator.clipboard?.writeText(url).then(() => {
+    alert('공유 링크가 복사되었습니다:\n' + url);
+  }).catch(() => {
+    prompt('공유 링크:', url);
+  });
+}
+
+// ═══════════════ UTILS ═══════════════
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
