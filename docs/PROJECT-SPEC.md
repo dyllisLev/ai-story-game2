@@ -278,6 +278,57 @@ npx wrangler tail              # 실시간 로그
 npx wrangler deployments list  # 배포 이력
 ```
 
+## DB 마이그레이션
+
+### 구조
+
+```
+supabase/
+  config.toml                          # Supabase CLI 설정
+  migrations/
+    00000000000000_init.sql            # 초기 스키마 (pg_dump)
+    20260320120000_add_something.sql   # 이후 변경사항 (예시)
+```
+
+### 마이그레이션 워크플로우
+
+```bash
+# 0. 환경변수 로드
+source .env
+
+# 1. 새 마이그레이션 파일 생성
+supabase migration new <설명>
+# → supabase/migrations/<timestamp>_<설명>.sql 파일 생성됨
+
+# 2. 생성된 SQL 파일에 변경사항 작성
+# 예: ALTER TABLE stories ADD COLUMN genre TEXT;
+
+# 3. 공식 Supabase에 적용
+PGPASSWORD=$SUPABASE_DB_PASSWORD psql "$SUPABASE_DB_POOLER" -f supabase/migrations/<파일명>.sql
+
+# 4. 셀프호스팅에도 적용 (있는 경우)
+# PGPASSWORD=$SELFHOST_DB_PASSWORD psql "$SELFHOST_DB_URL" -f supabase/migrations/<파일명>.sql
+```
+
+### 현재 스키마 덤프 (참조용)
+
+```bash
+source .env
+PGPASSWORD=$SUPABASE_DB_PASSWORD pg_dump \
+  -h aws-1-ap-southeast-2.pooler.supabase.com -p 5432 \
+  -U postgres.cjpbsgdjpodrfdyqhaja -d postgres \
+  --schema=public --schema-only --no-owner --no-privileges \
+  -f supabase/migrations/00000000000000_init.sql
+```
+
+### 주의사항 (마이그레이션)
+
+- **모든 DB 접속 정보는 `.env`에 있음.** `SUPABASE_DB_PASSWORD`, `SUPABASE_DB_POOLER` 등 URL/비밀번호를 찾을 때는 **반드시 `.env` 파일을 먼저 확인**할 것.
+- **Docker 불필요.** `supabase db push/pull`은 Docker가 필요하지만, `psql`로 직접 적용하면 Docker 없이 가능.
+- **마이그레이션 파일은 git에 커밋.** 스키마 변경 이력을 추적할 수 있음.
+- **되돌리기(rollback)는 수동.** 별도 down 마이그레이션을 작성하거나 `ALTER TABLE ... DROP COLUMN` 등으로 직접 처리.
+- **공식/셀프호스팅 동일한 SQL 파일 사용.** 환경별로 접속 정보만 다르게 지정.
+
 ## 주의사항
 
 - **배포는 반드시 `git push origin main`으로.** `wrangler deploy` 직접 실행 금지.

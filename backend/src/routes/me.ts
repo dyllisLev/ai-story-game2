@@ -1,0 +1,161 @@
+// backend/src/routes/me.ts
+// GET    /api/me           — get own profile
+// PUT    /api/me           — update nickname
+// GET    /api/me/apikey    — get masked API key
+// PUT    /api/me/apikey    — save encrypted API key
+// DELETE /api/me/apikey    — remove API key
+import type { FastifyInstance } from 'fastify';
+import type { UserProfile } from '@story-game/shared';
+import { requireAuth } from '../plugins/auth.js';
+import { encrypt, decrypt } from '../services/crypto.js';
+
+export default async function meRoutes(app: FastifyInstance) {
+  // GET /api/me
+  app.get('/api/me', async (request, reply) => {
+    const user = requireAuth(request);
+
+    const { data: profile, error } = await app.supabaseAdmin
+      .from('user_profiles')
+      .select('id, nickname, avatar_url, api_key_enc, created_at')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !profile) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Profile not found' },
+      });
+    }
+
+    const response: UserProfile = {
+      id: profile.id,
+      nickname: profile.nickname ?? null,
+      avatar_url: profile.avatar_url ?? null,
+      has_api_key: profile.api_key_enc != null,
+      created_at: profile.created_at,
+    };
+
+    return reply.send(response);
+  });
+
+  // PUT /api/me — update nickname
+  app.put('/api/me', async (request, reply) => {
+    const user = requireAuth(request);
+    const { nickname } = request.body as { nickname: string };
+
+    if (!nickname) {
+      return reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'nickname required' },
+      });
+    }
+
+    const { data, error } = await app.supabaseAdmin
+      .from('user_profiles')
+      .update({ nickname, updated_at: new Date().toISOString() })
+      .eq('id', user.id)
+      .select('id, nickname, avatar_url, api_key_enc, created_at')
+      .single();
+
+    if (error) {
+      app.log.error(error, 'meRoutes PUT /api/me: update failed');
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to update profile' },
+      });
+    }
+
+    const response: UserProfile = {
+      id: data.id,
+      nickname: data.nickname ?? null,
+      avatar_url: data.avatar_url ?? null,
+      has_api_key: data.api_key_enc != null,
+      created_at: data.created_at,
+    };
+
+    return reply.send(response);
+  });
+
+  // GET /api/me/apikey — masked API key
+  app.get('/api/me/apikey', async (request, reply) => {
+    const user = requireAuth(request);
+    const encryptionKey = app.config.API_KEY_ENCRYPTION_SECRET;
+
+    const { data: profile, error } = await app.supabaseAdmin
+      .from('user_profiles')
+      .select('api_key_enc')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !profile?.api_key_enc) {
+      return reply.send({ has_api_key: false, masked: null });
+    }
+
+    try {
+      const plaintext = decrypt(profile.api_key_enc, encryptionKey);
+      const masked =
+        plaintext.length > 8
+          ? plaintext.slice(0, 4) + '****' + plaintext.slice(-4)
+          : '****';
+      return reply.send({ has_api_key: true, masked });
+    } catch (decryptErr) {
+      app.log.error(decryptErr, 'meRoutes GET /api/me/apikey: decrypt failed');
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to decrypt API key' },
+      });
+    }
+  });
+
+  // PUT /api/me/apikey — save encrypted API key
+  app.put('/api/me/apikey', async (request, reply) => {
+    const user = requireAuth(request);
+    const { apiKey } = request.body as { apiKey: string };
+    const encryptionKey = app.config.API_KEY_ENCRYPTION_SECRET;
+
+    if (!apiKey) {
+      return reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'apiKey required' },
+      });
+    }
+
+    let encrypted: string;
+    try {
+      encrypted = encrypt(apiKey, encryptionKey);
+    } catch (encErr) {
+      app.log.error(encErr, 'meRoutes PUT /api/me/apikey: encrypt failed');
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to encrypt API key' },
+      });
+    }
+
+    const { error } = await app.supabaseAdmin
+      .from('user_profiles')
+      .update({ api_key_enc: encrypted, updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+
+    if (error) {
+      app.log.error(error, 'meRoutes PUT /api/me/apikey: update failed');
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to save API key' },
+      });
+    }
+
+    return reply.send({ has_api_key: true });
+  });
+
+  // DELETE /api/me/apikey — remove API key
+  app.delete('/api/me/apikey', async (request, reply) => {
+    const user = requireAuth(request);
+
+    const { error } = await app.supabaseAdmin
+      .from('user_profiles')
+      .update({ api_key_enc: null, updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+
+    if (error) {
+      app.log.error(error, 'meRoutes DELETE /api/me/apikey: update failed');
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to remove API key' },
+      });
+    }
+
+    return reply.status(204).send();
+  });
+}

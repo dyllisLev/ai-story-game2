@@ -1,0 +1,303 @@
+// components/editor/StatusSettings.tsx
+// Toggle, preset chips, attribute table with drag-and-drop
+
+import { type FC, useRef } from 'react';
+import type { StatusAttribute } from '../../hooks/useStoryEditor';
+import type { StatusPreset } from '@story-game/shared';
+
+const TYPE_OPTIONS: { value: StatusAttribute['type']; label: string }[] = [
+  { value: 'bar', label: '수치바' },
+  { value: 'percent', label: '퍼센트' },
+  { value: 'number', label: '숫자' },
+  { value: 'text', label: '텍스트' },
+  { value: 'list', label: '목록' },
+];
+
+interface StatusSettingsProps {
+  enabled: boolean;
+  attributes: StatusAttribute[];
+  statusPresets: StatusPreset[];
+  onToggle: (v: boolean) => void;
+  onAddAttribute: () => void;
+  onUpdateAttribute: (id: string, updates: Partial<StatusAttribute>) => void;
+  onRemoveAttribute: (id: string) => void;
+  onReorder: (fromIndex: number, toIndex: number) => void;
+  onApplyPreset: (attrs: StatusAttribute[]) => void;
+}
+
+// Local built-in presets for quick selection
+const BUILTIN_PRESETS: { key: string; label: string; icon: string; attrs: Omit<StatusAttribute, 'id'>[] }[] = [
+  {
+    key: 'moo',
+    label: '무협',
+    icon: '⚔️',
+    attrs: [
+      { name: '경지', type: 'text', max: '' },
+      { name: '내공', type: 'bar', max: '100' },
+      { name: '외공', type: 'bar', max: '100' },
+      { name: '경공', type: 'text', max: '' },
+      { name: '검법', type: 'list', max: '' },
+      { name: '세력', type: 'text', max: '' },
+      { name: '장소', type: 'text', max: '' },
+    ],
+  },
+  {
+    key: 'fantasy',
+    label: '판타지',
+    icon: '🧙',
+    attrs: [
+      { name: '체력', type: 'bar', max: '100' },
+      { name: '마나', type: 'bar', max: '100' },
+      { name: '레벨', type: 'number', max: '' },
+      { name: '힘', type: 'number', max: '' },
+      { name: '민첩', type: 'number', max: '' },
+      { name: '지능', type: 'number', max: '' },
+      { name: '장소', type: 'text', max: '' },
+    ],
+  },
+  {
+    key: 'modern',
+    label: '현대',
+    icon: '🏙️',
+    attrs: [
+      { name: '체력', type: 'bar', max: '100' },
+      { name: '스트레스', type: 'bar', max: '100' },
+      { name: '소지금', type: 'number', max: '' },
+      { name: '호감도', type: 'percent', max: '' },
+      { name: '장소', type: 'text', max: '' },
+    ],
+  },
+];
+
+function generateId(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+export const StatusSettings: FC<StatusSettingsProps> = ({
+  enabled,
+  attributes,
+  statusPresets,
+  onToggle,
+  onAddAttribute,
+  onUpdateAttribute,
+  onRemoveAttribute,
+  onReorder,
+  onApplyPreset,
+}) => {
+  const dragIndexRef = useRef<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    dragIndexRef.current = index;
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragIndexRef.current === null || dragIndexRef.current === index) return;
+    onReorder(dragIndexRef.current, index);
+    dragIndexRef.current = index;
+  };
+
+  const handleDragEnd = () => {
+    dragIndexRef.current = null;
+  };
+
+  const handleBuiltinPreset = (attrs: Omit<StatusAttribute, 'id'>[]) => {
+    onApplyPreset(attrs.map(a => ({ ...a, id: generateId() })));
+  };
+
+  const handleStatusPreset = (preset: StatusPreset) => {
+    const attrs: StatusAttribute[] = preset.attributes.map(a => ({
+      id: generateId(),
+      name: a.name,
+      type: a.type === 'gauge' ? 'bar' : a.type === 'number' ? 'number' : 'text',
+      max: a.max_value != null ? String(a.max_value) : '',
+    }));
+    onApplyPreset(attrs);
+  };
+
+  return (
+    <section id="section-status" aria-labelledby="status-heading">
+      <div className="mb-7">
+        <h2 id="status-heading" className="font-serif text-[22px] font-bold text-text-primary tracking-tight mb-1">
+          상태창 설정
+        </h2>
+        <p className="text-[13px] text-text-secondary leading-relaxed">플레이어의 스탯과 상태를 표시할 상태창을 구성하세요.</p>
+      </div>
+
+      {/* Enable toggle */}
+      <div className="mb-5">
+        <div
+          className="flex items-center justify-between px-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-[9px] cursor-pointer transition-all hover:border-[var(--border-mid)] hover:bg-[var(--bg-surface)] gap-4"
+          onClick={() => onToggle(!enabled)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => e.key === 'Enter' || e.key === ' ' ? onToggle(!enabled) : undefined}
+          aria-pressed={enabled}
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-text-primary">상태창 사용</p>
+            <p className="text-[11px] text-text-muted mt-0.5">게임 플레이 화면에 캐릭터 상태창을 표시합니다</p>
+          </div>
+          <label className="relative w-10 h-[22px] flex-shrink-0" onClick={e => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              className="opacity-0 w-0 h-0 absolute"
+              checked={enabled}
+              onChange={e => onToggle(e.target.checked)}
+              aria-label="상태창 사용"
+            />
+            <span
+              className={`absolute inset-0 rounded-full transition-colors duration-200 cursor-pointer ${enabled ? 'bg-accent' : 'bg-[var(--border-mid)]'}`}
+            >
+              <span
+                className={`absolute w-4 h-4 rounded-full bg-white top-[3px] transition-transform duration-200 shadow-sm ${enabled ? 'translate-x-[21px]' : 'translate-x-[3px]'}`}
+              />
+            </span>
+          </label>
+        </div>
+      </div>
+
+      {/* Config area */}
+      <div
+        className="transition-opacity"
+        style={{ opacity: enabled ? 1 : 0.4, pointerEvents: enabled ? undefined : 'none' }}
+        aria-hidden={!enabled}
+      >
+        {/* Preset chips */}
+        <div className="mb-5">
+          <p className="text-[13px] font-semibold text-text-primary mb-1.5">프리셋 선택</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {BUILTIN_PRESETS.map(p => (
+              <button
+                key={p.key}
+                className="px-3.5 py-1.5 rounded-full border border-[var(--border-mid)] bg-transparent text-text-secondary text-[12px] font-medium cursor-pointer transition-all hover:border-accent hover:text-accent hover:bg-[var(--accent-dim)]"
+                onClick={() => handleBuiltinPreset(p.attrs)}
+              >
+                {p.icon} {p.label}
+              </button>
+            ))}
+            {statusPresets.map(p => (
+              <button
+                key={p.id}
+                className="px-3.5 py-1.5 rounded-full border border-[var(--border-mid)] bg-transparent text-text-secondary text-[12px] font-medium cursor-pointer transition-all hover:border-accent hover:text-accent hover:bg-[var(--accent-dim)]"
+                onClick={() => handleStatusPreset(p)}
+              >
+                {p.title}
+              </button>
+            ))}
+            <button
+              className="px-3.5 py-1.5 rounded-full border border-[var(--border-mid)] bg-transparent text-text-secondary text-[12px] font-medium cursor-pointer transition-all hover:border-purple hover:text-purple hover:bg-[var(--purple-dim)]"
+              onClick={() => onApplyPreset([])}
+            >
+              ✏️ 직접 만들기
+            </button>
+          </div>
+          <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
+            프리셋을 선택하면 기본 속성이 채워집니다. 이후 자유롭게 수정·추가·삭제할 수 있습니다.
+          </p>
+        </div>
+
+        {/* Attribute table */}
+        <div className="mb-5">
+          <p className="text-[13px] font-semibold text-text-primary mb-1.5">속성 목록</p>
+
+          {/* Header row */}
+          <div className="grid gap-2 px-1 pb-1.5 text-[11px] font-semibold text-text-muted uppercase tracking-[0.06em]"
+            style={{ gridTemplateColumns: '1fr 140px 90px 32px 32px' }}
+          >
+            <span>속성 이름</span>
+            <span>타입</span>
+            <span>최대값</span>
+            <span />
+            <span />
+          </div>
+
+          {/* Attribute rows */}
+          <div role="list" aria-label="상태 속성 목록">
+            {attributes.map((attr, i) => (
+              <div
+                key={attr.id}
+                className="grid gap-2 items-center px-1 py-1.5 rounded-[7px] transition-colors hover:bg-[var(--bg-card)] animate-fadeIn"
+                style={{ gridTemplateColumns: '1fr 140px 90px 32px 32px' }}
+                draggable
+                onDragStart={() => handleDragStart(i)}
+                onDragOver={e => handleDragOver(e, i)}
+                onDragEnd={handleDragEnd}
+                role="listitem"
+                aria-label={`속성: ${attr.name || '(빈 이름)'}`}
+              >
+                <input
+                  className="bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-md px-2.5 py-[7px] text-[13px] text-text-primary font-sans outline-none transition-colors focus:border-[var(--border-focus)] w-full placeholder:text-text-muted placeholder:text-[12px]"
+                  value={attr.name}
+                  onChange={e => onUpdateAttribute(attr.id, { name: e.target.value })}
+                  placeholder="속성 이름"
+                  aria-label="속성 이름"
+                />
+                <select
+                  className="bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-md px-2.5 py-[7px] text-[13px] text-text-primary font-sans outline-none appearance-none cursor-pointer transition-colors focus:border-[var(--border-focus)] w-full"
+                  value={attr.type}
+                  onChange={e => onUpdateAttribute(attr.id, { type: e.target.value as StatusAttribute['type'] })}
+                  aria-label="타입"
+                >
+                  {TYPE_OPTIONS.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min={1}
+                  className="bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-md px-2.5 py-[7px] text-[13px] text-text-primary font-sans outline-none transition-all focus:border-[var(--border-focus)] w-full placeholder:text-text-muted placeholder:text-[12px] disabled:opacity-30 disabled:cursor-not-allowed"
+                  value={attr.max}
+                  onChange={e => onUpdateAttribute(attr.id, { max: e.target.value })}
+                  disabled={attr.type !== 'bar' && attr.type !== 'percent'}
+                  placeholder="최대값"
+                  aria-label="최대값"
+                />
+                {/* Delete */}
+                <button
+                  className="w-8 h-8 rounded-md border border-[var(--border)] bg-transparent text-text-muted flex items-center justify-center cursor-pointer transition-all hover:bg-[var(--rose-dim)] hover:text-[var(--rose)] hover:border-[rgba(224,90,122,0.3)] flex-shrink-0"
+                  onClick={() => onRemoveAttribute(attr.id)}
+                  aria-label={`${attr.name || '속성'} 삭제`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                  </svg>
+                </button>
+                {/* Drag handle */}
+                <button
+                  className="w-8 h-8 rounded-md border border-[var(--border)] bg-transparent text-text-muted flex items-center justify-center cursor-grab transition-all hover:bg-[var(--bg-card)] hover:text-text-secondary active:cursor-grabbing flex-shrink-0"
+                  aria-label="순서 변경 (드래그)"
+                  tabIndex={-1}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+                    <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add attribute button */}
+          <button
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-[var(--border-mid)] rounded-[9px] bg-transparent text-text-muted text-[13px] font-sans cursor-pointer transition-all hover:border-accent hover:text-accent hover:bg-[var(--accent-dim)] mt-2"
+            onClick={onAddAttribute}
+            aria-label="속성 추가"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            속성 추가
+          </button>
+
+          {/* Hint */}
+          <div className="mt-2.5 px-3.5 py-2.5 bg-[var(--bg-card)] rounded-[0_7px_7px_0] text-[11px] text-text-muted leading-relaxed" style={{ border: '1px solid var(--border)', borderLeft: '3px solid var(--purple)' }}>
+            프리셋의 속성을 자유롭게 수정할 수 있습니다. 이름 변경, 타입 변경, 최대값 조정 모두 가능합니다. 드래그(≡)로 순서를 바꿀 수 있습니다.
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
