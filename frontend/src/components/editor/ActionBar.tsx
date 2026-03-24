@@ -7,6 +7,7 @@ interface ActionBarProps {
   lastSaved: Date | null;
   isSaving: boolean;
   onStartGame: () => void;
+  onTestPlay: () => void;
   onSave: () => void;
   onLoad: () => void;
   onDelete: () => void;
@@ -26,6 +27,7 @@ export const ActionBar: FC<ActionBarProps> = ({
   lastSaved,
   isSaving,
   onStartGame,
+  onTestPlay,
   onSave,
   onLoad,
   onDelete,
@@ -43,6 +45,20 @@ export const ActionBar: FC<ActionBarProps> = ({
           <polygon points="5 3 19 12 5 21 5 3" />
         </svg>
         게임 시작
+      </button>
+
+      {/* Test Play */}
+      <button
+        className="action-bar-btn test-play"
+        onClick={onTestPlay}
+        aria-label="테스트 플레이"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z" />
+          <polyline points="14 2 14 8 20 8" />
+          <path d="M10 12l2 2 4-4" />
+        </svg>
+        테스트
       </button>
 
       <div className="action-bar-sep" aria-hidden="true" />

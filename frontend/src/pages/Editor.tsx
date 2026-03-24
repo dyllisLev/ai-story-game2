@@ -23,6 +23,7 @@ import { PublishSettings } from '../components/editor/PublishSettings';
 import { PromptPreview } from '../components/editor/PromptPreview';
 import { PreviewPanel } from '../components/editor/PreviewPanel';
 import { ActionBar } from '../components/editor/ActionBar';
+import { TestPlayModal } from '../components/editor/TestPlayModal';
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -187,6 +188,13 @@ const EditorPage: FC = () => {
     }
   }, [save, storyId, navigate]);
 
+  // Test play
+  const [testPlayOpen, setTestPlayOpen] = useState(false);
+  const [testPlayKey, setTestPlayKey] = useState(0);
+  const openTestPlay = useCallback(() => setTestPlayOpen(true), []);
+  const closeTestPlay = useCallback(() => setTestPlayOpen(false), []);
+  const resetTestPlay = useCallback(() => setTestPlayKey(k => k + 1), []);
+
   // Toggle prompt preview (50/50 split) independently
   const handleTogglePromptPreview = useCallback(() => {
     setShowPromptPreview(prev => !prev);
@@ -341,10 +349,20 @@ const EditorPage: FC = () => {
         lastSaved={lastSaved}
         isSaving={saveStatus === 'saving'}
         onStartGame={handleStartGame}
+        onTestPlay={openTestPlay}
         onSave={save}
         onLoad={handleLoad}
         onDelete={handleDelete}
         onShare={handleShare}
+      />
+
+      {/* Test Play Modal */}
+      <TestPlayModal
+        key={testPlayKey}
+        editorForm={form}
+        visible={testPlayOpen}
+        onClose={closeTestPlay}
+        onReset={resetTestPlay}
       />
     </div>
   );
