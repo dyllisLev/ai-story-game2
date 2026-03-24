@@ -86,8 +86,8 @@ export default async function (app: FastifyInstance) {
       response_text: null,
       response_usage: null,
       response_error: null,
-    }).catch((err: unknown) => {
-      app.log.error(err, 'test-prompt: api_log insert failed');
+    }).then(({ error }) => {
+      if (error) app.log.error(error, 'test-prompt: api_log insert failed');
     });
 
     return reply.send({
