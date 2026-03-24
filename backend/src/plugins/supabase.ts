@@ -15,12 +15,15 @@ export default fp(async (app: FastifyInstance) => {
   const anonKey = app.config.SUPABASE_ANON_KEY;
   const serviceKey = app.config.SUPABASE_SERVICE_KEY;
 
+  // Use 'public' schema for cloud Supabase, 'story_game' for self-hosted
+  const schema = process.env.SUPABASE_SCHEMA || 'public';
+
   const supabase = createClient(url, anonKey, {
-    db: { schema: 'story_game' },
+    db: { schema },
   });
 
   const supabaseAdmin = createClient(url, serviceKey, {
-    db: { schema: 'story_game' },
+    db: { schema },
   });
 
   // 연결 확인
@@ -31,4 +34,4 @@ export default fp(async (app: FastifyInstance) => {
 
   app.decorate('supabase', supabase as any);
   app.decorate('supabaseAdmin', supabaseAdmin as any);
-});
+}, { name: 'supabase' });

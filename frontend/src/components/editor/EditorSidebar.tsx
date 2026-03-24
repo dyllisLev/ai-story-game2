@@ -18,7 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: 'basic',
     label: '기본 설정',
-    iconBg: 'bg-[var(--accent-dim)]',
+    iconBg: 'var(--accent-dim)',
     icon: (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" aria-hidden="true">
         <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
@@ -28,7 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: 'rules',
     label: '시스템 규칙',
-    iconBg: 'bg-[var(--rose-dim)]',
+    iconBg: 'var(--rose-dim)',
     icon: (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--rose)" strokeWidth="2" aria-hidden="true">
         <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
@@ -38,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: 'world',
     label: '세계관',
-    iconBg: 'bg-[var(--purple-dim)]',
+    iconBg: 'var(--purple-dim)',
     icon: (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="2" aria-hidden="true">
         <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
@@ -49,7 +49,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: 'story',
     label: '스토리',
-    iconBg: 'bg-[var(--accent-dim)]',
+    iconBg: 'var(--accent-dim)',
     icon: (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" aria-hidden="true">
         <path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
@@ -59,7 +59,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: 'chars',
     label: '등장인물',
-    iconBg: 'bg-[var(--purple-dim)]',
+    iconBg: 'var(--purple-dim)',
     icon: (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="2" aria-hidden="true">
         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
@@ -70,7 +70,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: 'status',
     label: '상태창 설정',
-    iconBg: 'bg-[var(--purple-dim)]',
+    iconBg: 'var(--purple-dim)',
     badge: 'new',
     icon: (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="2" aria-hidden="true">
@@ -82,7 +82,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: 'output',
     label: '출력 설정',
-    iconBg: 'bg-[var(--accent-dim)]',
+    iconBg: 'var(--accent-dim)',
     icon: (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" aria-hidden="true">
         <circle cx="12" cy="12" r="3" />
@@ -93,7 +93,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: 'visibility',
     label: '공개 설정',
-    iconBg: 'bg-[var(--green-dim)]',
+    iconBg: 'var(--green-dim)',
     icon: (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2" aria-hidden="true">
         <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -111,50 +111,33 @@ interface EditorSidebarProps {
 
 export const EditorSidebar: FC<EditorSidebarProps> = ({ activeSection, completeness, onNavigate }) => {
   return (
-    <nav
-      className="w-[220px] bg-[var(--bg-panel)] border-r border-[var(--border)] flex flex-col overflow-hidden flex-shrink-0"
-      aria-label="섹션 네비게이션"
-    >
-      <div className="flex-1 overflow-y-auto py-3 px-2.5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted px-2 py-2 pb-1">
-          스토리 구성
-        </p>
+    <aside className="sidebar" aria-label="섹션 네비게이션">
+      <div className="sidebar-scroll">
+        <p className="sidebar-group-label">스토리 구성</p>
 
         {NAV_ITEMS.map((item) => {
           const isActive = activeSection === item.id;
           return (
             <button
               key={item.id}
-              className={[
-                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[7px] cursor-pointer text-[13px] transition-all border text-left relative',
-                isActive
-                  ? 'bg-[var(--bg-card)] border-[var(--border-mid)] text-text-primary'
-                  : 'border-transparent text-text-secondary hover:bg-[var(--bg-card)] hover:text-text-primary',
-              ].join(' ')}
+              className={`nav-item${isActive ? ' active' : ''}`}
               onClick={() => onNavigate(item.id)}
               aria-current={isActive ? 'location' : undefined}
             >
-              {/* Active indicator bar */}
-              {isActive && (
-                <span
-                  className="absolute left-0 top-[7px] bottom-[7px] w-0.5 bg-accent rounded-[0_2px_2px_0]"
-                  aria-hidden="true"
-                />
-              )}
-
               {/* Icon */}
-              <span className={`w-5 h-5 rounded-[5px] flex items-center justify-center flex-shrink-0 ${item.iconBg}`}>
+              <span
+                className="nav-item-icon"
+                style={{ background: item.iconBg }}
+              >
                 {item.icon}
               </span>
 
               {/* Label */}
-              <span className="flex-1 font-sans">{item.label}</span>
+              <span className="nav-item-name">{item.label}</span>
 
               {/* Badge */}
               {item.badge === 'new' && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--purple-dim)] text-purple font-semibold flex-shrink-0">
-                  NEW
-                </span>
+                <span className="nav-badge new">NEW</span>
               )}
             </button>
           );
@@ -162,14 +145,14 @@ export const EditorSidebar: FC<EditorSidebarProps> = ({ activeSection, completen
       </div>
 
       {/* Completeness progress */}
-      <div className="px-4 py-3 border-t border-[var(--border)] flex-shrink-0">
-        <div className="flex justify-between text-[10px] text-text-muted mb-1.5">
+      <div className="sidebar-progress">
+        <div className="progress-row">
           <span>완성도</span>
           <span>{completeness}%</span>
         </div>
-        <div className="h-[3px] bg-[var(--border)] rounded-full overflow-hidden">
+        <div className="progress-track">
           <div
-            className="h-full bg-gradient-to-r from-accent to-purple rounded-full transition-all duration-500"
+            className="progress-fill"
             style={{ width: `${completeness}%` }}
             role="progressbar"
             aria-valuenow={completeness}
@@ -179,6 +162,6 @@ export const EditorSidebar: FC<EditorSidebarProps> = ({ activeSection, completen
           />
         </div>
       </div>
-    </nav>
+    </aside>
   );
 };

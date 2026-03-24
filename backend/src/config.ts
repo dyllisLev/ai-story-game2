@@ -1,5 +1,9 @@
 // backend/src/config.ts
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env from project root (parent of backend/)
+config({ path: resolve(import.meta.dirname, '../../.env') });
 
 export interface EnvConfig {
   PORT: number;

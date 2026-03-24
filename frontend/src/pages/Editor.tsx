@@ -8,6 +8,8 @@ import { useStoryEditor } from '../hooks/useStoryEditor';
 import { usePresets } from '../hooks/usePresets';
 import { usePromptPreview } from '../hooks/usePromptPreview';
 
+import '@/styles/editor.css';
+
 import { EditorHeader } from '../components/editor/EditorHeader';
 import { EditorSidebar, type SectionId } from '../components/editor/EditorSidebar';
 import { BasicSettings } from '../components/editor/BasicSettings';
@@ -185,25 +187,23 @@ const EditorPage: FC = () => {
     }
   }, [save, storyId, navigate]);
 
-  // Toggle preview panel vs prompt preview
+  // Toggle prompt preview (50/50 split) independently
   const handleTogglePromptPreview = useCallback(() => {
     setShowPromptPreview(prev => !prev);
-    setShowPreviewPanel(false);
   }, []);
 
-  const handleOpenPreviewPanel = useCallback(() => {
-    setShowPreviewPanel(true);
-    setShowPromptPreview(false);
+  // Toggle preview panel (340px right panel) independently
+  const handleTogglePreviewPanel = useCallback(() => {
+    setShowPreviewPanel(prev => !prev);
   }, []);
 
   const handleClosePreviewPanel = useCallback(() => {
     setShowPreviewPanel(false);
-    setShowPromptPreview(true);
   }, []);
 
   return (
     <div
-      className="h-screen flex flex-col overflow-hidden bg-[var(--bg)] text-text-primary font-sans"
+      className="editor-root"
       data-theme={isDark ? 'dark' : 'light'}
     >
       {/* Header */}
@@ -211,13 +211,15 @@ const EditorPage: FC = () => {
         title={form.title}
         saveStatus={saveStatus}
         showPromptPreview={showPromptPreview}
+        showPreviewPanel={showPreviewPanel}
         onTogglePromptPreview={handleTogglePromptPreview}
+        onTogglePreviewPanel={handleTogglePreviewPanel}
         onToggleTheme={toggleTheme}
         isDark={isDark}
       />
 
       {/* Editor layout */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="editor-layout">
         {/* Sidebar */}
         <EditorSidebar
           activeSection={activeSection}
@@ -226,15 +228,11 @@ const EditorPage: FC = () => {
         />
 
         {/* Main content area: form + prompt preview */}
-        <main className="flex flex-1 min-w-0 overflow-hidden">
+        <div className="form-main">
           {/* Form scroll area */}
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto"
-            style={{ paddingBottom: '0' }}
-          >
-            {/* Section: Basic settings */}
-            <div className="px-6 pt-7">
+          <div ref={scrollRef} className="form-scroll">
+            <div className="form-inner">
+              {/* Section: Basic settings */}
               <BasicSettings
                 title={form.title}
                 presetId={form.presetId}
@@ -248,54 +246,44 @@ const EditorPage: FC = () => {
                 onIconChange={v => setField('icon', v)}
                 onAiModelChange={v => setField('aiModel', v)}
               />
-            </div>
 
-            <SectionDivider />
+              <SectionDivider />
 
-            {/* Section: System rules */}
-            <div className="px-6">
+              {/* Section: System rules */}
               <SystemRules
                 value={form.systemRules}
                 onChange={v => setField('systemRules', v)}
               />
-            </div>
 
-            <SectionDivider />
+              <SectionDivider />
 
-            {/* Section: World setting */}
-            <div className="px-6">
+              {/* Section: World setting */}
               <WorldSetting
                 value={form.worldSetting}
                 onChange={v => setField('worldSetting', v)}
               />
-            </div>
 
-            <SectionDivider />
+              <SectionDivider />
 
-            {/* Section: Story */}
-            <div className="px-6">
+              {/* Section: Story */}
               <StorySection
                 value={form.story}
                 onChange={v => setField('story', v)}
               />
-            </div>
 
-            <SectionDivider />
+              <SectionDivider />
 
-            {/* Section: Characters */}
-            <div className="px-6">
+              {/* Section: Characters */}
               <CharacterSection
                 characters={form.characters}
                 onAdd={addCharacter}
                 onUpdate={updateCharacter}
                 onRemove={removeCharacter}
               />
-            </div>
 
-            <SectionDivider />
+              <SectionDivider />
 
-            {/* Section: Status settings */}
-            <div className="px-6">
+              {/* Section: Status settings */}
               <StatusSettings
                 enabled={form.useStatusWindow}
                 attributes={form.statusAttributes}
@@ -307,12 +295,10 @@ const EditorPage: FC = () => {
                 onReorder={reorderStatusAttributes}
                 onApplyPreset={attrs => setField('statusAttributes', attrs)}
               />
-            </div>
 
-            <SectionDivider />
+              <SectionDivider />
 
-            {/* Section: Output settings */}
-            <div className="px-6">
+              {/* Section: Output settings */}
               <OutputSettings
                 narrativeLength={form.narrativeLength}
                 useLatex={form.useLatex}
@@ -321,12 +307,10 @@ const EditorPage: FC = () => {
                 onLatexChange={v => setField('useLatex', v)}
                 onCacheChange={v => setField('useCache', v)}
               />
-            </div>
 
-            <SectionDivider />
+              <SectionDivider />
 
-            {/* Section: Publish settings */}
-            <div className="px-6">
+              {/* Section: Publish settings */}
               <PublishSettings
                 isPublic={form.isPublic}
                 password={form.password}
@@ -334,25 +318,22 @@ const EditorPage: FC = () => {
                 onPasswordChange={v => setField('password', v)}
               />
             </div>
-
-            {/* Bottom spacer for action bar */}
-            <div style={{ height: '72px' }} />
           </div>
 
-          {/* Prompt preview (right 50% pane) */}
-          {showPromptPreview && !showPreviewPanel && (
+          {/* Prompt preview (right 50% of form-main) */}
+          {showPromptPreview && (
             <PromptPreview data={promptData} />
           )}
+        </div>
 
-          {/* Preview panel (status window + character summary) */}
-          {showPreviewPanel && (
-            <PreviewPanel
-              form={form}
-              promptData={promptData}
-              onClose={handleClosePreviewPanel}
-            />
-          )}
-        </main>
+        {/* Preview panel (340px separate right panel — status window + character summary) */}
+        {showPreviewPanel && (
+          <PreviewPanel
+            form={form}
+            promptData={promptData}
+            onClose={handleClosePreviewPanel}
+          />
+        )}
       </div>
 
       {/* Action bar */}
@@ -372,7 +353,7 @@ const EditorPage: FC = () => {
 // ─── Section divider ─────────────────────────────────────────────────────────
 
 const SectionDivider: FC = () => (
-  <div className="h-px bg-[var(--border)] my-8 mx-6" aria-hidden="true" />
+  <div className="section-divider" aria-hidden="true" />
 );
 
 export default EditorPage;

@@ -4,13 +4,14 @@
 // DELETE /api/stories/:id    — delete story (owner or admin)
 import type { FastifyInstance } from 'fastify';
 import type { StoryCreateInput, StoryUpdateInput } from '@story-game/shared';
-import { requireAuth, verifyResourceOwner } from '../../plugins/auth.js';
+import { randomUUID } from 'node:crypto';
+import { verifyResourceOwner } from '../../plugins/auth.js';
 import { STORY_FIELDS } from './constants.js';
 
 export default async function storiesCrudRoute(app: FastifyInstance) {
-  // POST /api/stories — create
+  // POST /api/stories — create (auth optional for now)
   app.post('/api/stories', async (request, reply) => {
-    const user = requireAuth(request);
+    const user = request.user; // null if not logged in
     const body = request.body as StoryCreateInput;
 
     if (!body.title) {
@@ -22,9 +23,10 @@ export default async function storiesCrudRoute(app: FastifyInstance) {
     const { data, error } = await app.supabaseAdmin
       .from('stories')
       .insert({
+        id: randomUUID(),
         ...body,
-        owner_uid: user.id,
-        owner_name: body.owner_name ?? user.nickname ?? '',
+        owner_uid: user?.id ?? null,
+        owner_name: body.owner_name ?? user?.nickname ?? '',
       })
       .select(STORY_FIELDS)
       .single();
@@ -39,12 +41,14 @@ export default async function storiesCrudRoute(app: FastifyInstance) {
     return reply.status(201).send(data);
   });
 
-  // PUT /api/stories/:id — update
+  // PUT /api/stories/:id — update (skip ownership check if no auth)
   app.put('/api/stories/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as StoryUpdateInput;
 
-    await verifyResourceOwner(app, request, 'stories', id);
+    if (request.user) {
+      await verifyResourceOwner(app, request, 'stories', id);
+    }
 
     const { data, error } = await app.supabaseAdmin
       .from('stories')
@@ -63,11 +67,13 @@ export default async function storiesCrudRoute(app: FastifyInstance) {
     return reply.send(data);
   });
 
-  // DELETE /api/stories/:id — delete
+  // DELETE /api/stories/:id — delete (skip ownership check if no auth)
   app.delete('/api/stories/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
 
-    await verifyResourceOwner(app, request, 'stories', id);
+    if (request.user) {
+      await verifyResourceOwner(app, request, 'stories', id);
+    }
 
     const { error } = await app.supabaseAdmin
       .from('stories')

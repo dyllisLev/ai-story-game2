@@ -26,6 +26,8 @@ interface EditorTextareaProps {
   onChange: (value: string) => void;
   /** Character count at which the counter turns red */
   warnThreshold?: number;
+  /** Extra CSS class for textarea size variant (lg, xl) */
+  sizeVariant?: 'lg' | 'xl';
 }
 
 export const EditorTextarea: FC<EditorTextareaProps> = ({
@@ -40,41 +42,32 @@ export const EditorTextarea: FC<EditorTextareaProps> = ({
   placeholder,
   onChange,
   warnThreshold = 3000,
+  sizeVariant = 'xl',
 }) => {
   const charCount = value.length;
   const isWarn = charCount > warnThreshold;
 
   return (
     <section id={sectionId} aria-labelledby={headingId}>
-      <div className="mb-7">
-        <h2
-          id={headingId}
-          className="font-serif text-[22px] font-bold text-text-primary tracking-tight mb-1"
-        >
-          {heading}
-        </h2>
-        <p className="text-[13px] text-text-secondary leading-relaxed">{description}</p>
+      <div className="section-header">
+        <h2 id={headingId} className="section-title">{heading}</h2>
+        <p className="section-desc">{description}</p>
       </div>
 
-      <div className="mb-5">
-        <label
-          className="flex items-center gap-1.5 text-[13px] font-semibold text-text-primary mb-1.5"
-          htmlFor={textareaId}
-        >
-          {label}
-        </label>
+      <div className="form-group">
+        <label className="form-label" htmlFor={textareaId}>{label}</label>
         <textarea
           id={textareaId}
-          className="w-full bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-lg px-3.5 py-3 font-serif text-sm leading-[1.85] text-text-primary outline-none resize-y min-h-[300px] transition-all focus:border-[var(--border-focus)] focus:shadow-[0_0_0_3px_var(--accent-dim)] placeholder:text-text-muted placeholder:font-sans placeholder:text-[13px]"
+          className={`form-textarea ${sizeVariant}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           aria-describedby={counterId}
         />
-        <div className="flex justify-end mt-1">
+        <div className="textarea-footer">
           <span
             id={counterId}
-            className={`text-[11px] ${isWarn ? 'text-[var(--rose)]' : 'text-text-muted'}`}
+            className={`char-count${isWarn ? ' warn' : ''}`}
             aria-live="polite"
           >
             {charCount.toLocaleString()}자

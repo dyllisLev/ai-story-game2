@@ -32,14 +32,10 @@ export const ActionBar: FC<ActionBarProps> = ({
   onShare,
 }) => {
   return (
-    <div
-      className="sticky bottom-0 h-[56px] bg-[var(--bg-panel)] border-t border-[var(--border)] flex items-center px-5 gap-2 z-40 backdrop-blur-[10px]"
-      role="toolbar"
-      aria-label="편집기 액션"
-    >
+    <footer className="action-bar" role="toolbar" aria-label="편집기 액션">
       {/* Primary: Game start */}
       <button
-        className="h-[38px] px-5 rounded-lg border-none bg-accent text-[#0a0a0f] text-[13px] font-bold flex items-center gap-1.5 cursor-pointer transition-all hover:bg-[#d4b85a] hover:shadow-[0_0_20px_var(--accent-glow)]"
+        className="action-bar-primary"
         onClick={onStartGame}
         aria-label="게임 시작"
       >
@@ -49,11 +45,11 @@ export const ActionBar: FC<ActionBarProps> = ({
         게임 시작
       </button>
 
-      <div className="w-px h-5 bg-[var(--border)] mx-1" aria-hidden="true" />
+      <div className="action-bar-sep" aria-hidden="true" />
 
       {/* Save */}
       <button
-        className="h-9 px-3.5 rounded-[7px] border border-[var(--border)] bg-transparent text-text-secondary text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-all hover:bg-[var(--bg-card)] hover:text-text-primary hover:border-[var(--border-mid)] disabled:opacity-50"
+        className="action-bar-btn"
         onClick={onSave}
         disabled={isSaving}
         aria-label="저장"
@@ -68,7 +64,7 @@ export const ActionBar: FC<ActionBarProps> = ({
 
       {/* Load */}
       <button
-        className="h-9 px-3.5 rounded-[7px] border border-[var(--border)] bg-transparent text-text-secondary text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-all hover:bg-[var(--bg-card)] hover:text-text-primary hover:border-[var(--border-mid)]"
+        className="action-bar-btn"
         onClick={onLoad}
         aria-label="불러오기"
       >
@@ -82,7 +78,7 @@ export const ActionBar: FC<ActionBarProps> = ({
 
       {/* Delete */}
       <button
-        className="h-9 px-3.5 rounded-[7px] border border-[var(--border)] bg-transparent text-text-secondary text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-all hover:bg-[var(--rose-dim)] hover:text-[var(--rose)] hover:border-[rgba(224,90,122,0.3)]"
+        className="action-bar-btn danger"
         onClick={onDelete}
         aria-label="삭제"
       >
@@ -95,7 +91,7 @@ export const ActionBar: FC<ActionBarProps> = ({
 
       {/* Share */}
       <button
-        className="h-9 px-3.5 rounded-[7px] border border-[var(--border)] bg-transparent text-text-secondary text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-all hover:bg-[var(--bg-card)] hover:text-text-primary hover:border-[var(--border-mid)]"
+        className="action-bar-btn"
         onClick={onShare}
         aria-label="공유"
       >
@@ -108,9 +104,9 @@ export const ActionBar: FC<ActionBarProps> = ({
       </button>
 
       {/* Timestamp — right aligned */}
-      <div className="ml-auto text-[11px] text-text-muted">
+      <div className="action-bar-right" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
         마지막 저장: <span aria-live="polite">{formatLastSaved(lastSaved)}</span>
       </div>
-    </div>
+    </footer>
   );
 };

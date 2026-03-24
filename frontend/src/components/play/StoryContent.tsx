@@ -45,7 +45,7 @@ export const StoryContent: FC<StoryContentProps> = ({
   };
 
   return (
-    <main className="panel-center" aria-label="스토리 내용">
+    <>
       {/* Story header */}
       <div className="story-header">
         <div className="story-header-left">
@@ -128,6 +128,6 @@ export const StoryContent: FC<StoryContentProps> = ({
           </div>
         )}
       </div>
-    </main>
+    </>
   );
 };

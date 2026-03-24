@@ -11,17 +11,30 @@ interface PanelSectionProps {
   icon: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  noCollapse?: boolean;
+  headerAction?: React.ReactNode;
 }
 
-const PanelSection: FC<PanelSectionProps> = ({ title, icon, children, defaultOpen = true }) => {
+const PanelSection: FC<PanelSectionProps> = ({
+  title,
+  icon,
+  children,
+  defaultOpen = true,
+  noCollapse = false,
+  headerAction,
+}) => {
   const [open, setOpen] = useState(defaultOpen);
+  const collapsed = !noCollapse && !open;
   return (
-    <div className={`panel-section${open ? '' : ' collapsed'}`}>
-      <div className="panel-section-header" onClick={() => setOpen(!open)}>
+    <div className={`panel-section${collapsed ? ' collapsed' : ''}`}>
+      <div
+        className={`panel-section-header${noCollapse ? ' no-collapse' : ''}`}
+        onClick={noCollapse ? undefined : () => setOpen((v) => !v)}
+      >
         <span className="panel-section-title">
           {icon} {title}
         </span>
-        <span className="section-collapse-icon">▾</span>
+        {headerAction ?? (!noCollapse && <span className="section-collapse-icon">▾</span>)}
       </div>
       <div className="panel-section-body">{children}</div>
     </div>
@@ -48,25 +61,25 @@ export const InfoTab: FC<InfoTabProps> = ({ settingsData, onOpenCharModal }) => 
               </div>
             </div>
           </div>
-
-          <button
-            className="char-detail-btn"
-            onClick={onOpenCharModal}
-            style={{ width: '100%', justifyContent: 'center' }}
-          >
-            등장인물 상세 보기
-          </button>
         </PanelSection>
 
-        {/* NPC summary */}
-        <PanelSection title="등장인물 요약" icon="👥" defaultOpen={false}>
+        <PanelSection
+          title="등장인물"
+          icon="👥"
+          noCollapse
+          headerAction={
+            <button className="char-detail-btn" onClick={onOpenCharModal}>
+              상세보기 ▶
+            </button>
+          }
+        >
           <p className="char-summary-text" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-xs)' }}>
             게임이 진행되면 등장인물 정보가 표시됩니다.
           </p>
         </PanelSection>
 
         {/* Quest */}
-        <PanelSection title="목표 / 퀘스트" icon="📜" defaultOpen={false}>
+        <PanelSection title="임무" icon="📜" defaultOpen={false}>
           <div className="quest-current-goal">
             <span className="quest-goal-label">현재 목표</span>
             <span className="quest-goal-text">

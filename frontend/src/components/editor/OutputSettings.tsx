@@ -22,32 +22,26 @@ interface ToggleRowProps {
 
 const ToggleRow: FC<ToggleRowProps> = ({ id, label, description, checked, onChange }) => (
   <div
-    className="flex items-center justify-between px-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-[9px] cursor-pointer transition-all hover:border-[var(--border-mid)] hover:bg-[var(--bg-surface)] gap-4 mb-2"
+    className="toggle-row"
+    style={{ marginBottom: '8px' }}
     onClick={() => onChange(!checked)}
     role="button"
     tabIndex={0}
     onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onChange(!checked)}
   >
-    <div className="flex-1 min-w-0">
-      <p className="text-[13px] font-semibold text-text-primary">{label}</p>
-      <p className="text-[11px] text-text-muted mt-0.5">{description}</p>
+    <div className="toggle-row-info">
+      <p className="toggle-label">{label}</p>
+      <p className="toggle-desc">{description}</p>
     </div>
-    <label className="relative w-10 h-[22px] flex-shrink-0" onClick={e => e.stopPropagation()}>
+    <label className="toggle-switch" onClick={e => e.stopPropagation()}>
       <input
         id={id}
         type="checkbox"
-        className="opacity-0 w-0 h-0 absolute"
         checked={checked}
         onChange={e => onChange(e.target.checked)}
         aria-label={label}
       />
-      <span
-        className={`absolute inset-0 rounded-full transition-colors duration-200 cursor-pointer ${checked ? 'bg-accent' : 'bg-[var(--border-mid)]'}`}
-      >
-        <span
-          className={`absolute w-4 h-4 rounded-full bg-white top-[3px] transition-transform duration-200 shadow-sm ${checked ? 'translate-x-[21px]' : 'translate-x-[3px]'}`}
-        />
-      </span>
+      <span className="toggle-slider" />
     </label>
   </div>
 );
@@ -72,26 +66,20 @@ export const OutputSettings: FC<OutputSettingsProps> = ({
 
   return (
     <section id="section-output" aria-labelledby="output-heading">
-      <div className="mb-7">
-        <h2 id="output-heading" className="font-serif text-[22px] font-bold text-text-primary tracking-tight mb-1">
-          출력 설정
-        </h2>
-        <p className="text-[13px] text-text-secondary leading-relaxed">AI 응답의 분량과 형식을 조정하세요.</p>
+      <div className="section-header">
+        <h2 id="output-heading" className="section-title">출력 설정</h2>
+        <p className="section-desc">AI 응답의 분량과 형식을 조정하세요.</p>
       </div>
 
       {/* Narrative length stepper */}
-      <div
-        className="flex items-center gap-2.5 px-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-[9px] mb-2"
-        role="group"
-        aria-label="서술 분량 조절"
-      >
-        <div className="flex-1">
-          <p className="text-[13px] font-semibold text-text-primary">서술 분량</p>
-          <p className="text-[11px] text-text-muted mt-0.5">AI가 한 번에 서술하는 문단 수</p>
+      <div className="stepper-row" role="group" aria-label="서술 분량 조절">
+        <div className="stepper-info">
+          <p className="stepper-label">서술 분량</p>
+          <p className="stepper-desc">AI가 한 번에 서술하는 문단 수</p>
         </div>
-        <div className="flex items-center bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-[7px] overflow-hidden flex-shrink-0">
+        <div className="stepper-ctrl">
           <button
-            className="w-[30px] h-[30px] border-none bg-transparent text-text-secondary cursor-pointer flex items-center justify-center transition-all hover:bg-[var(--bg-card)] hover:text-text-primary text-base disabled:opacity-30 disabled:cursor-not-allowed"
+            className="stepper-btn"
             onClick={decrement}
             disabled={narrativeLength <= MIN_LENGTH}
             aria-label="문단 수 줄이기"
@@ -99,14 +87,14 @@ export const OutputSettings: FC<OutputSettingsProps> = ({
             −
           </button>
           <div
-            className="min-w-[60px] text-center text-[13px] font-semibold text-text-primary border-x border-[var(--border)] h-[30px] flex items-center justify-center font-sans"
+            className="stepper-val"
             aria-live="polite"
             aria-label={`현재 서술 분량: ${narrativeLength}문단`}
           >
             {narrativeLength}문단
           </div>
           <button
-            className="w-[30px] h-[30px] border-none bg-transparent text-text-secondary cursor-pointer flex items-center justify-center transition-all hover:bg-[var(--bg-card)] hover:text-text-primary text-base disabled:opacity-30 disabled:cursor-not-allowed"
+            className="stepper-btn"
             onClick={increment}
             disabled={narrativeLength >= MAX_LENGTH}
             aria-label="문단 수 늘리기"

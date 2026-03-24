@@ -7,332 +7,112 @@
 ## 아키텍처
 
 ```
-[브라우저] ──→ [Cloudflare Workers] ──→ [Supabase PostgreSQL]
-    │                │
-    │                └─ /api/config (GET/PUT)
-    │                └─ 정적 파일 서빙 (Assets)
-    │
-    └─ [Gemini API] (직접 호출, 서버 경유 없음)
+[React Frontend :5173] ──→ [Fastify Backend :3000] ──→ [Supabase PostgreSQL]
+         │                         │
+         │                         ├─ /api/config (GET/PUT)
+         │                         ├─ /api/game/start|chat (SSE)
+         │                         ├─ /api/stories (CRUD)
+         │                         ├─ /api/sessions (CRUD)
+         │                         ├─ /api/admin/* (관리자)
+         │                         └─ /api/auth/* (인증)
+         │
+         └─ [Gemini API] (프론트에서 직접 호출, 백엔드가 프롬프트 조합)
 ```
 
-- **프론트엔드:** Vanilla HTML/CSS/JS (빌드 도구 없음, ES Modules)
-- **백엔드:** Cloudflare Workers (config API + 정적 파일 서빙만)
-- **AI:** Google Gemini API (브라우저에서 직접 호출)
-- **DB:** Supabase (PostgreSQL + RLS + 익명 인증)
-- **배포:** GitHub push → Cloudflare 자동 배포
+- **Frontend:** React 19 + TypeScript + Vite + Tailwind CSS
+- **Backend:** Fastify 5 + TypeScript
+- **Shared:** @story-game/shared (pnpm workspace, TypeScript 타입)
+- **AI:** Google Gemini API (프론트엔드 직접 호출)
+- **DB:** Supabase (PostgreSQL + RLS)
+- **Monorepo:** pnpm workspaces
 
-## 접속 정보
+## DB 테이블
 
-### Supabase
-
-| 항목 | 값 |
-|-----|---|
-| Project Ref | `cjpbsgdjpodrfdyqhaja` |
-| URL | `https://cjpbsgdjpodrfdyqhaja.supabase.co` |
-| Region | `ap-southeast-2` (Sydney) |
-| DB Pooler | `.env` 의 `SUPABASE_DB_POOLER` 참조 |
-| DB Password | `.env` 의 `SUPABASE_DB_PASSWORD` 참조 |
-
-**psql 접속:**
-```bash
-# .env에서 자동으로 읽기
-source .env
-PGPASSWORD=$SUPABASE_DB_PASSWORD psql "$SUPABASE_DB_POOLER"
-```
-
-### Cloudflare
-
-| 항목 | 값 |
-|-----|---|
-| Worker 이름 | `ai-story-game` |
-| Account ID | `.env` 의 `CLOUDFLARE_ACCOUNT_ID` 참조 |
-
-### 로컬 개발
-
-```bash
-npx wrangler dev          # → http://localhost:8787
-npx wrangler dev --port 3000  # 포트 충돌 시
-```
-
-## 파일 구조 및 역할
-
-```
-src/
-  worker.js                 # Cloudflare Worker (API 라우팅 + Basic Auth)
-
-public/
-  index.html                # 홈 - 스토리 목록
-  play.html                 # 게임 플레이 (메인 기능)
-  editor.html               # 스토리 에디터
-  base_story_admin.html     # 관리자 설정 (Basic Auth 보호)
-
-  js/
-    supabase-config.js      # Supabase 클라이언트 초기화, config 로드
-    supabase-ops.js         # DB CRUD (stories, sessions, presets, session_memory)
-    gemini-api.js           # Gemini API 래퍼 (stream/batch generate, cache, models)
-    prompt-builder.js       # 시스템 프롬프트 조립 (스토리 설정 + 메모리)
-    memory-manager.js       # 구조화 메모리 생성/파싱/캐시
-    markdown-renderer.js    # Markdown + LaTeX(KaTeX) 렌더링
-    token-tracker.js        # 토큰 사용량/비용 추적
-    crypto.js               # PBKDF2 패스워드 해싱
-    theme.js                # 다크/라이트 테마
-    utils.js                # HTML 이스케이프 유틸리티
-    app-play.js             # 게임 엔진 (세션, 대화, 메모리 트리거)
-    app-editor.js           # 에디터 로직
-    app-admin.js            # 관리자 패널 로직
-
-  styles/
-    theme.css               # CSS 변수 (다크/라이트)
-    base.css                # 공통 레이아웃
-    markdown.css            # Markdown 렌더링
-    editor.css              # 에디터 전용
-
-  presets/
-    default.json            # 기본 프리셋
-    basic-murim.json        # 무림 프리셋 예시
-
-wrangler.jsonc              # Cloudflare 배포 설정
-supabase-schema.sql         # DB 스키마 (참조용, 실행은 Supabase에서)
-.env                        # 로컬 환경변수 (git에 포함 안됨)
-```
-
-## 데이터베이스 테이블
-
-### stories
-스토리 템플릿. 세계관, 등장인물, 규칙 등을 저장.
-
-| 컬럼 | 타입 | 설명 |
-|-----|------|-----|
-| id | UUID PK | |
-| title | TEXT | 스토리 제목 |
-| world_setting | TEXT | 세계관 |
-| story | TEXT | 스토리 도입부 |
-| character_name, character_setting | TEXT | 주인공 설정 |
-| characters | TEXT | NPC 목록 |
-| user_note, system_rules | TEXT | AI 지시 |
-| use_latex | BOOLEAN | LaTeX 연출 |
-| is_public | BOOLEAN | 공개 여부 |
-| password_hash | TEXT | 비밀번호 (salt:hash) |
-| owner_uid | UUID | 작성자 |
-
-### sessions
-게임 플레이 세션. 대화 기록과 설정을 저장.
-
-| 컬럼 | 타입 | 설명 |
-|-----|------|-----|
-| id | UUID PK | |
-| story_id | UUID FK→stories | |
-| title | TEXT | 세션 제목 |
-| preset | JSONB | 스토리 설정 스냅샷 |
-| messages | JSONB | 대화 배열 `[{role, content, timestamp}]` |
-| model | TEXT | 사용한 Gemini 모델 |
-| summary | TEXT | 레거시 요약 (하위 호환) |
-| summary_up_to_index | INT | 요약 기준 인덱스 |
-| owner_uid | UUID | |
-
-### session_memory
-구조화된 메모리. 세션별 4개 카테고리.
-
-| 컬럼 | 타입 | 설명 |
-|-----|------|-----|
-| id | UUID PK | |
-| session_id | UUID FK→sessions | CASCADE DELETE |
-| type | TEXT | `short_term`, `characters`, `goals`, `long_term` |
-| content | JSONB | 카테고리별 데이터 |
-| UNIQUE | (session_id, type) | |
-
-**content 형식:**
-- `short_term`: `[{title, content}]` — 최근 이벤트 (최대 10개)
-- `long_term`: `[{title, content}]` — 누적 서사
-- `characters`: `[{name, role, description}]` — 등장인물 상태
-- `goals`: `"텍스트"` — 현재 목표 (JSON 문자열)
-
-### config
-관리자 설정. `prompt_config`과 `gameplay_config` 두 row.
-
-| 컬럼 | 타입 | 설명 |
-|-----|------|-----|
-| id | TEXT PK | `'prompt_config'` 또는 `'gameplay_config'` |
-| value | JSONB | 설정 JSON |
-
-### presets
-공개 프리셋 (관리자만 수정).
-
-### stories_safe (VIEW)
-`password_hash`를 제외한 공개 스토리 뷰.
+| 테이블 | 용도 | 주요 컬럼 |
+|--------|------|----------|
+| stories | 스토리 템플릿 | title, description, tags[], icon, world_setting, story, characters, system_rules, play_count, like_count, is_featured, is_public |
+| sessions | 게임 세션 | story_id, title, messages(JSONB), model, turn_count, progress_pct, chapter_label |
+| presets | 스토리 프리셋 | title, genre, icon, world_setting, story, characters, status_preset_id |
+| config | 앱 설정 | prompt_config, gameplay_config, genre_list |
+| session_memory | 구조화 메모리 | session_id, type(short_term/long_term/characters/goals), content(JSONB) |
+| status_presets | 상태창 프리셋 | title, genre, attributes(JSONB) |
+| service_logs | HTTP 요청 로그 | method, path, status_code, duration_ms, ip |
+| api_logs | Gemini API 로그 | session_id, endpoint, request/response, duration_ms |
+| profiles | 사용자 프로필 | display_name, email, avatar_url, gemini_api_key_encrypted |
 
 ## API 엔드포인트
 
-### GET /api/config
-Supabase 연결 정보 + 프롬프트/게임플레이 설정 반환. 5분 캐시.
+### Public
+- `GET /api/health` — 서버 상태 확인
+- `GET /api/config` — 앱 설정 (promptConfig, gameplayConfig)
+- `GET /api/stories` — 공개 스토리 목록 (필터: genre, search, sort, page)
+- `GET /api/stories/:id` — 단일 스토리
+- `GET /api/stories/stats` — 통계 (스토리수, 플레이수, 작성자수)
+- `GET /api/presets` — 공개 프리셋 목록
+- `GET /api/status-presets` — 상태창 프리셋 목록
+
+### Auth
+- `POST /api/auth/signup` — 회원가입
+- `POST /api/auth/login` — 로그인
+- `POST /api/auth/logout` — 로그아웃
+- `GET /api/me` — 내 프로필
+- `PUT /api/me` — 프로필 수정
+
+### Game
+- `POST /api/game/start` — 새 게임 시작 (SSE 스트리밍)
+- `POST /api/game/chat` — 게임 진행 (SSE 스트리밍)
+
+### Stories CRUD
+- `POST /api/stories` — 스토리 생성
+- `PUT /api/stories/:id` — 수정
+- `DELETE /api/stories/:id` — 삭제
+
+### Sessions
+- `GET /api/sessions` — 내 세션 목록
+- `GET /api/sessions/:id` — 세션 상세
+- `GET /api/sessions/:id/memory` — 세션 메모리
+- `DELETE /api/sessions/:id` — 세션 삭제
+
+### Admin (Basic Auth)
+- `PUT /api/config` — 설정 수정
+- `GET /api/admin/dashboard` — 대시보드 통계
+- `GET /api/admin/stories` — 전체 스토리 관리
+- `GET/DELETE /api/admin/service-logs` — 서비스 로그
+- `GET/DELETE /api/admin/api-logs` — API 로그
+- CRUD `/api/admin/status-presets` — 상태창 프리셋 관리
+- `DELETE /api/admin/danger-zone/*` — 위험 구역 (데이터 삭제)
+
+## 로컬 개발
 
 ```bash
-curl http://localhost:8787/api/config | jq '.gameplayConfig.sliding_window_size'
+# 의존성 설치
+pnpm install
+
+# 공유 타입 빌드
+cd packages/shared && npx tsc
+
+# 백엔드 시작 (포트 3000)
+npx tsx backend/src/server.ts
+
+# 프론트엔드 시작 (포트 5173)
+cd frontend && npx vite --port 5173 --host 0.0.0.0
 ```
 
-### PUT /api/config
-관리자 설정 업데이트. Basic Auth 필요.
+## 환경변수 (.env)
 
-```bash
-curl -X PUT http://localhost:8787/api/config \
-  -u "dyllislev:PASSWORD" \
-  -H "Content-Type: application/json" \
-  -d '{"promptConfig": {...}, "gameplayConfig": {...}}'
-```
+| 변수 | 설명 |
+|------|------|
+| SUPABASE_URL | Supabase 프로젝트 URL |
+| SUPABASE_ANON_KEY | Supabase anon key |
+| SUPABASE_SERVICE_KEY | Supabase service_role key |
+| API_KEY_ENCRYPTION_SECRET | AES-256 암호화 키 |
+| SUPABASE_SCHEMA | DB 스키마 (기본: public) |
 
-## 핵심 설정값 (gameplay_config)
+## 프론트엔드 페이지
 
-| 키 | 기본값 | 설명 |
-|---|-------|-----|
-| sliding_window_size | 20 | Gemini에 전송하는 최근 메시지 수 |
-| memory_short_term_max | 10 | 단기기억 최대 이벤트 수 |
-| message_limit | 500 | 세션 최대 메시지 수 |
-| auto_save_interval_ms | 300000 | 자동 저장 간격 (5분) |
-| default_narrative_length | 3 | 기본 서술 문단 수 |
-
-## 핵심 설정값 (prompt_config)
-
-| 키 | 설명 |
-|---|-----|
-| system_preamble | AI 역할 기본 프롬프트 |
-| latex_rules | LaTeX 연출 규칙 |
-| narrative_length_template | 문단 수 지시 템플릿 |
-| memory_system_instruction | 메모리 생성 AI 시스템 프롬프트 |
-| memory_request | 메모리 생성 요청 템플릿 |
-| safety_settings | Gemini 안전 설정 (BLOCK_NONE) |
-| game_start_message | 게임 시작 시 첫 메시지 |
-
-## 메모리 시스템
-
-### 흐름
-1. 메시지가 `sliding_window_size` 초과 + `memoryUpToIndex` 이후 `interval`만큼 쌓이면 트리거
-2. Gemini API에 현재 윈도우 메시지 + 기존 메모리 전송 (`responseMimeType: application/json`)
-3. 4개 카테고리 JSON 응답 파싱
-4. `session_memory` 테이블에 UPSERT + localStorage 캐시
-5. 시스템 프롬프트에 `[메모리]` 섹션으로 주입
-
-### 동시 실행 방지
-`isGeneratingMemory` 플래그로 중복 API 호출 차단.
-
-### 실패 처리
-실패 시 `memoryUpToIndex` 미갱신 → 다음 메시지에서 자동 재트리거. 뱃지에 "실패" 표시 + 재시도 버튼.
-
-## localStorage 키
-
-| 키 | 용도 |
-|---|-----|
-| `ai-story-game-sessions` | 세션 목록 메타데이터 |
-| `ai-story-session-{id}` | 세션 전체 데이터 캐시 |
-| `ai-story-session-{id}-memory` | 구조화 메모리 캐시 |
-| `gemini-api-key` | Gemini API 키 |
-| `ai-story-game-theme` | 테마 설정 |
-
-## RLS 정책 요약
-
-| 테이블 | SELECT | INSERT/UPDATE/DELETE |
-|-------|--------|---------------------|
-| stories | 공개 OR 소유자 | 소유자만 |
-| sessions | 전체 공개 (UUID가 비밀) | 소유자만 |
-| session_memory | 전체 공개 | 세션 소유자만 |
-| presets | 전체 공개 | 관리자만 |
-| config | 인증 사용자 (admin 제외) | 서비스 키만 (RLS 우회) |
-
-## 디버깅
-
-### 브라우저 콘솔
-- Supabase 연결 실패: `supabase-config.js`에서 `/api/config` 응답 확인
-- 메모리 생성 실패: `memory-manager.js`의 JSON 파싱 에러 확인
-- LaTeX 렌더링 에러: KaTeX 에러 로그 확인
-
-### API 디버깅
-```bash
-# config 로드 확인
-curl -s http://localhost:8787/api/config | python3 -m json.tool
-
-# 특정 설정 확인
-curl -s http://localhost:8787/api/config | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-print('memory_instruction:', 'YES' if 'memory_system_instruction' in d.get('promptConfig',{}) else 'NO')
-"
-```
-
-### DB 디버깅
-```bash
-# psql 접속
-source .env
-PGPASSWORD=$SUPABASE_DB_PASSWORD psql "$SUPABASE_DB_POOLER"
-
-# 세션 메모리 확인
-SELECT session_id, type, jsonb_array_length(content) as items
-FROM session_memory
-ORDER BY updated_at DESC LIMIT 10;
-
-# config 키 확인
-SELECT id, jsonb_object_keys(value) FROM config;
-```
-
-### Cloudflare 로그
-```bash
-npx wrangler tail              # 실시간 로그
-npx wrangler deployments list  # 배포 이력
-```
-
-## DB 마이그레이션
-
-### 구조
-
-```
-supabase/
-  config.toml                          # Supabase CLI 설정
-  migrations/
-    00000000000000_init.sql            # 초기 스키마 (pg_dump)
-    20260320120000_add_something.sql   # 이후 변경사항 (예시)
-```
-
-### 마이그레이션 워크플로우
-
-```bash
-# 0. 환경변수 로드
-source .env
-
-# 1. 새 마이그레이션 파일 생성
-supabase migration new <설명>
-# → supabase/migrations/<timestamp>_<설명>.sql 파일 생성됨
-
-# 2. 생성된 SQL 파일에 변경사항 작성
-# 예: ALTER TABLE stories ADD COLUMN genre TEXT;
-
-# 3. 공식 Supabase에 적용
-PGPASSWORD=$SUPABASE_DB_PASSWORD psql "$SUPABASE_DB_POOLER" -f supabase/migrations/<파일명>.sql
-
-# 4. 셀프호스팅에도 적용 (있는 경우)
-# PGPASSWORD=$SELFHOST_DB_PASSWORD psql "$SELFHOST_DB_URL" -f supabase/migrations/<파일명>.sql
-```
-
-### 현재 스키마 덤프 (참조용)
-
-```bash
-source .env
-PGPASSWORD=$SUPABASE_DB_PASSWORD pg_dump \
-  -h aws-1-ap-southeast-2.pooler.supabase.com -p 5432 \
-  -U postgres.cjpbsgdjpodrfdyqhaja -d postgres \
-  --schema=public --schema-only --no-owner --no-privileges \
-  -f supabase/migrations/00000000000000_init.sql
-```
-
-### 주의사항 (마이그레이션)
-
-- **모든 DB 접속 정보는 `.env`에 있음.** `SUPABASE_DB_PASSWORD`, `SUPABASE_DB_POOLER` 등 URL/비밀번호를 찾을 때는 **반드시 `.env` 파일을 먼저 확인**할 것.
-- **Docker 불필요.** `supabase db push/pull`은 Docker가 필요하지만, `psql`로 직접 적용하면 Docker 없이 가능.
-- **마이그레이션 파일은 git에 커밋.** 스키마 변경 이력을 추적할 수 있음.
-- **되돌리기(rollback)는 수동.** 별도 down 마이그레이션을 작성하거나 `ALTER TABLE ... DROP COLUMN` 등으로 직접 처리.
-- **공식/셀프호스팅 동일한 SQL 파일 사용.** 환경별로 접속 정보만 다르게 지정.
-
-## 주의사항
-
-- **배포는 반드시 `git push origin main`으로.** `wrangler deploy` 직접 실행 금지.
-- **.env 파일은 git에 포함되지 않음.** 접속 정보는 `.env`에서 참조.
-- **Gemini API 키는 브라우저에서 직접 사용.** 서버를 경유하지 않음.
-- **config 테이블의 PK는 `id` (TEXT).** `key`가 아님.
-- **RLS 정책 때문에 DB 직접 수정 시 서비스 키 필요.** psql은 RLS를 우회함.
+| 경로 | 페이지 | 설명 |
+|------|--------|------|
+| `/` | Home | 스토리 목록, 검색, 필터, 추천 |
+| `/play/:storyId` | Play | 게임 플레이 (3-column: 세션|스토리|정보패널) |
+| `/editor/:storyId?` | Editor | 스토리 에디터 (사이드바+폼+미리보기) |
+| `/admin` | Admin | 관리자 (대시보드, 로그, 설정, 프리셋) |

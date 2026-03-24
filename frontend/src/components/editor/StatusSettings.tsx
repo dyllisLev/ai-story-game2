@@ -117,60 +117,50 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
 
   return (
     <section id="section-status" aria-labelledby="status-heading">
-      <div className="mb-7">
-        <h2 id="status-heading" className="font-serif text-[22px] font-bold text-text-primary tracking-tight mb-1">
-          상태창 설정
-        </h2>
-        <p className="text-[13px] text-text-secondary leading-relaxed">플레이어의 스탯과 상태를 표시할 상태창을 구성하세요.</p>
+      <div className="section-header">
+        <h2 id="status-heading" className="section-title">상태창 설정</h2>
+        <p className="section-desc">플레이어의 스탯과 상태를 표시할 상태창을 구성하세요.</p>
       </div>
 
       {/* Enable toggle */}
-      <div className="mb-5">
+      <div className="form-group">
         <div
-          className="flex items-center justify-between px-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-[9px] cursor-pointer transition-all hover:border-[var(--border-mid)] hover:bg-[var(--bg-surface)] gap-4"
+          className="toggle-row"
           onClick={() => onToggle(!enabled)}
           role="button"
           tabIndex={0}
           onKeyDown={e => e.key === 'Enter' || e.key === ' ' ? onToggle(!enabled) : undefined}
           aria-pressed={enabled}
         >
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold text-text-primary">상태창 사용</p>
-            <p className="text-[11px] text-text-muted mt-0.5">게임 플레이 화면에 캐릭터 상태창을 표시합니다</p>
+          <div className="toggle-row-info">
+            <p className="toggle-label">상태창 사용</p>
+            <p className="toggle-desc">게임 플레이 화면에 캐릭터 상태창을 표시합니다</p>
           </div>
-          <label className="relative w-10 h-[22px] flex-shrink-0" onClick={e => e.stopPropagation()}>
+          <label className="toggle-switch" onClick={e => e.stopPropagation()}>
             <input
               type="checkbox"
-              className="opacity-0 w-0 h-0 absolute"
               checked={enabled}
               onChange={e => onToggle(e.target.checked)}
               aria-label="상태창 사용"
             />
-            <span
-              className={`absolute inset-0 rounded-full transition-colors duration-200 cursor-pointer ${enabled ? 'bg-accent' : 'bg-[var(--border-mid)]'}`}
-            >
-              <span
-                className={`absolute w-4 h-4 rounded-full bg-white top-[3px] transition-transform duration-200 shadow-sm ${enabled ? 'translate-x-[21px]' : 'translate-x-[3px]'}`}
-              />
-            </span>
+            <span className="toggle-slider" />
           </label>
         </div>
       </div>
 
       {/* Config area */}
       <div
-        className="transition-opacity"
         style={{ opacity: enabled ? 1 : 0.4, pointerEvents: enabled ? undefined : 'none' }}
         aria-hidden={!enabled}
       >
         {/* Preset chips */}
-        <div className="mb-5">
-          <p className="text-[13px] font-semibold text-text-primary mb-1.5">프리셋 선택</p>
-          <div className="flex gap-1.5 flex-wrap">
+        <div className="form-group">
+          <p className="form-label">프리셋 선택</p>
+          <div className="status-presets">
             {BUILTIN_PRESETS.map(p => (
               <button
                 key={p.key}
-                className="px-3.5 py-1.5 rounded-full border border-[var(--border-mid)] bg-transparent text-text-secondary text-[12px] font-medium cursor-pointer transition-all hover:border-accent hover:text-accent hover:bg-[var(--accent-dim)]"
+                className="preset-chip"
                 onClick={() => handleBuiltinPreset(p.attrs)}
               >
                 {p.icon} {p.label}
@@ -179,32 +169,30 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
             {statusPresets.map(p => (
               <button
                 key={p.id}
-                className="px-3.5 py-1.5 rounded-full border border-[var(--border-mid)] bg-transparent text-text-secondary text-[12px] font-medium cursor-pointer transition-all hover:border-accent hover:text-accent hover:bg-[var(--accent-dim)]"
+                className="preset-chip"
                 onClick={() => handleStatusPreset(p)}
               >
                 {p.title}
               </button>
             ))}
             <button
-              className="px-3.5 py-1.5 rounded-full border border-[var(--border-mid)] bg-transparent text-text-secondary text-[12px] font-medium cursor-pointer transition-all hover:border-purple hover:text-purple hover:bg-[var(--purple-dim)]"
+              className="preset-chip custom"
               onClick={() => onApplyPreset([])}
             >
               ✏️ 직접 만들기
             </button>
           </div>
-          <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
+          <p className="form-hint">
             프리셋을 선택하면 기본 속성이 채워집니다. 이후 자유롭게 수정·추가·삭제할 수 있습니다.
           </p>
         </div>
 
         {/* Attribute table */}
-        <div className="mb-5">
-          <p className="text-[13px] font-semibold text-text-primary mb-1.5">속성 목록</p>
+        <div className="form-group">
+          <p className="form-label">속성 목록</p>
 
           {/* Header row */}
-          <div className="grid gap-2 px-1 pb-1.5 text-[11px] font-semibold text-text-muted uppercase tracking-[0.06em]"
-            style={{ gridTemplateColumns: '1fr 140px 90px 32px 32px' }}
-          >
+          <div className="status-attrs-header">
             <span>속성 이름</span>
             <span>타입</span>
             <span>최대값</span>
@@ -217,8 +205,7 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
             {attributes.map((attr, i) => (
               <div
                 key={attr.id}
-                className="grid gap-2 items-center px-1 py-1.5 rounded-[7px] transition-colors hover:bg-[var(--bg-card)] animate-fadeIn"
-                style={{ gridTemplateColumns: '1fr 140px 90px 32px 32px' }}
+                className="attr-row"
                 draggable
                 onDragStart={() => handleDragStart(i)}
                 onDragOver={e => handleDragOver(e, i)}
@@ -227,14 +214,14 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
                 aria-label={`속성: ${attr.name || '(빈 이름)'}`}
               >
                 <input
-                  className="bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-md px-2.5 py-[7px] text-[13px] text-text-primary font-sans outline-none transition-colors focus:border-[var(--border-focus)] w-full placeholder:text-text-muted placeholder:text-[12px]"
+                  className="attr-input"
                   value={attr.name}
                   onChange={e => onUpdateAttribute(attr.id, { name: e.target.value })}
                   placeholder="속성 이름"
                   aria-label="속성 이름"
                 />
                 <select
-                  className="bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-md px-2.5 py-[7px] text-[13px] text-text-primary font-sans outline-none appearance-none cursor-pointer transition-colors focus:border-[var(--border-focus)] w-full"
+                  className="attr-select"
                   value={attr.type}
                   onChange={e => onUpdateAttribute(attr.id, { type: e.target.value as StatusAttribute['type'] })}
                   aria-label="타입"
@@ -246,7 +233,7 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
                 <input
                   type="number"
                   min={1}
-                  className="bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-md px-2.5 py-[7px] text-[13px] text-text-primary font-sans outline-none transition-all focus:border-[var(--border-focus)] w-full placeholder:text-text-muted placeholder:text-[12px] disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="attr-max"
                   value={attr.max}
                   onChange={e => onUpdateAttribute(attr.id, { max: e.target.value })}
                   disabled={attr.type !== 'bar' && attr.type !== 'percent'}
@@ -255,7 +242,7 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
                 />
                 {/* Delete */}
                 <button
-                  className="w-8 h-8 rounded-md border border-[var(--border)] bg-transparent text-text-muted flex items-center justify-center cursor-pointer transition-all hover:bg-[var(--rose-dim)] hover:text-[var(--rose)] hover:border-[rgba(224,90,122,0.3)] flex-shrink-0"
+                  className="attr-btn delete"
                   onClick={() => onRemoveAttribute(attr.id)}
                   aria-label={`${attr.name || '속성'} 삭제`}
                 >
@@ -266,7 +253,7 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
                 </button>
                 {/* Drag handle */}
                 <button
-                  className="w-8 h-8 rounded-md border border-[var(--border)] bg-transparent text-text-muted flex items-center justify-center cursor-grab transition-all hover:bg-[var(--bg-card)] hover:text-text-secondary active:cursor-grabbing flex-shrink-0"
+                  className="attr-btn drag"
                   aria-label="순서 변경 (드래그)"
                   tabIndex={-1}
                 >
@@ -281,7 +268,8 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
 
           {/* Add attribute button */}
           <button
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-[var(--border-mid)] rounded-[9px] bg-transparent text-text-muted text-[13px] font-sans cursor-pointer transition-all hover:border-accent hover:text-accent hover:bg-[var(--accent-dim)] mt-2"
+            className="btn-dashed"
+            style={{ marginTop: '8px' }}
             onClick={onAddAttribute}
             aria-label="속성 추가"
           >
@@ -293,7 +281,7 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
           </button>
 
           {/* Hint */}
-          <div className="mt-2.5 px-3.5 py-2.5 bg-[var(--bg-card)] rounded-[0_7px_7px_0] text-[11px] text-text-muted leading-relaxed" style={{ border: '1px solid var(--border)', borderLeft: '3px solid var(--purple)' }}>
+          <div className="attrs-hint">
             프리셋의 속성을 자유롭게 수정할 수 있습니다. 이름 변경, 타입 변경, 최대값 조정 모두 가능합니다. 드래그(≡)로 순서를 바꿀 수 있습니다.
           </div>
         </div>

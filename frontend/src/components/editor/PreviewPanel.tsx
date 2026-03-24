@@ -21,18 +21,18 @@ function estimateTokens(text: string): number {
 const StatusPreviewItem: FC<{ attr: StatusAttribute }> = ({ attr }) => {
   const showBar = attr.type === 'bar' || attr.type === 'percent';
   return (
-    <div className="bg-[var(--bg-input)] rounded-md p-2 px-2.5">
-      <p className="text-[10px] text-text-muted mb-1">{attr.name}</p>
+    <div className="status-preview-item">
+      <p className="status-preview-name">{attr.name}</p>
       {showBar ? (
-        <div className="h-1 bg-[var(--border)] rounded-full overflow-hidden">
+        <div className="status-preview-bar">
           <div
-            className="h-full bg-gradient-to-r from-accent to-purple rounded-full"
+            className="status-preview-bar-fill"
             style={{ width: '60%' }}
             aria-hidden="true"
           />
         </div>
       ) : (
-        <p className="text-[12px] font-semibold text-text-primary">—</p>
+        <p className="status-preview-val">—</p>
       )}
     </div>
   );
@@ -56,13 +56,10 @@ export const PreviewPanel: FC<PreviewPanelProps> = ({ form, promptData, onClose 
   const charTokens = estimateTokens(charSummary);
 
   return (
-    <aside
-      className="w-[340px] flex-shrink-0 bg-[var(--bg-panel)] border-l border-[var(--border)] flex flex-col overflow-hidden"
-      aria-label="미리보기 패널"
-    >
+    <aside className="preview-panel" aria-label="미리보기 패널">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+      <div className="preview-header">
+        <div className="preview-title-label">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
@@ -70,7 +67,7 @@ export const PreviewPanel: FC<PreviewPanelProps> = ({ form, promptData, onClose 
           상태창 &amp; 캐릭터
         </div>
         <button
-          className="w-6 h-6 border-none bg-transparent text-text-muted flex items-center justify-center cursor-pointer transition-colors hover:text-text-primary"
+          style={{ width: '24px', height: '24px', border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           onClick={onClose}
           aria-label="패널 닫기"
         >
@@ -81,17 +78,15 @@ export const PreviewPanel: FC<PreviewPanelProps> = ({ form, promptData, onClose 
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="preview-scroll">
         {/* Status window preview */}
         {form.useStatusWindow && form.statusAttributes.length > 0 && (
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[9px] overflow-hidden mb-3">
-            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted border-b border-[var(--border)] bg-[var(--bg-surface)] flex items-center justify-between">
-              <span>상태창 프롬프트</span>
-              <span className="text-accent text-[10px] font-medium normal-case tracking-normal">
-                약 {statusTokens.toLocaleString()} 토큰
-              </span>
+          <div className="preview-block">
+            <div className="preview-block-label">
+              상태창 프롬프트
+              <span className="token-count">약 {statusTokens.toLocaleString()} 토큰</span>
             </div>
-            <div className="grid grid-cols-2 gap-1.5 p-3">
+            <div className="status-preview-grid">
               {form.statusAttributes.map(attr => (
                 <StatusPreviewItem key={attr.id} attr={attr} />
               ))}
@@ -101,22 +96,20 @@ export const PreviewPanel: FC<PreviewPanelProps> = ({ form, promptData, onClose 
 
         {/* Characters preview */}
         {charSummary && (
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[9px] overflow-hidden mb-3">
-            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted border-b border-[var(--border)] bg-[var(--bg-surface)] flex items-center justify-between">
-              <span>캐릭터 정보</span>
-              <span className="text-accent text-[10px] font-medium normal-case tracking-normal">
-                약 {charTokens.toLocaleString()} 토큰
-              </span>
+          <div className="preview-block">
+            <div className="preview-block-label">
+              캐릭터 정보
+              <span className="token-count">약 {charTokens.toLocaleString()} 토큰</span>
             </div>
-            <div className="p-3 text-[12px] text-text-secondary leading-[1.7] font-serif whitespace-pre-wrap">
+            <div className="preview-block-body">
               {charSummary}
             </div>
           </div>
         )}
 
         {/* Total tokens */}
-        <p className="text-[11px] text-text-muted pb-1">
-          총 예상 토큰: <strong className="text-accent">{promptData.totalTokens.toLocaleString()} 토큰</strong>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', paddingBottom: '4px' }}>
+          총 예상 토큰: <strong style={{ color: 'var(--accent)' }}>{promptData.totalTokens.toLocaleString()} 토큰</strong>
         </p>
       </div>
     </aside>

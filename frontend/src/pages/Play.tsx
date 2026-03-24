@@ -79,7 +79,7 @@ const Play: FC = () => {
   const engine = useGameEngine();
 
   // --- Session ---
-  const { sessionList, refreshSessionList, loadSession, deleteSession } = useSession();
+  const { sessionList, refreshSessionList, loadSession } = useSession();
 
   // --- Memory ---
   const { memory, loadMemory, updateMemory } = useMemory();
@@ -267,7 +267,7 @@ const Play: FC = () => {
         {!leftOpen && <div style={{ overflow: 'hidden' }} />}
 
         {/* Center — Story + Input */}
-        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        <main className="panel-center">
           <StoryContent
             storyTitle={engine.settingsData.title}
             genre={undefined}
@@ -288,7 +288,7 @@ const Play: FC = () => {
             onRegenerate={handleRegenerate}
             tokenUsage={engine.tokenUsage}
           />
-        </div>
+        </main>
 
         {/* Right Panel */}
         {rightOpen && (

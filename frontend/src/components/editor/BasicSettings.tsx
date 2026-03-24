@@ -40,22 +40,20 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
 }) => {
   return (
     <section id="section-basic" aria-labelledby="basic-heading">
-      <div className="mb-7">
-        <h2 id="basic-heading" className="font-serif text-[22px] font-bold text-text-primary tracking-tight mb-1">
-          기본 설정
-        </h2>
-        <p className="text-[13px] text-text-secondary leading-relaxed">스토리의 기본 정보와 프리셋을 선택하세요.</p>
+      <div className="section-header">
+        <h2 id="basic-heading" className="section-title">기본 설정</h2>
+        <p className="section-desc">스토리의 기본 정보와 프리셋을 선택하세요.</p>
       </div>
 
       {/* Preset select */}
-      <div className="mb-5">
-        <label className="flex items-center gap-1.5 text-[13px] font-semibold text-text-primary mb-1.5" htmlFor="presetSelect">
+      <div className="form-group">
+        <label className="form-label" htmlFor="presetSelect">
           프리셋 선택
-          <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-[var(--border)] text-text-muted">선택</span>
+          <span className="label-badge optional">선택</span>
         </label>
         <select
           id="presetSelect"
-          className="w-full bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-lg px-3.5 py-2.5 text-sm text-text-primary font-sans outline-none transition-all focus:border-[var(--border-focus)] focus:shadow-[0_0_0_3px_var(--accent-dim)] appearance-none cursor-pointer"
+          className="form-select"
           value={presetId}
           onChange={e => onPresetChange(e.target.value)}
         >
@@ -64,27 +62,22 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
             <option key={p.id} value={p.id}>{p.icon} {p.title}</option>
           ))}
         </select>
-        <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
+        <p className="form-hint">
           프리셋은 세계관·스토리·캐릭터 등 기본값을 자동으로 채워줍니다. 이후 자유롭게 수정 가능합니다.
         </p>
       </div>
 
       {/* Genre chips */}
-      <div className="mb-5">
-        <p className="flex items-center gap-1.5 text-[13px] font-semibold text-text-primary mb-1.5">
+      <div className="form-group">
+        <p className="form-label">
           장르 태그
-          <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-[var(--border)] text-text-muted">선택</span>
+          <span className="label-badge optional">선택</span>
         </p>
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="장르 선택">
+        <div className="genre-chips" role="group" aria-label="장르 선택">
           {GENRES.map(g => (
             <button
               key={g}
-              className={[
-                'px-3 py-1 rounded-full border text-[12px] font-medium cursor-pointer transition-all',
-                genre === g
-                  ? 'bg-accent border-accent text-[#0a0a0f] font-bold'
-                  : 'bg-transparent border-[var(--border-mid)] text-text-secondary hover:border-accent hover:text-accent hover:bg-[var(--accent-dim)]',
-              ].join(' ')}
+              className={`genre-chip${genre === g ? ' selected' : ''}`}
               onClick={() => onGenreChange(genre === g ? '' : g)}
               aria-pressed={genre === g}
             >
@@ -95,21 +88,16 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
       </div>
 
       {/* Icon grid */}
-      <div className="mb-5">
-        <p className="flex items-center gap-1.5 text-[13px] font-semibold text-text-primary mb-1.5">
+      <div className="form-group">
+        <p className="form-label">
           스토리 아이콘
-          <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-[var(--border)] text-text-muted">선택</span>
+          <span className="label-badge optional">선택</span>
         </p>
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="아이콘 선택">
+        <div className="icon-grid" role="group" aria-label="아이콘 선택">
           {ICONS.map(ic => (
             <button
               key={ic}
-              className={[
-                'w-[38px] h-[38px] rounded-lg border text-lg cursor-pointer flex items-center justify-center transition-all',
-                icon === ic
-                  ? 'border-accent bg-[var(--accent-dim)] shadow-[0_0_0_2px_var(--accent-glow)]'
-                  : 'border-[var(--border-mid)] bg-[var(--bg-input)] hover:border-accent hover:bg-[var(--accent-dim)]',
-              ].join(' ')}
+              className={`icon-btn${icon === ic ? ' selected' : ''}`}
               onClick={() => onIconChange(ic)}
               aria-pressed={icon === ic}
               aria-label={`아이콘 ${ic}`}
@@ -121,14 +109,14 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
       </div>
 
       {/* AI model */}
-      <div className="mb-5">
-        <label className="flex items-center gap-1.5 text-[13px] font-semibold text-text-primary mb-1.5" htmlFor="aiModelSelect">
+      <div className="form-group">
+        <label className="form-label" htmlFor="aiModelSelect">
           AI 모델
-          <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-[var(--border)] text-text-muted">선택</span>
+          <span className="label-badge optional">선택</span>
         </label>
         <select
           id="aiModelSelect"
-          className="w-full bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-lg px-3.5 py-2.5 text-sm text-text-primary font-sans outline-none transition-all focus:border-[var(--border-focus)] focus:shadow-[0_0_0_3px_var(--accent-dim)] appearance-none cursor-pointer"
+          className="form-select"
           value={aiModel}
           onChange={e => onAiModelChange(e.target.value)}
         >
@@ -136,21 +124,19 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
             <option key={m.value} value={m.value}>{m.label}</option>
           ))}
         </select>
-        <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
-          Flash는 빠른 응답, Pro는 더 정교한 서술에 적합합니다.
-        </p>
+        <p className="form-hint">Flash는 빠른 응답, Pro는 더 정교한 서술에 적합합니다.</p>
       </div>
 
       {/* Title */}
-      <div className="mb-5">
-        <label className="flex items-center gap-1.5 text-[13px] font-semibold text-text-primary mb-1.5" htmlFor="storyTitle">
+      <div className="form-group">
+        <label className="form-label" htmlFor="storyTitle">
           스토리 제목
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--rose-dim)] text-[var(--rose)]">필수</span>
+          <span className="label-badge required">필수</span>
         </label>
         <input
           id="storyTitle"
           type="text"
-          className="w-full bg-[var(--bg-input)] border border-[var(--border-mid)] rounded-lg px-3.5 py-2.5 text-sm text-text-primary font-sans outline-none transition-all focus:border-[var(--border-focus)] focus:shadow-[0_0_0_3px_var(--accent-dim)] placeholder:text-text-muted"
+          className="form-input"
           value={title}
           onChange={e => onTitleChange(e.target.value)}
           placeholder="스토리 제목을 입력하세요"
