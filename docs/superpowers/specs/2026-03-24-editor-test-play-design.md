@@ -18,7 +18,7 @@
 | 설정 반영 | 에디터 폼 변경 → 다음 턴부터 즉시 반영 (시스템 프롬프트 재구성) |
 | 캐시 | 테스트 모드에서 강제 비활성 (`useCache: false`) |
 | 세션 수명 | 모달 닫아도 유지, "새 테스트" 버튼으로 리셋, 페이지 이탈 시 자동 정리 |
-| 세션 저장 | DB에 저장하지 않음 (메모리 내 임시 세션) |
+| 세션 저장 | DB에 저장하지 않음 (메모리 내 임시 세션). 단, API 로그는 `api_logs` 테이블에 저장 |
 
 ## 3. 아키텍처
 
@@ -120,6 +120,7 @@ DB 조회/저장 없음. SSE 스트리밍 없음.
 4. `regenerate: true`이면 `messages`에서 마지막 user+model 쌍을 제거하고, 제거된 user 메시지를 `userMessage`로 사용
 5. `messages` + `userMessage`에 `applySlidingWindow()` + `prepareContents()` 적용
 6. JSON 응답 반환
+7. 비동기로 `api_logs` 테이블에 로그 저장 (`session_id: null`, `endpoint: 'game/test-prompt'`)
 
 ### 3.5 `useTestPlayEngine` 훅 (새로 생성)
 
@@ -132,7 +133,7 @@ DB 조회/저장 없음. SSE 스트리밍 없음.
 | 세션 ID | DB에서 발급 | 없음 (불필요) |
 | auto-save interval | 30초마다 | 없음 |
 | `markDirty()` → localStorage | O | X |
-| `api.post('/game/save')` | O | X |
+| `api.post('/game/save')` | O | X (단, API 로그 저장은 수행) |
 | visibility/pagehide 저장 | O | X |
 | `addToSessionList()` | O | X |
 | 캐시 (`useCache`) | 사용자 선택 | 강제 비활성 |
