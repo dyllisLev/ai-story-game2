@@ -1,8 +1,9 @@
 // backend/src/routes/game/start.ts
+// Returns JSON with sessionId, systemPrompt, startMessage, safetySettings.
+// The frontend calls Gemini directly with the user's API key.
 import type { FastifyInstance } from 'fastify';
 import type { GameStartRequest } from '@story-game/shared';
 import { buildPrompt } from '../../services/prompt-builder.js';
-import { streamToSSE, sendSSE } from '../../services/gemini.js';
 import { resolveApiKey } from './utils.js';
 
 export default async function (app: FastifyInstance) {
@@ -58,55 +59,12 @@ export default async function (app: FastifyInstance) {
       .select('session_token')
       .single();
 
-    // SSE 스트리밍 시작
-    const geminiBody = {
-      contents: [{ role: 'user', parts: [{ text: startMessage }] }],
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      safetySettings: config.promptConfig.safety_settings,
-    };
-
-    const result = await streamToSSE(apiKey, body.model, geminiBody, reply);
-
-    // done 이벤트 (sessionToken 포함)
-    const doneData = {
+    return reply.send({
       sessionId,
-      sessionToken: sessionData?.session_token,
-      tokenUsage: result.usageMetadata
-        ? { input: result.usageMetadata.promptTokenCount || 0, output: result.usageMetadata.candidatesTokenCount || 0 }
-        : null,
-    };
-
-    sendSSE(reply, 'done', doneData);
-    if (!reply.raw.destroyed) {
-      reply.raw.end();
-    }
-
-    // 비동기: 메시지 저장 + API 로그 — run in parallel, errors must not crash the handler
-    if (result.text) {
-      const messages = [
-        { role: 'user', content: startMessage, timestamp: Date.now() },
-        { role: 'model', content: result.text, timestamp: Date.now() },
-      ];
-      try {
-        await Promise.all([
-          app.supabaseAdmin
-            .from('sessions')
-            .update({ messages })
-            .eq('id', sessionId),
-          app.supabaseAdmin.from('api_logs').insert({
-            session_id: sessionId,
-            endpoint: 'game/start',
-            request_model: body.model,
-            request_system_prompt: systemPrompt,
-            request_messages: [{ role: 'user', content: startMessage }],
-            response_text: result.text.slice(0, 500),
-            response_usage: result.usageMetadata,
-            response_error: result.error,
-          }),
-        ]);
-      } catch (err) {
-        app.log.error(err, 'start: post-SSE DB writes failed');
-      }
-    }
+      sessionToken: sessionData?.session_token ?? null,
+      systemPrompt,
+      startMessage,
+      safetySettings: config.promptConfig.safety_settings ?? [],
+    });
   });
 }

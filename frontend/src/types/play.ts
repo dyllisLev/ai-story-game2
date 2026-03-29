@@ -90,8 +90,16 @@ export interface SettingsData {
   _pendingModel?: string;
 }
 
+export interface StatusAttribute {
+  id: string;
+  name: string;
+  type: 'bar' | 'percent' | 'number' | 'text' | 'list';
+  max: string;
+}
+
 export interface GameStartResponse {
   sessionId: string;
+  sessionToken: string | null;
   systemPrompt: string;
   startMessage: string;
   safetySettings: unknown[];

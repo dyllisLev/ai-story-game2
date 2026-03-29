@@ -9,6 +9,7 @@ import { usePresets } from '../hooks/usePresets';
 import { usePromptPreview } from '../hooks/usePromptPreview';
 
 import '@/styles/editor.css';
+import { useToast } from '@/components/ui/Toast';
 
 import { EditorHeader } from '../components/editor/EditorHeader';
 import { EditorSidebar, type SectionId } from '../components/editor/EditorSidebar';
@@ -85,6 +86,7 @@ const EditorPage: FC = () => {
   const params = useParams<{ storyId?: string }>();
   const navigate = useNavigate();
 
+  const toast = useToast();
   const { presets, statusPresets } = usePresets();
 
   const {
@@ -173,11 +175,11 @@ const EditorPage: FC = () => {
   // Share story
   const handleShare = useCallback(() => {
     if (!storyId) {
-      alert('먼저 스토리를 저장해주세요.');
+      toast.show('먼저 스토리를 저장해주세요.', 'warning');
       return;
     }
     const url = `${window.location.origin}/play/${storyId}`;
-    navigator.clipboard.writeText(url).then(() => alert('링크가 복사되었습니다.'));
+    navigator.clipboard.writeText(url).then(() => toast.show('링크가 복사되었습니다.', 'success'));
   }, [storyId]);
 
   // Start game

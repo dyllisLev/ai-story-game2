@@ -7,6 +7,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { streamGenerate } from '@/lib/sse';
 import { renderMarkdown, initMarked } from '@/lib/markdown';
 import { api } from '@/lib/api';
+import { parseStatusBlock } from '@/lib/status-parser';
 import {
   messagesToStorage,
   messagesFromStorage,
@@ -53,6 +54,7 @@ export interface GameEngineState {
   settingsData: SettingsData;
   cachedContentName: string | null;
   streamingText: string;
+  statusValues: Record<string, string>;
 }
 
 export interface GameEngineActions {
@@ -97,6 +99,8 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const sessionTokenRef = useRef<string | null>(null);
   const [conversationHistory, setConversationHistory] = useState<GeminiMessage[]>([]);
   const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
   const [narrativeLength, setNarrativeLengthState] = useState(3);
@@ -114,6 +118,7 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
   });
   const [cachedContentName, setCachedContentName] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState('');
+  const [statusValues, setStatusValues] = useState<Record<string, string>>({});
 
   // refs for mutable state inside callbacks
   const autoSaveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -272,9 +277,11 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
         onChunk(textSoFar) {
           if (renderTimer !== null) clearTimeout(renderTimer);
           renderTimer = setTimeout(() => {
+            // Hide ```status block during streaming
+            const display = textSoFar.replace(/```status[\s\S]*$/m, '').trimEnd();
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId ? ({ type: 'streaming', text: textSoFar, id: msgId } as MessageBlock) : m
+                m.id === msgId ? ({ type: 'streaming', text: display, id: msgId } as MessageBlock) : m
               )
             );
           }, 80);
@@ -283,8 +290,12 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
 
       if (renderTimer !== null) clearTimeout(renderTimer);
 
+      // Parse status block from response
+      const { content: cleanContent, statusValues: parsed } = parseStatusBlock(fullResponse);
+      if (parsed) setStatusValues(parsed);
+
       // Replace streaming block with final rendered narrator block
-      const renderedHtml = renderMarkdown(fullResponse);
+      const renderedHtml = renderMarkdown(cleanContent);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === msgId
@@ -344,6 +355,7 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
       setStreamingText('');
 
       try {
+        const geminiHeaders = apiKey ? { 'X-Gemini-Key': apiKey } : undefined;
         const data = await api.post<GameStartResponse>('/game/start', {
           storyId,
           model,
@@ -354,12 +366,15 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
             useCache: options.useCache,
             narrativeLength: options.narrativeLength,
           },
-        });
+        }, geminiHeaders);
         const newSessionId = data.sessionId;
+        const newSessionToken = data.sessionToken ?? null;
 
         setCurrentSessionId(newSessionId);
         setCurrentStoryId(storyId);
+        setSessionToken(newSessionToken);
         sessionIdRef.current = newSessionId;
+        sessionTokenRef.current = newSessionToken;
         storyIdRef.current = storyId;
         addToSessionList(newSessionId, settingsRef.current.title || '제목 없음');
 
@@ -410,8 +425,8 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
   const sendMessage = useCallback(
     async (apiKey: string, userMessage: string): Promise<void> => {
       const sid = sessionIdRef.current;
-      if (!apiKey) { alert('API Key를 입력해주세요.'); return; }
-      if (!sid) { alert('게임을 먼저 시작해주세요.'); return; }
+      if (!apiKey) { console.warn('API Key를 입력해주세요.'); return; }
+      if (!sid) { console.warn('게임을 먼저 시작해주세요.'); return; }
       if (isGenerating) return;
 
       setIsGenerating(true);
@@ -436,7 +451,10 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
       ]);
 
       try {
-        const prompt = await api.post<ChatPromptResponse>('/game/chat', { sessionId: sid, userMessage });
+        const chatHeaders: Record<string, string> = {};
+        if (apiKey) chatHeaders['X-Gemini-Key'] = apiKey;
+        if (sessionTokenRef.current) chatHeaders['X-Session-Token'] = sessionTokenRef.current;
+        const prompt = await api.post<ChatPromptResponse>('/game/chat', { sessionId: sid, userMessage }, chatHeaders);
 
         const geminiBody = cachedNameRef.current && !prompt.hasMemory
           ? {
@@ -498,7 +516,10 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
       setMessages((prev) => prev.slice(0, -2));
 
       try {
-        const prompt = await api.post<ChatPromptResponse>('/game/chat', { sessionId: sid, regenerate: true });
+        const regenHeaders: Record<string, string> = {};
+        if (apiKey) regenHeaders['X-Gemini-Key'] = apiKey;
+        if (sessionTokenRef.current) regenHeaders['X-Session-Token'] = sessionTokenRef.current;
+        const prompt = await api.post<ChatPromptResponse>('/game/chat', { sessionId: sid, regenerate: true }, regenHeaders);
 
         const geminiBody = cachedNameRef.current && !prompt.hasMemory
           ? {
@@ -583,20 +604,28 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
       setConversationHistory(history);
       historyRef.current = history;
 
-      // Rebuild UI message blocks
+      // Rebuild UI message blocks — strip status blocks for display only
+      let lastStatus: Record<string, string> | null = null;
       const blocks: MessageBlock[] = history.map((msg) => {
         if (msg.role === 'user') {
           return { type: 'user', text: msg.parts[0]?.text ?? '', id: newMsgId() } as MessageBlock;
         } else {
-          const rendered = renderMarkdown(msg.parts[0]?.text ?? '');
+          const raw = msg.parts[0]?.text ?? '';
+          const { content, statusValues: parsed } = parseStatusBlock(raw);
+          if (parsed) lastStatus = parsed;
+          const rendered = renderMarkdown(content);
           return { type: 'narrator', text: rendered, id: newMsgId() } as MessageBlock;
         }
       });
+      if (lastStatus) setStatusValues(lastStatus);
       setMessages(blocks);
 
       isDirtyRef.current = false;
       setSaveStatus('saved');
-      addToSessionList(sessionId, data.title ?? '제목 없음');
+      // Keep existing lastPlayedAt — don't bump to now on load
+      const lastMsg = history.filter(m => m.role === 'model').at(-1);
+      const lastTs = lastMsg?._timestamp;
+      addToSessionList(sessionId, data.title ?? '제목 없음', lastTs);
       startAutoSave();
     },
     [startAutoSave]
@@ -662,6 +691,7 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
     settingsData,
     cachedContentName,
     streamingText,
+    statusValues,
     startGame,
     sendMessage,
     regenerate,

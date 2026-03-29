@@ -17,7 +17,8 @@ import { InfoPanel } from '@/components/play/InfoPanel';
 import { CharacterModal } from '@/components/play/CharacterModal';
 
 import type { SessionMemory } from '@story-game/shared';
-import type { SettingsData } from '@/types/play';
+import type { SettingsData, StatusAttribute } from '@/types/play';
+import { useToast } from '@/components/ui/Toast';
 
 // ---- Theme ----
 type Theme = 'dark' | 'light';
@@ -29,18 +30,16 @@ function getInitialTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }
 
-// ---- Suggestion chips (static for now) ----
-const DEFAULT_SUGGESTIONS = [
-  '⚔️ 행동으로 맞서다',
-  '🤔 신중하게 생각해보다',
-  '💬 대화를 시도하다',
-  '🌀 상황을 관찰하다',
-];
+// ---- Suggestion chips (disabled) ----
+const DEFAULT_SUGGESTIONS: string[] = [];
 
 // ---- Play Page ----
 const Play: FC = () => {
   // --- Route params ---
   const { storyId: routeStoryId } = useParams<{ storyId?: string }>();
+
+  // --- Toast (non-blocking alert replacement) ---
+  const toast = useToast();
 
   // --- Theme ---
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
@@ -74,6 +73,9 @@ const Play: FC = () => {
 
   // --- Char modal ---
   const [charModalOpen, setCharModalOpen] = useState(false);
+
+  // --- Status window config ---
+  const [statusAttributes, setStatusAttributes] = useState<StatusAttribute[]>([]);
 
   // --- Game engine ---
   const engine = useGameEngine();
@@ -118,6 +120,10 @@ const Play: FC = () => {
         system_rules?: string;
         use_latex?: boolean;
         genre?: string;
+        preset?: {
+          useStatusWindow?: boolean;
+          statusAttributes?: StatusAttribute[];
+        };
       };
       engine.updateSettingsData({
         title: data.title ?? '',
@@ -130,6 +136,9 @@ const Play: FC = () => {
         systemRules: data.system_rules ?? '',
       });
       if (data.use_latex !== undefined) engine.setUseLatex(data.use_latex);
+      if (data.preset?.useStatusWindow && data.preset.statusAttributes?.length) {
+        setStatusAttributes(data.preset.statusAttributes);
+      }
     } catch {
       // ignore
     }
@@ -139,7 +148,7 @@ const Play: FC = () => {
   const handleLoadSession = useCallback(async (sessionId: string) => {
     const data = await loadSession(sessionId);
     if (!data) {
-      alert('세션을 찾을 수 없습니다.');
+      toast.show('세션을 찾을 수 없습니다.', 'error');
       return;
     }
 
@@ -176,12 +185,11 @@ const Play: FC = () => {
 
   // --- Start game ---
   const handleStart = async () => {
-    if (!apiKey) { alert('API Key를 입력해주세요.'); return; }
-    if (!model)  { alert('모델을 선택해주세요.'); return; }
+    if (!apiKey) { toast.show('API Key를 입력해주세요.', 'warning'); return; }
+    if (!model)  { toast.show('모델을 선택해주세요.', 'warning'); return; }
 
-    // Use storyId from URL or settingsData — for now we pass empty (worker handles it)
-    const storyId = engine.currentStoryId ?? engine.settingsData.title;
-    if (!storyId) { alert('스토리를 선택해주세요.'); return; }
+    const storyId = engine.currentStoryId ?? routeStoryId;
+    if (!storyId) { toast.show('스토리를 선택해주세요.', 'warning'); return; }
 
     await engine.startGame({
       apiKey,
@@ -307,6 +315,8 @@ const Play: FC = () => {
             onSaveNow={engine.saveNow}
             hasSession={!!engine.currentSessionId}
             onOpenCharModal={() => setCharModalOpen(true)}
+            statusAttributes={statusAttributes}
+            statusValues={engine.statusValues}
           />
         )}
         {!rightOpen && <div style={{ overflow: 'hidden' }} />}

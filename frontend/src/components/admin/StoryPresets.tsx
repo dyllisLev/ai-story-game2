@@ -85,7 +85,7 @@ export const StoryPresets: FC = () => {
 
   const { data: presets = [], isLoading } = useQuery<StoryPreset[]>({
     queryKey: ['admin', 'story-presets'],
-    queryFn: () => api.get<StoryPreset[]>('/admin/presets'),
+    queryFn: () => api.get<StoryPreset[]>('/presets'),
     staleTime: 30_000,
   });
 
@@ -98,8 +98,8 @@ export const StoryPresets: FC = () => {
   const saveMutation = useMutation({
     mutationFn: (p: StoryPreset) =>
       p.id
-        ? api.put(`/admin/presets/${p.id}`, p)
-        : api.post('/admin/presets', p),
+        ? api.put(`/presets/${p.id}`, p)
+        : api.post('/presets', p),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'story-presets'] });
       setEditTarget(undefined);
@@ -107,7 +107,7 @@ export const StoryPresets: FC = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/admin/presets/${id}`),
+    mutationFn: (id: string) => api.delete(`/presets/${id}`),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin', 'story-presets'] }),
   });
 

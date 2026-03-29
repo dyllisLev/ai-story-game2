@@ -5,48 +5,49 @@ import type { StoryStats } from '@story-game/shared';
 
 export default async function storiesStatsRoute(app: FastifyInstance) {
   app.get('/api/stories/stats', async (_request, reply) => {
-    // Run all three queries in parallel.
-    // total_plays and total_authors are computed DB-side via RPCs to avoid
-    // fetching every row just to reduce it in JS.
-    const [
-      { count: total_stories, error: countErr },
-      { data: totalPlaysData, error: playErr },
-      { data: totalAuthorsData, error: authorErr },
-    ] = await Promise.all([
-      app.supabaseAdmin
-        .from('stories_safe')
-        .select('*', { count: 'exact', head: true }),
-      app.supabaseAdmin
-        .rpc('get_total_public_play_count'),
-      app.supabaseAdmin
-        .rpc('get_unique_public_author_count'),
-    ]);
+    try {
+      // Count total public stories
+      const { count: total_stories, error: countErr } = await app.supabaseAdmin
+        .from('stories')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_public', true);
 
-    if (countErr) {
-      app.log.error(countErr, 'storiesStatsRoute: story count failed');
+      if (countErr) {
+        app.log.error(countErr, 'storiesStatsRoute: story count failed');
+        return reply.status(500).send({
+          error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch stats' },
+        });
+      }
+
+      // Sum play_count and count distinct owners from stories table directly
+      const { data: stories, error: storiesErr } = await app.supabaseAdmin
+        .from('stories')
+        .select('play_count, owner_uid')
+        .eq('is_public', true);
+
+      if (storiesErr) {
+        app.log.error(storiesErr, 'storiesStatsRoute: stories query failed');
+        return reply.status(500).send({
+          error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch play stats' },
+        });
+      }
+
+      const total_plays = (stories ?? []).reduce((sum, s) => sum + (s.play_count ?? 0), 0);
+      const uniqueOwners = new Set((stories ?? []).map(s => s.owner_uid).filter(Boolean));
+      const total_authors = uniqueOwners.size;
+
+      const response: StoryStats = {
+        total_stories: total_stories ?? 0,
+        total_plays,
+        total_authors,
+      };
+
+      return reply.send(response);
+    } catch (err) {
+      app.log.error(err, 'storiesStatsRoute: unexpected error');
       return reply.status(500).send({
         error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch stats' },
       });
     }
-    if (playErr) {
-      app.log.error(playErr, 'storiesStatsRoute: play count RPC failed');
-      return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch play stats' },
-      });
-    }
-    if (authorErr) {
-      app.log.error(authorErr, 'storiesStatsRoute: author count RPC failed');
-      return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch author stats' },
-      });
-    }
-
-    const response: StoryStats = {
-      total_stories: total_stories ?? 0,
-      total_plays:   (totalPlaysData as number | null) ?? 0,
-      total_authors: (totalAuthorsData as number | null) ?? 0,
-    };
-
-    return reply.send(response);
   });
 }

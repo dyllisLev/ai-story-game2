@@ -8,6 +8,7 @@ import { InputArea } from '@/components/play/InputArea';
 import { InfoPanel } from '@/components/play/InfoPanel';
 import { CharacterModal } from '@/components/play/CharacterModal';
 import type { SettingsData } from '@/types/play';
+import { useToast } from '@/components/ui/Toast';
 
 const DEFAULT_SUGGESTIONS = [
   '⚔️ 행동으로 맞서다',
@@ -29,6 +30,7 @@ export const TestPlayModal: FC<TestPlayModalProps> = ({
   onClose,
   onReset,
 }) => {
+  const toast = useToast();
   const formRef = useRef<EditorFormState | null>(editorForm);
   formRef.current = editorForm;
 
@@ -55,8 +57,8 @@ export const TestPlayModal: FC<TestPlayModalProps> = ({
   }, [visible, onClose]);
 
   const handleStart = async () => {
-    if (!apiKey) { alert('API Key를 입력해주세요.'); return; }
-    if (!model) { alert('모델을 선택해주세요.'); return; }
+    if (!apiKey) { toast.show('API Key를 입력해주세요.', 'warning'); return; }
+    if (!model) { toast.show('모델을 선택해주세요.', 'warning'); return; }
     await engine.startGame(apiKey, model);
   };
 
