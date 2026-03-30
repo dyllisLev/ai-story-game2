@@ -31,10 +31,30 @@ export default fp(async (app: FastifyInstance) => {
     return value;
   }
 
-  // preHandler로 등록 — 모든 요청에서 JWT를 파싱 (실패해도 진행, 공개 라우트 허용)
+  // preHandler로 등록 — 모든 요청에서 JWT 또는 Basic Auth를 파싱 (실패해도 진행, 공개 라우트 허용)
   app.addHook('preHandler', async (request) => {
     const authHeader = request.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) return;
+    if (!authHeader) return;
+
+    // Basic Auth — admin 로그인
+    if (authHeader.startsWith('Basic ')) {
+      const decoded = Buffer.from(authHeader.slice(6), 'base64').toString();
+      const [user, pass] = decoded.split(':');
+      const adminUser = process.env.ADMIN_USER || 'admin';
+      const adminPass = process.env.ADMIN_PASS || '';
+      if (user === adminUser && pass === adminPass && adminPass) {
+        request.user = {
+          id: 'admin',
+          email: '',
+          nickname: 'Admin',
+          role: 'admin',
+        };
+      }
+      return;
+    }
+
+    // Bearer JWT — 일반 사용자
+    if (!authHeader.startsWith('Bearer ')) return;
 
     const token = authHeader.slice(7);
     const { data: { user }, error } = await app.supabase.auth.getUser(token);

@@ -41,9 +41,9 @@ export function useAdminStories() {
     queryFn: () => {
       const params = new URLSearchParams();
       if (filters.genre)          params.set('genre',        filters.genre);
-      if (filters.visibility)     params.set('visibility',   filters.visibility);
+      if (filters.visibility)     params.set('is_public',    filters.visibility === 'public' ? 'true' : 'false');
       if (filters.search)         params.set('search',       filters.search);
-      if (filters.featured_only)  params.set('featured_only', 'true');
+      if (filters.featured_only)  params.set('featured', 'true');
       params.set('page',  String(filters.page));
       params.set('limit', String(filters.limit));
       return api.get<StoriesPage>(`/admin/stories?${params.toString()}`);
