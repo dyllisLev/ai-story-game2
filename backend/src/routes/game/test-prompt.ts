@@ -2,6 +2,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { SessionMessage, SessionMemory } from '@story-game/shared';
 import { buildPrompt, buildMemoryPrompt } from '../../services/prompt-builder.js';
+import { logGeminiCall } from '../../services/gemini.js';
 import { applySlidingWindow, prepareContents } from '../../services/session-manager.js';
 
 interface TestPromptRequest {
@@ -77,18 +78,10 @@ export default async function (app: FastifyInstance) {
     }
 
     // Async: log to api_logs (fire-and-forget)
-    app.supabaseAdmin.from('api_logs').insert({
-      session_id: null,
-      endpoint: 'game/test-prompt',
-      request_model: null,
-      request_system_prompt: systemPrompt.slice(0, 500),
-      request_messages: actualUserMessage ? [{ role: 'user', content: actualUserMessage }] : [],
-      response_text: null,
-      response_usage: null,
-      response_error: null,
-    }).then(({ error }) => {
-      if (error) app.log.error(error, 'test-prompt: api_log insert failed');
-    });
+    logGeminiCall(
+      { app, sessionId: null, endpoint: 'game/test-prompt', model: null, systemPrompt, userMessage: actualUserMessage ?? '' },
+      { text: '', usageMetadata: null, error: null },
+    );
 
     return reply.send({
       systemPrompt,

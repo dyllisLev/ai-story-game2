@@ -30,12 +30,15 @@ function saveSessionList(list: SessionListEntry[]): void {
   localStorage.setItem(SESSION_LIST_KEY, JSON.stringify(sorted));
 }
 
-export function addToSessionList(sessionId: string, title: string): void {
+export function addToSessionList(sessionId: string, title: string, lastPlayedAt?: number): void {
   const list = getSessionList();
   const idx = list.findIndex((s) => s.sessionId === sessionId);
-  const entry: SessionListEntry = { sessionId, title: title || '제목 없음', lastPlayedAt: Date.now() };
-  if (idx >= 0) list[idx] = entry;
-  else list.unshift(entry);
+  const ts = lastPlayedAt ?? Date.now();
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], title: title || list[idx].title, lastPlayedAt: lastPlayedAt ?? list[idx].lastPlayedAt };
+  } else {
+    list.unshift({ sessionId, title: title || '제목 없음', lastPlayedAt: ts });
+  }
   saveSessionList(list);
 }
 

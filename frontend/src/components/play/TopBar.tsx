@@ -50,6 +50,9 @@ export const TopBar: FC<TopBarProps> = ({
     try {
       const list = await fetchGeminiModels(key);
       setModels(list);
+      if (list.length > 0 && !model) {
+        onModelChange(list[0].id);
+      }
     } catch {
       setModels([]);
     } finally {

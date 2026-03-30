@@ -1,6 +1,12 @@
 // backend/src/services/prompt-builder.ts
 import type { PromptConfig, SessionMemory } from '@story-game/shared';
 
+interface StatusAttribute {
+  name: string;
+  type: 'bar' | 'percent' | 'number' | 'text' | 'list';
+  max?: string;
+}
+
 interface StoryData {
   world_setting?: string;
   story?: string;
@@ -10,6 +16,10 @@ interface StoryData {
   user_note?: string;
   system_rules?: string;
   use_latex?: boolean;
+  preset?: {
+    useStatusWindow?: boolean;
+    statusAttributes?: StatusAttribute[];
+  };
 }
 
 interface PresetData {
@@ -49,6 +59,30 @@ export function buildPrompt(story: StoryData, preset: PresetData, promptConfig: 
   const useLatex = preset.useLatex !== undefined ? preset.useLatex : story.use_latex;
   if (useLatex) {
     prompt += `\n\n${promptConfig.latex_rules}`;
+  }
+
+  // Status window instructions
+  const storyPreset = story.preset;
+  if (storyPreset?.useStatusWindow && storyPreset.statusAttributes?.length) {
+    const attrs = storyPreset.statusAttributes;
+    const attrLines = attrs.map((a) => {
+      if (a.type === 'bar' || a.type === 'percent' || a.type === 'number') {
+        return `${a.name}: <현재값>/${a.max || '100'}`;
+      }
+      if (a.type === 'list') {
+        return `${a.name}: <항목1>, <항목2>, ...`;
+      }
+      return `${a.name}: <값>`;
+    });
+
+    prompt += `\n\n[상태창 규칙]
+매 응답 끝에 반드시 아래 형식의 상태창 블록을 출력하세요.
+상태창은 이야기 본문 뒤에 코드블록으로 작성합니다.
+상태값은 이야기 진행에 따라 자연스럽게 변화시키세요.
+
+\`\`\`status
+${attrLines.join('\n')}
+\`\`\``;
   }
 
   if (cn) prompt = prompt.replaceAll('{{user}}', cn);

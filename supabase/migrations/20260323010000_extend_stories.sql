@@ -51,6 +51,7 @@ AS SELECT
   system_rules,
   use_latex,
   is_public,
+  preset,
   (password_hash IS NOT NULL) AS has_password,
   owner_uid,
   created_at,

@@ -1,5 +1,5 @@
 // backend/src/services/memory-handler.ts
-import { generate } from './gemini.js';
+import { callGeminiGenerate } from './gemini.js';
 import type { FastifyInstance } from 'fastify';
 import type { SessionMessage, SessionMemory, PromptConfig, GameplayConfig } from '@story-game/shared';
 
@@ -54,16 +54,24 @@ export async function generateAndSaveMemory(params: GenerateMemoryParams): Promi
     .replace('{memory}', memoryText)
     .replace('{messages}', messagesText);
 
-  const result = await generate(apiKey, model, {
-    contents: [{ role: 'user', parts: [{ text: requestBody }] }],
-    systemInstruction: { parts: [{ text: promptConfig.memory_system_instruction }] },
-    generationConfig: { responseMimeType: 'application/json' },
-    safetySettings: [
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-    ],
+  const result = await callGeminiGenerate({
+    apiKey, model,
+    body: {
+      contents: [{ role: 'user', parts: [{ text: requestBody }] }],
+      systemInstruction: { parts: [{ text: promptConfig.memory_system_instruction }] },
+      generationConfig: { responseMimeType: 'application/json' },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      ],
+    },
+    log: {
+      app, sessionId, endpoint: 'memory/generate',
+      model, systemPrompt: promptConfig.memory_system_instruction,
+      userMessage: requestBody.slice(0, 200),
+    },
   });
 
   const parsed = parseMemoryResponse(result.text);

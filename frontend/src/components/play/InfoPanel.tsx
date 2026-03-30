@@ -1,5 +1,5 @@
 import { type FC, useState } from 'react';
-import type { RightPanelTab, SessionMemory, SettingsData, SaveStatus } from '@/types/play';
+import type { RightPanelTab, SessionMemory, SettingsData, SaveStatus, StatusAttribute } from '@/types/play';
 import { InfoTab } from './InfoTab';
 import { MemoryTab } from './MemoryTab';
 import { NotesTab } from './NotesTab';
@@ -20,6 +20,8 @@ interface InfoPanelProps {
   onSaveNow: () => void;
   hasSession: boolean;
   onOpenCharModal: () => void;
+  statusAttributes: StatusAttribute[];
+  statusValues: Record<string, string>;
 }
 
 const TABS: { id: RightPanelTab; label: string }[] = [
@@ -44,6 +46,8 @@ export const InfoPanel: FC<InfoPanelProps> = ({
   onSaveNow,
   hasSession,
   onOpenCharModal,
+  statusAttributes,
+  statusValues,
 }) => {
   const [activeTab, setActiveTab] = useState<RightPanelTab>('info');
 
@@ -67,7 +71,7 @@ export const InfoPanel: FC<InfoPanelProps> = ({
 
       {/* Tab panels */}
       {activeTab === 'info' && (
-        <InfoTab settingsData={settingsData} onOpenCharModal={onOpenCharModal} />
+        <InfoTab settingsData={settingsData} onOpenCharModal={onOpenCharModal} statusAttributes={statusAttributes} statusValues={statusValues} />
       )}
       {activeTab === 'memory' && (
         <MemoryTab memory={memory} onUpdateMemory={onUpdateMemory} />

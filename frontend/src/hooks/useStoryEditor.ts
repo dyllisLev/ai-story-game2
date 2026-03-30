@@ -84,7 +84,7 @@ function calcCompleteness(form: EditorFormState): number {
   return Math.round((done / checks.length) * 100);
 }
 
-function formToUpdateInput(form: EditorFormState): StoryUpdateInput {
+function formToUpdateInput(form: EditorFormState): StoryUpdateInput & { preset?: unknown } {
   return {
     title: form.title,
     system_rules: form.systemRules,
@@ -98,6 +98,13 @@ function formToUpdateInput(form: EditorFormState): StoryUpdateInput {
     is_public: form.isPublic,
     icon: form.icon,
     tags: form.genre ? [form.genre] : [],
+    // 상태창 + 출력 설정을 preset JSONB에 저장
+    preset: {
+      useStatusWindow: form.useStatusWindow,
+      statusAttributes: form.statusAttributes,
+      narrativeLength: form.narrativeLength,
+      useCache: form.useCache,
+    },
   };
 }
 
@@ -123,6 +130,16 @@ function storyToForm(story: Story): EditorFormState {
     parsedChars = [];
   }
 
+  // preset JSONB에서 상태창 + 출력 설정 복원
+  const preset = (story as unknown as { preset?: Record<string, unknown> }).preset || {};
+  let statusAttrs: StatusAttribute[] = [];
+  if (Array.isArray(preset.statusAttributes)) {
+    statusAttrs = (preset.statusAttributes as StatusAttribute[]).map(a => ({
+      ...a,
+      id: a.id || generateId(),
+    }));
+  }
+
   return {
     ...DEFAULT_FORM,
     title: story.title,
@@ -137,6 +154,10 @@ function storyToForm(story: Story): EditorFormState {
     isPublic: story.is_public,
     icon: story.icon || '📖',
     genre: story.tags?.[0] || '',
+    useStatusWindow: preset.useStatusWindow !== false,
+    statusAttributes: statusAttrs,
+    narrativeLength: typeof preset.narrativeLength === 'number' ? preset.narrativeLength : 3,
+    useCache: preset.useCache !== false,
   };
 }
 

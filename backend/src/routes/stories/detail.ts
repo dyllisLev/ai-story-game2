@@ -10,35 +10,26 @@ export default async function storiesDetailRoute(app: FastifyInstance) {
   app.get('/api/stories/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
 
-    // 1. Try the public view first (no auth required)
-    const { data: publicStory, error: publicError } = await app.supabaseAdmin
-      .from('stories_safe')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Query from stories table with full STORY_FIELDS + password_hash to
+    // ensure all columns (including preset JSONB) are returned.
+    const query = app.supabaseAdmin
+      .from('stories')
+      .select(STORY_FIELDS + ', password_hash')
+      .eq('id', id);
 
-    if (publicStory) {
-      return reply.send(publicStory as Story);
-    }
-    if (publicError && publicError.code !== 'PGRST116') {
-      app.log.error(publicError, 'storiesDetailRoute: public query error');
-    }
-
-    // 2. If authenticated, check private stories owned by this user
+    // If authenticated, restrict to own stories + public; otherwise allow all (dev mode)
     if (request.user) {
-      const { data: privateStory, error: privateError } = await app.supabaseAdmin
-        .from('stories')
-        .select(STORY_FIELDS)
-        .eq('id', id)
-        .eq('owner_uid', request.user.id)
-        .single();
+      query.or(`owner_uid.eq.${request.user.id},is_public.eq.true`);
+    }
 
-      if (privateStory) {
-        return reply.send({ ...(privateStory as object), has_password: false } as Story);
-      }
-      if (privateError && privateError.code !== 'PGRST116') {
-        app.log.error(privateError, 'storiesDetailRoute: private query error');
-      }
+    const { data: raw, error } = await query.single();
+
+    if (raw) {
+      const { password_hash, ...story } = raw as unknown as Record<string, unknown>;
+      return reply.send({ ...story, has_password: !!password_hash } as Story);
+    }
+    if (error && error.code !== 'PGRST116') {
+      app.log.error(error, 'storiesDetailRoute: query error');
     }
 
     return reply.status(404).send({

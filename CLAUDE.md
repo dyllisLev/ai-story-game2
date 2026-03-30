@@ -81,17 +81,20 @@ ai-story-game2/
 
 ### 5. 로컬 테스트
 
+서비스 관리는 `dev.sh` 스크립트를 사용한다:
+
 ```bash
-# 1. 공유 타입 빌드
-cd packages/shared && npx tsc
-
-# 2. 백엔드 시작 (포트 3000)
-cd /path/to/project && npx tsx backend/src/server.ts
-
-# 3. 프론트엔드 시작 (포트 5173, API → localhost:3000 프록시)
-cd frontend && npx vite --port 5173 --host 0.0.0.0
+./dev.sh start     # shared 빌드 → 백엔드(3000) + 프론트엔드(5173) 시작
+./dev.sh stop      # 모든 서비스 중지
+./dev.sh restart   # 중지 후 재시작
+./dev.sh status    # 실행 상태 확인
+./dev.sh logs            # 전체 로그 tail
+./dev.sh logs backend    # 백엔드 로그만
+./dev.sh logs frontend   # 프론트엔드 로그만
 ```
 
+- 시작 시 포트 점유 프로세스를 자동 정리한다.
+- 로그 파일: `logs/backend.log`, `logs/frontend.log`
 - `agent-browser` 스킬을 사용하여 http://localhost:5173 에서 동작을 확인한다.
 - 백엔드 헬스체크: `curl http://localhost:3000/api/health`
 
@@ -108,6 +111,13 @@ SUPABASE_SERVICE_KEY=<Supabase service_role key>
 API_KEY_ENCRYPTION_SECRET=<AES-256 암호화 키>
 SUPABASE_SCHEMA=public          # cloud: public, self-hosted: story_game
 ```
+
+## E2E 테스트
+
+- **테스트케이스 관리:** [Google Sheets](https://docs.google.com/spreadsheets/d/1vXwfGaAxOy4iE8Yxz1oiN4_osW77tmzkkB7E2U8ze0c/edit)
+- 탭: Home(32), Play(60), Editor(73), Admin(70) = 총 235개 테스트케이스
+- 실제 브라우저(Chrome) 기반 E2E 테스트로 검증
+- 테스트 결과와 발견된 버그는 시트의 "결과" 컬럼에 기록
 
 ## Key Architecture Decisions
 

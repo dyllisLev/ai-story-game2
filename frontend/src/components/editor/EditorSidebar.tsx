@@ -71,7 +71,6 @@ const NAV_ITEMS: NavItem[] = [
     id: 'status',
     label: '상태창 설정',
     iconBg: 'var(--purple-dim)',
-    badge: 'new',
     icon: (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="2" aria-hidden="true">
         <rect x="3" y="3" width="18" height="18" rx="2" />

@@ -1,5 +1,5 @@
 // backend/src/services/gemini.ts
-import type { FastifyReply } from 'fastify';
+import type { FastifyReply, FastifyInstance } from 'fastify';
 import type { SafetySetting } from '@story-game/shared';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
@@ -125,4 +125,73 @@ export function sendSSE(reply: FastifyReply, event: string, data: unknown): void
   if (!reply.raw.destroyed) {
     reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Higher-level wrappers
+// ---------------------------------------------------------------------------
+
+export interface ApiLogMeta {
+  app: FastifyInstance;
+  sessionId: string | null;
+  endpoint: string;
+  model: string | null;
+  systemPrompt: string;
+  userMessage: string;
+}
+
+export function logGeminiCall(
+  meta: ApiLogMeta,
+  result: { text: string; usageMetadata: any; error: string | null },
+): void {
+  meta.app.supabaseAdmin.from('api_logs').insert({
+    session_id: meta.sessionId,
+    endpoint: meta.endpoint,
+    request_model: meta.model,
+    request_system_prompt: meta.systemPrompt.slice(0, 500),
+    request_messages: meta.userMessage ? [{ role: 'user', content: meta.userMessage }] : [],
+    response_text: result.text ? result.text.slice(0, 500) : null,
+    response_usage: result.usageMetadata,
+    response_error: result.error,
+  }).then(({ error }) => {
+    if (error) meta.app.log.error(error, `${meta.endpoint}: api_log insert failed`);
+  });
+}
+
+export interface CallGeminiParams {
+  apiKey: string;
+  model: string;
+  body: GeminiRequestBody;
+  reply: FastifyReply;
+  log: ApiLogMeta;
+  doneExtra?: Record<string, unknown>;
+}
+
+export async function callGeminiStream(params: CallGeminiParams): Promise<StreamResult> {
+  const { apiKey, model, body, reply, log, doneExtra } = params;
+  const result = await streamToSSE(apiKey, model, body, reply);
+
+  const doneData = {
+    ...doneExtra,
+    tokenUsage: result.usageMetadata
+      ? { input: result.usageMetadata.promptTokenCount || 0, output: result.usageMetadata.candidatesTokenCount || 0 }
+      : null,
+  };
+  sendSSE(reply, 'done', doneData);
+  logGeminiCall({ ...log, model }, result);
+
+  return result;
+}
+
+export async function callGeminiGenerate(params: {
+  apiKey: string;
+  model: string;
+  body: GeminiRequestBody;
+  log?: ApiLogMeta;
+}): Promise<{ text: string; usageMetadata: any }> {
+  const result = await generate(params.apiKey, params.model, params.body);
+  if (params.log) {
+    logGeminiCall({ ...params.log, model: params.model }, { ...result, error: null });
+  }
+  return result;
 }
