@@ -10,7 +10,7 @@ export default async function configRoutes(app: FastifyInstance) {
       return config;
     } catch (err) {
       app.log.error(err, 'Failed to load config');
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Configuration unavailable' } });
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: '설정을 불러올 수 없습니다' } });
     }
   });
 
@@ -20,7 +20,7 @@ export default async function configRoutes(app: FastifyInstance) {
 
     const body = request.body as { promptConfig?: unknown; gameplayConfig?: unknown };
     if (!body.promptConfig || !body.gameplayConfig) {
-      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'Missing promptConfig or gameplayConfig' } });
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: '프롬프트 또는 게임플레이 설정이 누락되었습니다' } });
     }
 
     const { error: e1 } = await app.supabaseAdmin
@@ -35,7 +35,7 @@ export default async function configRoutes(app: FastifyInstance) {
 
     if (e1 || e2) {
       app.log.error({ e1, e2 }, 'Config update failed');
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Config update failed' } });
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: '설정 업데이트에 실패했습니다' } });
     }
 
     app.invalidateConfigCache();

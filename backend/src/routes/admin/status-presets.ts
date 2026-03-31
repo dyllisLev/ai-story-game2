@@ -24,7 +24,7 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'adminStatusPresetsRoute GET: query failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch status presets' },
+        error: { code: 'INTERNAL_ERROR', message: '상태 프리셋을 불러오는데 실패했습니다' },
       });
     }
 
@@ -38,7 +38,7 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
 
     if (!body.title) {
       return reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'title required' },
+        error: { code: 'VALIDATION_ERROR', message: '제목을 입력해주세요' },
       });
     }
 
@@ -55,7 +55,7 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'adminStatusPresetsRoute POST: insert failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to create status preset' },
+        error: { code: 'INTERNAL_ERROR', message: '상태 프리셋 생성에 실패했습니다' },
       });
     }
 
@@ -78,12 +78,12 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
     if (error) {
       if (error.code === 'PGRST116') {
         return reply.status(404).send({
-          error: { code: 'NOT_FOUND', message: 'Status preset not found' },
+          error: { code: 'NOT_FOUND', message: '상태 프리셋을 찾을 수 없습니다' },
         });
       }
       app.log.error(error, 'adminStatusPresetsRoute PUT: update failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to update status preset' },
+        error: { code: 'INTERNAL_ERROR', message: '상태 프리셋 업데이트에 실패했습니다' },
       });
     }
 
@@ -103,7 +103,7 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'adminStatusPresetsRoute DELETE: delete failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to delete status preset' },
+        error: { code: 'INTERNAL_ERROR', message: '상태 프리셋 삭제에 실패했습니다' },
       });
     }
 

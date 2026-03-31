@@ -2,7 +2,7 @@ import { type FC, useState, useRef, useCallback, useEffect } from 'react';
 import type { InputMode, TokenUsage } from '@/types/play';
 
 interface InputAreaProps {
-  onSend: (text: string) => void;
+  onSend: (text: string, mode: InputMode) => void;
   onStart: () => void;
   disabled: boolean;
   isGenerating: boolean;
@@ -58,7 +58,7 @@ export const InputArea: FC<InputAreaProps> = ({
     const text = value.trim();
     if (!text || disabled || isGenerating) return;
     setValue('');
-    onSend(text);
+    onSend(text, inputMode);
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';

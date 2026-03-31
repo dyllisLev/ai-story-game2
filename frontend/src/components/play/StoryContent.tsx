@@ -3,6 +3,7 @@ import type { MessageBlock } from '@/types/play';
 import { NarratorBlock } from './NarratorBlock';
 import { UserMessage } from './UserMessage';
 import { SystemEvent } from './SystemEvent';
+import { useToast } from '@/components/ui/Toast';
 
 interface StoryContentProps {
   storyTitle: string;
@@ -26,6 +27,7 @@ export const StoryContent: FC<StoryContentProps> = ({
   onSuggestionSelect,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   // Auto-scroll on new messages or streaming
   useEffect(() => {
@@ -39,8 +41,9 @@ export const StoryContent: FC<StoryContentProps> = ({
     try {
       const plainText = text.replace(/<[^>]+>/g, '');
       await navigator.clipboard.writeText(plainText);
+      toast.show('복사됐습니다.', 'success');
     } catch {
-      // ignore
+      toast.show('복사에 실패했습니다.', 'error');
     }
   };
 

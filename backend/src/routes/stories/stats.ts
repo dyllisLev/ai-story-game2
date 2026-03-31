@@ -15,7 +15,7 @@ export default async function storiesStatsRoute(app: FastifyInstance) {
       if (countErr) {
         app.log.error(countErr, 'storiesStatsRoute: story count failed');
         return reply.status(500).send({
-          error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch stats' },
+          error: { code: 'INTERNAL_ERROR', message: '통계를 불러오는데 실패했습니다' },
         });
       }
 
@@ -28,7 +28,7 @@ export default async function storiesStatsRoute(app: FastifyInstance) {
       if (storiesErr) {
         app.log.error(storiesErr, 'storiesStatsRoute: stories query failed');
         return reply.status(500).send({
-          error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch play stats' },
+          error: { code: 'INTERNAL_ERROR', message: '플레이 통계를 불러오는데 실패했습니다' },
         });
       }
 

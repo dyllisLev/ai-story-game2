@@ -431,6 +431,16 @@ export const Header: FC<HeaderProps> = ({ searchValue = '', onSearchChange, sear
                     >
                       <span style={{ fontSize: 15 }}>📚</span> 내 스토리 관리
                     </Link>
+                    {user.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        role="menuitem"
+                        onClick={() => setDropdownOpen(false)}
+                        style={dropdownItemStyle}
+                      >
+                        <span style={{ fontSize: 15 }}>🛡️</span> 관리자 패널
+                      </Link>
+                    )}
                   </div>
                   <div style={{ padding: '6px 0' }}>
                     <button

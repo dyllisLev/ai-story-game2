@@ -6,7 +6,8 @@ import { useParams, useNavigate } from 'react-router';
 
 import { useStoryEditor } from '../hooks/useStoryEditor';
 import { usePresets } from '../hooks/usePresets';
-import { usePromptPreview } from '../hooks/usePromptPreview';
+import { usePromptPreview, type PromptPreviewConfig } from '../hooks/usePromptPreview';
+import { useAdminConfig } from '../hooks/useAdminConfig';
 
 import '@/styles/editor.css';
 import { useToast } from '@/components/ui/Toast';
@@ -109,7 +110,13 @@ const EditorPage: FC = () => {
     applyPreset,
   } = useStoryEditor({ storyId: params.storyId });
 
-  const promptData = usePromptPreview(form);
+  const { config: adminConfig } = useAdminConfig();
+  const previewConfig: PromptPreviewConfig | undefined = adminConfig ? {
+    systemPreamble: adminConfig.prompt_config.system_preamble,
+    narrativeLengthTemplate: adminConfig.prompt_config.narrative_length_template,
+    latexRules: adminConfig.prompt_config.latex_rules,
+  } : undefined;
+  const promptData = usePromptPreview(form, previewConfig);
 
   // UI state
   const [showPromptPreview, setShowPromptPreview] = useState(true);

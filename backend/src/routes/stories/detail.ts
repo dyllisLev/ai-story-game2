@@ -33,7 +33,7 @@ export default async function storiesDetailRoute(app: FastifyInstance) {
     }
 
     return reply.status(404).send({
-      error: { code: 'NOT_FOUND', message: 'Story not found' },
+      error: { code: 'NOT_FOUND', message: '스토리를 찾을 수 없습니다' },
     });
   });
 
@@ -44,7 +44,7 @@ export default async function storiesDetailRoute(app: FastifyInstance) {
 
     if (!password) {
       return reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'password required' },
+        error: { code: 'VALIDATION_ERROR', message: '비밀번호를 입력해주세요' },
       });
     }
 
@@ -54,7 +54,7 @@ export default async function storiesDetailRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'storiesDetailRoute: verify_story_password rpc error');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to verify password' },
+        error: { code: 'INTERNAL_ERROR', message: '비밀번호 확인에 실패했습니다' },
       });
     }
 

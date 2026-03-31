@@ -220,9 +220,9 @@ const Home: FC = () => {
             {[
               { label: '관리자', href: '/admin' },
               { label: '에디터', href: '/editor' },
-              { label: '도움말', href: '#' },
-              { label: '이용약관', href: '#' },
-              { label: '개인정보처리방침', href: '#' },
+              { label: '도움말', href: '/help' },
+              { label: '이용약관', href: '/terms' },
+              { label: '개인정보처리방침', href: '/privacy' },
             ].map(({ label, href }) => (
               <a
                 key={label}

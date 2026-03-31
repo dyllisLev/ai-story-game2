@@ -17,6 +17,7 @@ import adminServiceLogsRoute   from './admin/service-logs.js';
 import adminApiLogsRoute       from './admin/api-logs.js';
 import adminDashboardRoute     from './admin/dashboard.js';
 import adminDangerZoneRoute    from './admin/danger-zone.js';
+import adminUsersRoute         from './admin/users.js';
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // --- Public stories ---
@@ -34,4 +35,5 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(adminApiLogsRoute);
   await app.register(adminDashboardRoute);
   await app.register(adminDangerZoneRoute);
+  await app.register(adminUsersRoute);
 }

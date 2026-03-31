@@ -74,7 +74,7 @@ export default async function adminStoriesRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'adminStoriesRoute GET: query failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch stories' },
+        error: { code: 'INTERNAL_ERROR', message: '스토리 목록을 불러오는데 실패했습니다' },
       });
     }
 
@@ -89,7 +89,7 @@ export default async function adminStoriesRoute(app: FastifyInstance) {
 
     if (typeof featured !== 'boolean') {
       return reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'featured (boolean) required' },
+        error: { code: 'VALIDATION_ERROR', message: 'featured 값(boolean)을 입력해주세요' },
       });
     }
 
@@ -103,12 +103,12 @@ export default async function adminStoriesRoute(app: FastifyInstance) {
     if (error) {
       if (error.code === 'PGRST116') {
         return reply.status(404).send({
-          error: { code: 'NOT_FOUND', message: 'Story not found' },
+          error: { code: 'NOT_FOUND', message: '스토리를 찾을 수 없습니다' },
         });
       }
       app.log.error(error, 'adminStoriesRoute PUT featured: update failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to update featured flag' },
+        error: { code: 'INTERNAL_ERROR', message: '추천 설정 업데이트에 실패했습니다' },
       });
     }
 

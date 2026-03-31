@@ -40,20 +40,11 @@ function buildCharactersPrompt(chars: Character[]): string {
   return `[등장인물]\n${lines.join('\n')}`;
 }
 
-// Default system preamble (matches admin config default)
-const DEFAULT_SYSTEM_PREAMBLE = `당신은 AI 스토리텔러입니다.
-사용자의 입력에 따라 몰입감 있는 인터랙티브 스토리를 이어가세요.
-한국어로만 응답하세요.`;
-
-// Default narrative length template
-const DEFAULT_NARRATIVE_TEMPLATE = `반드시 매 응답마다 지문/묘사 문단을 정확히 {nl}문단으로 작성하세요.
-{nl}문단보다 적거나 많으면 안 됩니다. 정확히 {nl}문단을 작성하세요.`;
-
-// Default LaTeX rules
-const DEFAULT_LATEX_RULES = `[LaTeX 연출 규칙]
-전투 판정, 수치 변동, 스탯 표시 등에 LaTeX 수식을 사용하세요.
-인라인: $수식$, 블록: $$수식$$
-예: 공격력 $ATK = 78 + 12 = 90$, 데미지 계산 $$DMG = ATK \\times 1.5 - DEF$$`;
+export interface PromptPreviewConfig {
+  systemPreamble: string;
+  narrativeLengthTemplate: string;
+  latexRules: string;
+}
 
 export interface PromptSection {
   label: string;
@@ -67,19 +58,22 @@ export interface PromptPreviewData {
   totalTokens: number;
 }
 
-export function usePromptPreview(form: EditorFormState): PromptPreviewData {
+export function usePromptPreview(form: EditorFormState, config?: PromptPreviewConfig): PromptPreviewData {
   return useMemo(() => {
     const parts: PromptSection[] = [];
 
-    // 1. 시스템 프리앰블 (항상 포함 — 백엔드에서 config에서 가져오지만 미리보기에 기본값 표시)
-    parts.push({
-      label: '시스템 프리앰블',
-      content: DEFAULT_SYSTEM_PREAMBLE,
-      tokens: estimateTokens(DEFAULT_SYSTEM_PREAMBLE),
-    });
+    // 1. 시스템 프리앰블 (DB config에서 가져옴)
+    if (config?.systemPreamble) {
+      parts.push({
+        label: '시스템 프리앰블',
+        content: config.systemPreamble,
+        tokens: estimateTokens(config.systemPreamble),
+      });
+    }
 
-    // 2. 서술 분량 템플릿
-    const nlContent = DEFAULT_NARRATIVE_TEMPLATE.replaceAll('{nl}', String(form.narrativeLength));
+    // 2. 서술 분량 템플릿 (DB config에서 가져옴)
+    const nlTemplate = config?.narrativeLengthTemplate || '';
+    const nlContent = nlTemplate.replaceAll('{nl}', String(form.narrativeLength));
     parts.push({
       label: '서술 분량',
       content: nlContent,
@@ -123,12 +117,12 @@ export function usePromptPreview(form: EditorFormState): PromptPreviewData {
       parts.push({ label: '유저노트', content, tokens: estimateTokens(content) });
     }
 
-    // 9. LaTeX 규칙 (토글 ON일 때)
-    if (form.useLatex) {
+    // 9. LaTeX 규칙 (토글 ON + DB config에 규칙이 있을 때)
+    if (form.useLatex && config?.latexRules) {
       parts.push({
         label: 'LaTeX 규칙',
-        content: DEFAULT_LATEX_RULES,
-        tokens: estimateTokens(DEFAULT_LATEX_RULES),
+        content: config.latexRules,
+        tokens: estimateTokens(config.latexRules),
       });
     }
 
@@ -142,5 +136,5 @@ export function usePromptPreview(form: EditorFormState): PromptPreviewData {
     const totalTokens = parts.reduce((sum, p) => sum + p.tokens, 0);
 
     return { sections: parts, fullPrompt, totalTokens };
-  }, [form]);
+  }, [form, config]);
 }

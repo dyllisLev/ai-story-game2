@@ -35,7 +35,7 @@ interface GenerateMemoryParams {
 
 export async function generateAndSaveMemory(params: GenerateMemoryParams): Promise<SessionMemory> {
   const { app, apiKey, model, sessionId, messages, promptConfig, gameplayConfig } = params;
-  const windowSize = gameplayConfig.sliding_window_size || 20;
+  const windowSize = gameplayConfig.sliding_window_size;
   const windowStart = Math.max(0, messages.length - windowSize);
   const recentMessages = messages.slice(windowStart);
 
@@ -60,12 +60,7 @@ export async function generateAndSaveMemory(params: GenerateMemoryParams): Promi
       contents: [{ role: 'user', parts: [{ text: requestBody }] }],
       systemInstruction: { parts: [{ text: promptConfig.memory_system_instruction }] },
       generationConfig: { responseMimeType: 'application/json' },
-      safetySettings: [
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-      ],
+      safetySettings: promptConfig.safety_settings,
     },
     log: {
       app, sessionId, endpoint: 'memory/generate',

@@ -6,31 +6,33 @@
 // DELETE /api/me/apikey    — remove API key
 import type { FastifyInstance } from 'fastify';
 import type { UserProfile } from '@story-game/shared';
-import { requireAuth } from '../plugins/auth.js';
+import { requireLogin } from '../plugins/auth.js';
 import { encrypt, decrypt } from '../services/crypto.js';
 
 export default async function meRoutes(app: FastifyInstance) {
   // GET /api/me
   app.get('/api/me', async (request, reply) => {
-    const user = requireAuth(request);
+    const user = requireLogin(request);
 
     const { data: profile, error } = await app.supabaseAdmin
       .from('user_profiles')
-      .select('id, nickname, avatar_url, api_key_enc, created_at')
+      .select('id, nickname, avatar_url, api_key_enc, role, created_at')
       .eq('id', user.id)
       .single();
 
     if (error || !profile) {
       return reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: 'Profile not found' },
+        error: { code: 'NOT_FOUND', message: '프로필을 찾을 수 없습니다' },
       });
     }
 
-    const response: UserProfile = {
+    const response = {
       id: profile.id,
+      email: user.email,
       nickname: profile.nickname ?? null,
       avatar_url: profile.avatar_url ?? null,
       has_api_key: profile.api_key_enc != null,
+      role: profile.role ?? 'pending',
       created_at: profile.created_at,
     };
 
@@ -39,12 +41,12 @@ export default async function meRoutes(app: FastifyInstance) {
 
   // PUT /api/me — update nickname
   app.put('/api/me', async (request, reply) => {
-    const user = requireAuth(request);
+    const user = requireLogin(request);
     const { nickname } = request.body as { nickname: string };
 
     if (!nickname) {
       return reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'nickname required' },
+        error: { code: 'VALIDATION_ERROR', message: '닉네임을 입력해주세요' },
       });
     }
 
@@ -58,7 +60,7 @@ export default async function meRoutes(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'meRoutes PUT /api/me: update failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to update profile' },
+        error: { code: 'INTERNAL_ERROR', message: '프로필 업데이트에 실패했습니다' },
       });
     }
 
@@ -75,7 +77,7 @@ export default async function meRoutes(app: FastifyInstance) {
 
   // GET /api/me/apikey — masked API key
   app.get('/api/me/apikey', async (request, reply) => {
-    const user = requireAuth(request);
+    const user = requireLogin(request);
     const encryptionKey = app.config.API_KEY_ENCRYPTION_SECRET;
 
     const { data: profile, error } = await app.supabaseAdmin
@@ -98,20 +100,20 @@ export default async function meRoutes(app: FastifyInstance) {
     } catch (decryptErr) {
       app.log.error(decryptErr, 'meRoutes GET /api/me/apikey: decrypt failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to decrypt API key' },
+        error: { code: 'INTERNAL_ERROR', message: 'API 키 복호화에 실패했습니다' },
       });
     }
   });
 
   // PUT /api/me/apikey — save encrypted API key
   app.put('/api/me/apikey', async (request, reply) => {
-    const user = requireAuth(request);
+    const user = requireLogin(request);
     const { apiKey } = request.body as { apiKey: string };
     const encryptionKey = app.config.API_KEY_ENCRYPTION_SECRET;
 
     if (!apiKey) {
       return reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'apiKey required' },
+        error: { code: 'VALIDATION_ERROR', message: 'API 키를 입력해주세요' },
       });
     }
 
@@ -121,7 +123,7 @@ export default async function meRoutes(app: FastifyInstance) {
     } catch (encErr) {
       app.log.error(encErr, 'meRoutes PUT /api/me/apikey: encrypt failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to encrypt API key' },
+        error: { code: 'INTERNAL_ERROR', message: 'API 키 암호화에 실패했습니다' },
       });
     }
 
@@ -133,7 +135,7 @@ export default async function meRoutes(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'meRoutes PUT /api/me/apikey: update failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to save API key' },
+        error: { code: 'INTERNAL_ERROR', message: 'API 키 저장에 실패했습니다' },
       });
     }
 
@@ -142,7 +144,7 @@ export default async function meRoutes(app: FastifyInstance) {
 
   // DELETE /api/me/apikey — remove API key
   app.delete('/api/me/apikey', async (request, reply) => {
-    const user = requireAuth(request);
+    const user = requireLogin(request);
 
     const { error } = await app.supabaseAdmin
       .from('user_profiles')
@@ -152,7 +154,7 @@ export default async function meRoutes(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'meRoutes DELETE /api/me/apikey: update failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to remove API key' },
+        error: { code: 'INTERNAL_ERROR', message: 'API 키 삭제에 실패했습니다' },
       });
     }
 

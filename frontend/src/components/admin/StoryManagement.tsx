@@ -129,6 +129,7 @@ export const StoryManagement: FC = () => {
                           className="a-filter-btn"
                           style={{ padding: '3px 8px', fontSize: '9px' }}
                           type="button"
+                          onClick={() => { window.location.href = `/editor/${story.id}`; }}
                         >
                           편집
                         </button>

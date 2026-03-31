@@ -15,7 +15,7 @@ export default async function (app: FastifyInstance) {
       .single();
 
     if (error || !data) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Session not found' } });
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: '세션을 찾을 수 없습니다' } });
     }
 
     return data;

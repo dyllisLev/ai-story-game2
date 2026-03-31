@@ -3,7 +3,7 @@ export interface AuthUser {
   id: string;
   email: string;
   nickname: string | null;
-  role: 'user' | 'admin';
+  role: 'pending' | 'user' | 'admin';
 }
 
 // Phase 2-A: UserProfile — 프로필 페이지 및 소유자 표시용

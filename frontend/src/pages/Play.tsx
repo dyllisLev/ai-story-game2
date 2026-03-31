@@ -17,8 +17,10 @@ import { InfoPanel } from '@/components/play/InfoPanel';
 import { CharacterModal } from '@/components/play/CharacterModal';
 
 import type { SessionMemory } from '@story-game/shared';
-import type { SettingsData, StatusAttribute } from '@/types/play';
+import type { SettingsData, StatusAttribute, InputMode } from '@/types/play';
 import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/lib/auth';
+import { DEFAULT_SUGGESTIONS } from '@/lib/constants';
 
 // ---- Theme ----
 type Theme = 'dark' | 'light';
@@ -30,8 +32,13 @@ function getInitialTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }
 
-// ---- Suggestion chips (disabled) ----
-const DEFAULT_SUGGESTIONS: string[] = [];
+// ---- Input mode prefixes ----
+const MODE_PREFIXES: Record<InputMode, string> = {
+  action: '[행동] ',
+  thought: '[생각] ',
+  dialogue: '[대사] ',
+  scene: '[장면 지시] ',
+};
 
 // ---- Play Page ----
 const Play: FC = () => {
@@ -40,6 +47,9 @@ const Play: FC = () => {
 
   // --- Toast (non-blocking alert replacement) ---
   const toast = useToast();
+
+  // --- Auth ---
+  const { user } = useAuth();
 
   // --- Theme ---
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
@@ -76,6 +86,9 @@ const Play: FC = () => {
 
   // --- Status window config ---
   const [statusAttributes, setStatusAttributes] = useState<StatusAttribute[]>([]);
+
+  // --- Story genre ---
+  const [storyGenre, setStoryGenre] = useState<string | undefined>(undefined);
 
   // --- Game engine ---
   const engine = useGameEngine();
@@ -136,6 +149,7 @@ const Play: FC = () => {
         systemRules: data.system_rules ?? '',
       });
       if (data.use_latex !== undefined) engine.setUseLatex(data.use_latex);
+      if (data.genre) setStoryGenre(data.genre);
       if (data.preset?.useStatusWindow && data.preset.statusAttributes?.length) {
         setStatusAttributes(data.preset.statusAttributes);
       }
@@ -210,8 +224,9 @@ const Play: FC = () => {
   };
 
   // --- Send message ---
-  const handleSend = (text: string) => {
-    engine.sendMessage(apiKey, text);
+  const handleSend = (text: string, mode: InputMode = 'action') => {
+    const prefix = MODE_PREFIXES[mode];
+    engine.sendMessage(apiKey, `${prefix}${text}`);
   };
 
   // --- Regenerate ---
@@ -245,7 +260,7 @@ const Play: FC = () => {
         {/* Top Bar */}
         <TopBar
           storyTitle={engine.settingsData.title}
-          genre={undefined}
+          genre={storyGenre}
           apiKey={apiKey}
           onApiKeyChange={handleApiKeyChange}
           model={model}
@@ -257,7 +272,7 @@ const Play: FC = () => {
           onOpenCharModal={() => setCharModalOpen(true)}
           theme={theme}
           onToggleTheme={toggleTheme}
-          username={undefined}
+          username={user?.nickname ?? user?.email}
         />
 
         {/* Left Panel */}
@@ -278,13 +293,13 @@ const Play: FC = () => {
         <main className="panel-center">
           <StoryContent
             storyTitle={engine.settingsData.title}
-            genre={undefined}
+            genre={storyGenre}
             messages={engine.messages}
             isGenerating={engine.isGenerating}
-            streamingText={engine.streamingText}
+            streamingText={''}
             onRegenerate={handleRegenerate}
             suggestions={!engine.isGenerating && engine.messages.length > 0 ? DEFAULT_SUGGESTIONS : []}
-            onSuggestionSelect={handleSend}
+            onSuggestionSelect={(text) => handleSend(text, 'action')}
           />
           <InputArea
             onSend={handleSend}

@@ -132,7 +132,7 @@ export default async function adminServiceLogsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'adminServiceLogsRoute GET: query failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch service logs' },
+        error: { code: 'INTERNAL_ERROR', message: '서비스 로그를 불러오는데 실패했습니다' },
       });
     }
 
@@ -154,7 +154,7 @@ export default async function adminServiceLogsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'adminServiceLogsRoute DELETE: delete failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to delete service logs' },
+        error: { code: 'INTERNAL_ERROR', message: '서비스 로그 삭제에 실패했습니다' },
       });
     }
 

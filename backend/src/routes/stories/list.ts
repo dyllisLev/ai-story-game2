@@ -67,7 +67,7 @@ export default async function storiesListRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'storiesListRoute: supabase query failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch stories' },
+        error: { code: 'INTERNAL_ERROR', message: '스토리 목록을 불러오는데 실패했습니다' },
       });
     }
 

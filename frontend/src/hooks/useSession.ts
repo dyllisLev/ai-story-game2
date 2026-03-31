@@ -12,7 +12,7 @@ import type {
 
 const SESSION_LIST_KEY = 'ai-story-game-sessions';
 const SESSION_DATA_PREFIX = 'ai-story-session-';
-const MAX_SESSION_LIST = 20;
+const MAX_SESSION_LIST = 50;
 
 // ---- localStorage helpers ----
 

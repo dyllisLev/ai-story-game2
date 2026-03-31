@@ -16,7 +16,7 @@ export default async function storiesCrudRoute(app: FastifyInstance) {
 
     if (!body.title) {
       return reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'title required' },
+        error: { code: 'VALIDATION_ERROR', message: '제목을 입력해주세요' },
       });
     }
 
@@ -34,7 +34,7 @@ export default async function storiesCrudRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'storiesCrudRoute POST: insert failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to create story' },
+        error: { code: 'INTERNAL_ERROR', message: '스토리 생성에 실패했습니다' },
       });
     }
 
@@ -60,7 +60,7 @@ export default async function storiesCrudRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'storiesCrudRoute PUT: update failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to update story' },
+        error: { code: 'INTERNAL_ERROR', message: '스토리 업데이트에 실패했습니다' },
       });
     }
 
@@ -83,7 +83,7 @@ export default async function storiesCrudRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'storiesCrudRoute DELETE: delete failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to delete story' },
+        error: { code: 'INTERNAL_ERROR', message: '스토리 삭제에 실패했습니다' },
       });
     }
 

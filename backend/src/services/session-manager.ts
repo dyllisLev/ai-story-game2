@@ -22,7 +22,7 @@ export function shouldGenerateMemory(
   summaryUpToIndex: number,
   gameplayConfig: GameplayConfig
 ): boolean {
-  const windowSize = gameplayConfig.sliding_window_size || 20;
+  const windowSize = gameplayConfig.sliding_window_size;
   if (messages.length <= windowSize) return false;
   if ((messages.length - summaryUpToIndex) < windowSize) return false;
   return true;

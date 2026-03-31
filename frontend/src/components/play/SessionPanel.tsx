@@ -1,6 +1,7 @@
 import { type FC, useState, useRef } from 'react';
 import type { SessionListEntry } from '@/types/play';
 import { SessionItem, getGroupLabel } from './SessionItem';
+import { useToast } from '@/components/ui/Toast';
 
 interface SessionPanelProps {
   sessions: SessionListEntry[];
@@ -21,6 +22,7 @@ export const SessionPanel: FC<SessionPanelProps> = ({
 }) => {
   const [loadIdValue, setLoadIdValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
 
   const handleLoadById = () => {
     const id = loadIdValue.trim();
@@ -32,9 +34,9 @@ export const SessionPanel: FC<SessionPanelProps> = ({
   const handleCopyId = async (sessionId: string) => {
     try {
       await navigator.clipboard.writeText(sessionId);
-      // brief visual feedback — could use a toast
+      toast.show('세션 ID가 복사됐습니다.', 'success');
     } catch {
-      // ignore
+      toast.show('복사에 실패했습니다.', 'error');
     }
   };
 

@@ -12,7 +12,7 @@ export default async function (app: FastifyInstance) {
     const body = request.body as { story_id: string; title?: string; model?: string };
 
     if (!body.story_id) {
-      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'story_id required' } });
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'story_id를 입력해주세요' } });
     }
 
     const { data, error } = await app.supabaseAdmin
@@ -45,7 +45,7 @@ export default async function (app: FastifyInstance) {
     }
 
     if (Object.keys(safeUpdate).length === 0) {
-      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'No valid fields to update' } });
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: '업데이트할 유효한 필드가 없습니다' } });
     }
 
     const { error } = await app.supabaseAdmin

@@ -96,7 +96,7 @@ export const Dashboard: FC = () => {
         <div className="a-stat-card">
           <div className="a-stat-label">활성 스토리</div>
           <div className="a-stat-value">{formatNumber(stats?.stories.public ?? 0)}</div>
-          <div className="a-stat-delta">↑ +2 이번 주</div>
+          <div className="a-stat-delta">총 {formatNumber(stats?.stories.total ?? 0)}개 중</div>
         </div>
         <div className="a-stat-card">
           <div className="a-stat-label">총 세션</div>
@@ -106,7 +106,6 @@ export const Dashboard: FC = () => {
         <div className="a-stat-card">
           <div className="a-stat-label">오늘 API 호출</div>
           <div className="a-stat-value">{formatNumber(stats?.system.total_requests_today ?? 0)}</div>
-          <div className="a-stat-delta">↑ +5.1% 어제 대비</div>
         </div>
         <div className="a-stat-card">
           <div className="a-stat-label">활성 사용자</div>

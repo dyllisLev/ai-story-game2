@@ -1,7 +1,8 @@
-import { type FC, useState, useCallback, useRef } from 'react';
+import { type FC, useState, useCallback, useRef, useEffect } from 'react';
+import { Navigate } from 'react-router';
 import '../styles/admin.css';
 
-import { AuthGate } from '../components/admin/AuthGate';
+import { useAuth } from '@/lib/auth';
 import { AdminNav, type AdminSection } from '../components/admin/AdminNav';
 import { Dashboard } from '../components/admin/Dashboard';
 import { ServiceLogs } from '../components/admin/ServiceLogs';
@@ -12,6 +13,7 @@ import { StoryPresets } from '../components/admin/StoryPresets';
 import { StoryManagement } from '../components/admin/StoryManagement';
 import { StatusPresets } from '../components/admin/StatusPresets';
 import { SystemSection } from '../components/admin/SystemSection';
+import { UserManagement } from '../components/admin/UserManagement';
 import { useAdminConfig, type AdminConfig, type PromptConfig, type GameplayConfig } from '../hooks/useAdminConfig';
 
 /* ── Theme toggle ── */
@@ -23,11 +25,11 @@ const AdminContent: FC = () => {
   const [theme, setTheme] = useState<AdminTheme>('dark');
 
   const {
-    config, save, saveStatus, lastSaved,
+    config, isLoading: configLoading, save, saveStatus, lastSaved,
   } = useAdminConfig();
 
   // Local draft state — accumulates changes before explicit save
-  const draftRef = useRef<AdminConfig>(config);
+  const draftRef = useRef<AdminConfig | undefined>(config);
 
   const toggleTheme = useCallback(() => {
     setTheme(t => (t === 'dark' ? 'light' : 'dark'));
@@ -36,16 +38,21 @@ const AdminContent: FC = () => {
   /* Sections that show the bottom action bar (config save) */
   const showActionBar = activeSection === 'prompt' || activeSection === 'game-params';
 
+  // Sync draftRef when config loads
+  useEffect(() => {
+    if (config) draftRef.current = config;
+  }, [config]);
+
   const handlePromptChange = useCallback((pc: PromptConfig) => {
-    draftRef.current = { ...draftRef.current, prompt_config: pc };
+    if (draftRef.current) draftRef.current = { ...draftRef.current, prompt_config: pc };
   }, []);
 
   const handleGameChange = useCallback((gc: GameplayConfig) => {
-    draftRef.current = { ...draftRef.current, gameplay_config: gc };
+    if (draftRef.current) draftRef.current = { ...draftRef.current, gameplay_config: gc };
   }, []);
 
   const handleSave = useCallback(() => {
-    save(draftRef.current);
+    if (draftRef.current) save(draftRef.current);
   }, [save]);
 
   const saveLabel = (() => {
@@ -90,15 +97,16 @@ const AdminContent: FC = () => {
         {/* Main content */}
         <main className="a-main">
           {activeSection === 'dashboard'     && <Dashboard />}
+          {activeSection === 'users'         && <UserManagement />}
           {activeSection === 'service-logs'  && <ServiceLogs />}
           {activeSection === 'api-logs'      && <ApiLogs />}
-          {activeSection === 'prompt'        && (
+          {activeSection === 'prompt'        && config && (
             <PromptSettings
               config={config.prompt_config}
               onChange={handlePromptChange}
             />
           )}
-          {activeSection === 'game-params'   && (
+          {activeSection === 'game-params'   && config && (
             <GameParams
               config={config.gameplay_config}
               onChange={handleGameChange}
@@ -135,22 +143,24 @@ const AdminContent: FC = () => {
 
 /* ── Page entry ── */
 const Admin: FC = () => {
-  const [authenticated, setAuthenticated] = useState(false);
+  const { user, isLoading } = useAuth();
 
-  // Check if previously authenticated
-  const storedCreds = typeof window !== 'undefined'
-    ? localStorage.getItem('admin_credentials')
-    : null;
-
-  if (!authenticated && !storedCreds) {
+  if (isLoading) {
     return (
-      <div
-        className="admin-root"
-        style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-      >
-        <AuthGate onAuthenticated={() => setAuthenticated(true)} />
+      <div className="admin-root" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>로딩 중...</span>
       </div>
     );
+  }
+
+  // 비로그인 → 로그인 페이지로
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // admin이 아닌 경우 → 홈으로
+  if (user.role !== 'admin') {
+    return <Navigate to="/" replace />;
   }
 
   return <AdminContent />;

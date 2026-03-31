@@ -48,7 +48,7 @@ export default async function (app: FastifyInstance) {
       systemPrompt += buildMemoryPrompt(body.memory);
     }
 
-    const startMessage = config.promptConfig.game_start_message || '게임을 시작해줘';
+    const startMessage = config.promptConfig.game_start_message;
     let messages: SessionMessage[] = body.messages || [];
     let actualUserMessage = body.userMessage;
 
@@ -69,7 +69,7 @@ export default async function (app: FastifyInstance) {
         ...messages,
         { role: 'user', content: actualUserMessage, timestamp: Date.now() },
       ];
-      const windowSize = config.gameplayConfig.sliding_window_size || 20;
+      const windowSize = config.gameplayConfig.sliding_window_size;
       const windowMessages = applySlidingWindow(allMessages, windowSize);
       contents = prepareContents(windowMessages);
     } else {

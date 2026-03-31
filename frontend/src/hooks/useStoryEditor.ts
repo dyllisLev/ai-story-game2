@@ -260,7 +260,7 @@ export function useStoryEditor({ storyId: initialId }: UseStoryEditorOptions = {
       if (saveStatus === 'unsaved') {
         save();
       }
-    }, 60_000);
+    }, 300_000); // gameplay_config.auto_save_interval_ms와 동일
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };

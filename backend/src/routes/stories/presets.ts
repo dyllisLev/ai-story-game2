@@ -19,7 +19,7 @@ export default async function presetsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'presetsRoute GET /api/presets: query failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch presets' },
+        error: { code: 'INTERNAL_ERROR', message: '프리셋을 불러오는데 실패했습니다' },
       });
     }
 
@@ -36,7 +36,7 @@ export default async function presetsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'presetsRoute GET /api/status-presets: query failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch status presets' },
+        error: { code: 'INTERNAL_ERROR', message: '상태 프리셋을 불러오는데 실패했습니다' },
       });
     }
 
@@ -50,7 +50,7 @@ export default async function presetsRoute(app: FastifyInstance) {
 
     if (!body.title) {
       return reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'title required' },
+        error: { code: 'VALIDATION_ERROR', message: '제목을 입력해주세요' },
       });
     }
 
@@ -63,7 +63,7 @@ export default async function presetsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'presetsRoute POST: insert failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to create preset' },
+        error: { code: 'INTERNAL_ERROR', message: '프리셋 생성에 실패했습니다' },
       });
     }
 
@@ -86,12 +86,12 @@ export default async function presetsRoute(app: FastifyInstance) {
     if (error) {
       if (error.code === 'PGRST116') {
         return reply.status(404).send({
-          error: { code: 'NOT_FOUND', message: 'Preset not found' },
+          error: { code: 'NOT_FOUND', message: '프리셋을 찾을 수 없습니다' },
         });
       }
       app.log.error(error, 'presetsRoute PUT: update failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to update preset' },
+        error: { code: 'INTERNAL_ERROR', message: '프리셋 업데이트에 실패했습니다' },
       });
     }
 
@@ -111,7 +111,7 @@ export default async function presetsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'presetsRoute DELETE: delete failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to delete preset' },
+        error: { code: 'INTERNAL_ERROR', message: '프리셋 삭제에 실패했습니다' },
       });
     }
 

@@ -112,7 +112,7 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'adminApiLogsRoute GET: query failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch API logs' },
+        error: { code: 'INTERNAL_ERROR', message: 'API 로그를 불러오는데 실패했습니다' },
       });
     }
 
@@ -132,7 +132,7 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
 
     if (error || !data) {
       return reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: 'API log not found' },
+        error: { code: 'NOT_FOUND', message: 'API 로그를 찾을 수 없습니다' },
       });
     }
 
@@ -151,7 +151,7 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'adminApiLogsRoute DELETE: delete failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to delete API logs' },
+        error: { code: 'INTERNAL_ERROR', message: 'API 로그 삭제에 실패했습니다' },
       });
     }
 

@@ -53,7 +53,6 @@ export interface GameEngineState {
   useCache: boolean;
   settingsData: SettingsData;
   cachedContentName: string | null;
-  streamingText: string;
   statusValues: Record<string, string>;
 }
 
@@ -117,7 +116,6 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
     systemRules: '',
   });
   const [cachedContentName, setCachedContentName] = useState<string | null>(null);
-  const [streamingText, setStreamingText] = useState('');
   const [statusValues, setStatusValues] = useState<Record<string, string>>({});
 
   // refs for mutable state inside callbacks
@@ -352,7 +350,6 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
       setCachedContentName(null);
       cachedNameRef.current = null;
       setSaveStatus('idle');
-      setStreamingText('');
 
       try {
         const geminiHeaders = apiKey ? { 'X-Gemini-Key': apiKey } : undefined;
@@ -641,12 +638,14 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
   const setUseLatex = useCallback((v: boolean) => {
     setUseLatexState(v);
     useLatexRef.current = v;
-  }, []);
+    markDirty();
+  }, [markDirty]);
 
   const setUseCache = useCallback((v: boolean) => {
     setUseCacheState(v);
     useCacheRef.current = v;
-  }, []);
+    markDirty();
+  }, [markDirty]);
 
   const updateSettingsData = useCallback((patch: Partial<SettingsData>) => {
     setSettingsDataState((prev) => {
@@ -690,7 +689,6 @@ export function useGameEngine(): GameEngineState & GameEngineActions {
     useCache,
     settingsData,
     cachedContentName,
-    streamingText,
     statusValues,
     startGame,
     sendMessage,

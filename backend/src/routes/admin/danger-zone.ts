@@ -18,7 +18,7 @@ export default async function adminDangerZoneRoute(app: FastifyInstance) {
     if (error) {
       app.log.error(error, 'dangerZone DELETE sessions: failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to delete sessions' },
+        error: { code: 'INTERNAL_ERROR', message: '세션 삭제에 실패했습니다' },
       });
     }
 
@@ -44,7 +44,7 @@ export default async function adminDangerZoneRoute(app: FastifyInstance) {
     if (svcErr || apiErr) {
       app.log.error({ svcErr, apiErr }, 'dangerZone DELETE logs: partial failure');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Failed to delete logs' },
+        error: { code: 'INTERNAL_ERROR', message: '로그 삭제에 실패했습니다' },
       });
     }
 
@@ -75,7 +75,7 @@ export default async function adminDangerZoneRoute(app: FastifyInstance) {
     if (sessErr || svcErr || apiErr) {
       app.log.error({ sessErr, svcErr, apiErr }, 'dangerZone DELETE all: partial failure');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: 'Partial failure during full data wipe' },
+        error: { code: 'INTERNAL_ERROR', message: '전체 데이터 삭제 중 일부 작업이 실패했습니다' },
       });
     }
 

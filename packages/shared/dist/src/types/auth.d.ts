@@ -2,7 +2,7 @@ export interface AuthUser {
     id: string;
     email: string;
     nickname: string | null;
-    role: 'user' | 'admin';
+    role: 'pending' | 'user' | 'admin';
 }
 export interface UserProfile {
     id: string;

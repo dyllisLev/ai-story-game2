@@ -14,10 +14,10 @@ export default async function (app: FastifyInstance) {
     const apiKey = await resolveApiKey(app, request);
 
     if (!body.storyId || !body.model) {
-      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'storyId and model required' } });
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'storyId와 model을 입력해주세요' } });
     }
     if (!apiKey) {
-      return reply.status(400).send({ error: { code: 'INVALID_API_KEY', message: 'API key required' } });
+      return reply.status(400).send({ error: { code: 'INVALID_API_KEY', message: 'API 키를 입력해주세요' } });
     }
 
     // 스토리 + 설정 조회
@@ -27,7 +27,7 @@ export default async function (app: FastifyInstance) {
     ]);
 
     if (storyResult.error || !storyResult.data) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Story not found' } });
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: '스토리를 찾을 수 없습니다' } });
     }
 
     const story = storyResult.data;
@@ -39,7 +39,7 @@ export default async function (app: FastifyInstance) {
     };
 
     const systemPrompt = buildPrompt(story, preset, config.promptConfig);
-    const startMessage = config.promptConfig.game_start_message || '게임을 시작해줘';
+    const startMessage = config.promptConfig.game_start_message;
 
     // 세션 생성
     const sessionId = crypto.randomUUID();

@@ -15,10 +15,10 @@ export default async function (app: FastifyInstance) {
     const body = request.body as GameChatRequest;
 
     if (!body.sessionId) {
-      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'sessionId required' } });
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'sessionId를 입력해주세요' } });
     }
     if (!body.regenerate && !body.userMessage) {
-      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'userMessage required' } });
+      return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'userMessage를 입력해주세요' } });
     }
 
     await verifySessionAccess(app, request, body.sessionId);
@@ -31,7 +31,7 @@ export default async function (app: FastifyInstance) {
       .single();
 
     if (!session) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Session not found' } });
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: '세션을 찾을 수 없습니다' } });
     }
 
     const [storyResult, config, memoryResult] = await Promise.all([
@@ -41,7 +41,7 @@ export default async function (app: FastifyInstance) {
     ]);
 
     if (!storyResult.data) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Story not found' } });
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: '스토리를 찾을 수 없습니다' } });
     }
 
     // 메모리 조립
@@ -62,7 +62,7 @@ export default async function (app: FastifyInstance) {
     let systemPrompt = buildPrompt(storyResult.data, session.preset || {}, config.promptConfig);
     systemPrompt += buildMemoryPrompt(memory);
 
-    const windowSize = config.gameplayConfig.sliding_window_size || 20;
+    const windowSize = config.gameplayConfig.sliding_window_size;
     const allMessages: SessionMessage[] = [
       ...messages,
       ...(body.userMessage ? [{ role: 'user' as const, content: body.userMessage, timestamp: Date.now() }] : []),
