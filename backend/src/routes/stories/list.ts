@@ -1,5 +1,4 @@
 // backend/src/routes/stories/list.ts
-// GET /api/stories — public paginated story list with filters
 import type { FastifyInstance } from 'fastify';
 import type {
   StoryFilterParams,
@@ -7,6 +6,7 @@ import type {
   StoryListItem,
 } from '@story-game/shared';
 import { buildPaginatedResponse } from '../../lib/pagination.js';
+import { STORIES_COLUMNS, mapToStoryListItem } from '../../lib/story-helpers.js';
 
 export default async function storiesListRoute(app: FastifyInstance) {
   app.get('/api/stories', {
@@ -39,23 +39,23 @@ export default async function storiesListRoute(app: FastifyInstance) {
     const offset = (pageNum - 1) * limitNum;
 
     let q = app.supabaseAdmin
-      .from('stories_safe')
-      .select('*', { count: 'exact' });
+      .from('stories')
+      .select(STORIES_COLUMNS.join(', '), { count: 'exact' });
 
     if (genre) {
-      q = q.contains('tags', [genre]);
+      q = q.eq('genre', genre);
     }
     if (search) {
       const safe = search.replace(/[%_]/g, '\\$&');
       q = q.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
     }
     if (featured === true) {
-      q = q.eq('is_featured', true);
+      q = q.contains('tags', ['featured']);
     }
 
     const sortMap: Record<string, { column: string; ascending: boolean }> = {
       latest:  { column: 'created_at', ascending: false },
-      popular: { column: 'play_count', ascending: false },
+      popular: { column: 'created_at', ascending: false },
       name:    { column: 'title',      ascending: true  },
     };
     const { column, ascending } = sortMap[sort] ?? sortMap.latest;
@@ -71,6 +71,7 @@ export default async function storiesListRoute(app: FastifyInstance) {
       });
     }
 
-    return reply.send(buildPaginatedResponse<StoryListItem>((data as StoryListItem[]) ?? [], count, pageNum, limitNum));
+    const stories = data?.map(mapToStoryListItem) ?? [];
+    return reply.send(buildPaginatedResponse<StoryListItem>(stories, count, pageNum, limitNum));
   });
 }
