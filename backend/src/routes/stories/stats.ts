@@ -6,11 +6,10 @@ import type { StoryStats } from '@story-game/shared';
 export default async function storiesStatsRoute(app: FastifyInstance) {
   app.get('/api/stories/stats', async (_request, reply) => {
     try {
-      // Count total public stories
+      // Count total stories (ai_story_game schema has no is_public column — all rows are public)
       const { count: total_stories, error: countErr } = await app.supabaseAdmin
         .from('stories')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_public', true);
+        .select('id', { count: 'exact', head: true });
 
       if (countErr) {
         app.log.error(countErr, 'storiesStatsRoute: story count failed');
@@ -19,27 +18,24 @@ export default async function storiesStatsRoute(app: FastifyInstance) {
         });
       }
 
-      // Sum play_count and count distinct owners from stories table directly
+      // Count distinct authors (ai_story_game schema uses 'author' column, not 'owner_uid')
       const { data: stories, error: storiesErr } = await app.supabaseAdmin
         .from('stories')
-        .select('play_count, owner_uid')
-        .eq('is_public', true);
+        .select('author');
 
       if (storiesErr) {
         app.log.error(storiesErr, 'storiesStatsRoute: stories query failed');
         return reply.status(500).send({
-          error: { code: 'INTERNAL_ERROR', message: '플레이 통계를 불러오는데 실패했습니다' },
+          error: { code: 'INTERNAL_ERROR', message: '작가 통계를 불러오는데 실패했습니다' },
         });
       }
 
-      const total_plays = (stories ?? []).reduce((sum, s) => sum + (s.play_count ?? 0), 0);
-      const uniqueOwners = new Set((stories ?? []).map(s => s.owner_uid).filter(Boolean));
-      const total_authors = uniqueOwners.size;
+      const uniqueAuthors = new Set((stories ?? []).map(s => s.author).filter(Boolean));
 
       const response: StoryStats = {
         total_stories: total_stories ?? 0,
-        total_plays,
-        total_authors,
+        total_plays: 0,
+        total_authors: uniqueAuthors.size,
       };
 
       return reply.send(response);
