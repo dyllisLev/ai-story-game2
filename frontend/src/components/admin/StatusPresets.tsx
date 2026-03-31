@@ -7,13 +7,15 @@ import { useConfig } from '@/hooks/useConfig';
 
 /* ── Helpers ── */
 
-function attrTypeLabel(type: StatusAttribute['type']): string {
-  switch (type) {
-    case 'number': return '수치바';
-    case 'gauge':  return '게이지';
-    case 'text':   return '텍스트';
-    default:       return type;
-  }
+/** Get type label from config (removes hardcoded labels) */
+function useAttrTypeLabel() {
+  const { data: config } = useConfig();
+  const attrTypes = config?.gameplayConfig?.status_attribute_types || [];
+
+  return (type: StatusAttribute['type']): string => {
+    const found = attrTypes.find((t: any) => t.id === type);
+    return found?.label || type;
+  };
 }
 
 /* ── Preset card ── */
@@ -26,6 +28,7 @@ interface StatusPresetCardProps {
 const StatusPresetCard: FC<StatusPresetCardProps> = ({ preset, onEdit, onDelete }) => {
   const { data: config } = useConfig();
   const genreConfig = config?.genreConfig || { genres: [] };
+  const attrTypeLabel = useAttrTypeLabel();
   const [open, setOpen] = useState(false);
 
   return (
@@ -107,6 +110,8 @@ const BLANK: Omit<StatusPreset, 'id' | 'created_at' | 'updated_at'> = {
 const StatusPresetEditModal: FC<EditModalProps> = ({ preset, onSave, onClose }) => {
   const { data: config } = useConfig();
   const genres = config?.genreConfig.genres.map(g => g.name) ?? [];
+  const attrTypes = config?.gameplayConfig?.status_attribute_types ?? [];
+  const attrTypeLabel = useAttrTypeLabel();
   const [form, setForm] = useState(preset ?? BLANK);
   const [newAttr, setNewAttr] = useState<StatusAttribute>({ name: '', type: 'text' });
 
@@ -202,9 +207,11 @@ const StatusPresetEditModal: FC<EditModalProps> = ({ preset, onSave, onClose }) 
                   value={newAttr.type}
                   onChange={e => setNewAttr(p => ({ ...p, type: e.target.value as StatusAttribute['type'] }))}
                 >
-                  <option value="text">텍스트</option>
-                  <option value="number">수치바</option>
-                  <option value="gauge">게이지</option>
+                  {attrTypes.map((type: any) => (
+                    <option key={type.id} value={type.id}>
+                      {type.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               {(newAttr.type === 'number' || newAttr.type === 'gauge') && (
