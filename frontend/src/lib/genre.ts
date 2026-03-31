@@ -1,28 +1,49 @@
 // lib/genre.ts — Genre-related style utilities
 import type { CSSProperties } from 'react';
+import type { GenreConfig } from '@story-game/shared';
+
+/**
+ * Get genre style from genre config
+ */
+function getGenreStyle(genre: string, genreConfig: GenreConfig): CSSProperties {
+  const g = genreConfig.genres.find(x => x.name === genre);
+  if (!g) {
+    return { color: 'var(--a-ink-muted)', borderColor: 'var(--a-border-soft)', background: 'transparent' };
+  }
+  return { color: g.color, borderColor: g.borderColor, background: g.bgColor };
+}
 
 /**
  * Returns admin CSS class name(s) for a genre tag badge.
+ * Note: This function now uses genre config for styling.
  */
-export function genreClass(genre: string): string {
-  switch (genre) {
-    case '무협':   return 'a-genre-tag genre-martial';
-    case '판타지': return 'a-genre-tag genre-fantasy';
-    case '현대':   return 'a-genre-tag genre-modern';
-    case '로맨스': return 'a-genre-tag genre-romance';
-    default:       return 'a-genre-tag';
-  }
+export function genreClass(genre: string, genreConfig: GenreConfig): string {
+  const g = genreConfig.genres.find(x => x.name === genre);
+  // For now, return generic class; specific styling can be done via inline styles
+  return g ? 'a-genre-tag' : 'a-genre-tag';
 }
 
 /**
  * Returns inline CSSProperties for a genre tag (used in admin tables).
  */
-export function genreStyle(genre: string): CSSProperties {
-  switch (genre) {
-    case '무협':   return { color: '#c49a3c', borderColor: 'rgba(196,154,60,0.35)',  background: 'rgba(196,154,60,0.1)' };
-    case '판타지': return { color: '#7a9fc4', borderColor: 'rgba(122,159,196,0.35)', background: 'rgba(122,159,196,0.1)' };
-    case '현대':   return { color: '#8fba8a', borderColor: 'rgba(143,186,138,0.35)', background: 'rgba(143,186,138,0.1)' };
-    case '로맨스': return { color: '#c47fa5', borderColor: 'rgba(196,127,165,0.35)', background: 'rgba(196,127,165,0.1)' };
-    default:       return { color: 'var(--a-ink-muted)', borderColor: 'var(--a-border-soft)', background: 'transparent' };
-  }
+export function genreStyle(genre: string, genreConfig: GenreConfig): CSSProperties {
+  return getGenreStyle(genre, genreConfig);
 }
+
+/**
+ * Shared tag style for home page components (StoryCard, FeaturedSection, StoryList)
+ * Returns inline styles for genre tag badges with padding and typography
+ */
+export function tagStyle(tag: string, genreConfig: GenreConfig): CSSProperties {
+  const genre = genreConfig.genres.find(g => g.name === tag);
+  const c = genre ? { bg: genre.bgColor, color: genre.color } : { bg: 'var(--bg-elevated)', color: 'var(--text-secondary)' };
+  return {
+    padding: '2px 8px',
+    borderRadius: 4,
+    fontSize: 11,
+    fontWeight: 500,
+    background: c.bg,
+    color: c.color,
+  };
+}
+

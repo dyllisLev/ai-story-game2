@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { PresetEditModal, type StoryPreset } from './PresetEditModal';
 import { genreClass } from '../../lib/genre';
+import { useConfig } from '@/hooks/useConfig';
 
 /* ── Preset card ── */
 interface PresetCardProps {
@@ -13,6 +14,8 @@ interface PresetCardProps {
 
 const PresetCard: FC<PresetCardProps> = ({ preset, onEdit, onDelete }) => {
   const [open, setOpen] = useState(false);
+  const { data: config } = useConfig();
+  const genreConfig = config?.genreConfig ?? { genres: [] };
 
   const detailFields: Array<{ key: string; value: string; single?: boolean; badge?: boolean }> = [
     { key: '제목',    value: preset.title,         single: true },
@@ -27,7 +30,7 @@ const PresetCard: FC<PresetCardProps> = ({ preset, onEdit, onDelete }) => {
     <div className={`a-preset-card${open ? ' open' : ''}`}>
       <div className="a-preset-card-header" onClick={() => setOpen(o => !o)}>
         <span className="a-preset-expand-icon">▶</span>
-        <span className={genreClass(preset.genre)}>{preset.genre || '—'}</span>
+        <span className={genreClass(preset.genre, genreConfig)}>{preset.genre || '—'}</span>
         <span className="a-preset-name">{preset.title}</span>
         <span className="a-preset-attr-count">{detailFields.length} 항목</span>
         <div

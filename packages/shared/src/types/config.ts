@@ -15,6 +15,53 @@ export interface PromptConfig {
   cache_ttl: string;
 }
 
+// Available AI models
+export interface AvailableModel {
+  id: string;
+  label: string;
+  context_window: number;
+  is_default?: boolean;
+}
+
+// Input mode for user actions
+export interface InputMode {
+  id: string;
+  label: string;
+  emoji: string;
+  prefix: string;
+}
+
+// Status attribute type
+export interface StatusAttributeType {
+  id: string;
+  label: string;
+}
+
+// Memory category configuration
+export interface MemoryCategory {
+  id: string;
+  dbKey: string;
+  label: string;
+  icon: string;
+}
+
+// Editor default settings
+export interface EditorDefaults {
+  icon: string;
+  aiModel: string;
+  narrativeLength: number;
+  useLatex: boolean;
+  useCache: boolean;
+  useStatusWindow: boolean;
+  isPublic: boolean;
+}
+
+// Default labels for UI
+export interface DefaultLabels {
+  new_session: string;
+  untitled_story: string;
+}
+
 export interface GameplayConfig {
   default_narrative_length: number;
   narrative_length_min: number;
@@ -26,6 +73,31 @@ export interface GameplayConfig {
   memory_short_term_max: number;
   auto_save_interval_ms: number;
   max_session_list: number;
+  // Phase 1-B extension
+  available_models: AvailableModel[];
+  input_modes: InputMode[];
+  status_attribute_types: StatusAttributeType[];
+  default_suggestions: string[];
+  character_relations: string[];
+  story_icons: string[];
+  character_icons: string[];
+  memory_categories: MemoryCategory[];
+  editor_defaults: EditorDefaults;
+  default_labels: DefaultLabels;
+}
+
+// Genre styling configuration
+export interface GenreStyle {
+  id: string;
+  name: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  icon: string;
+}
+
+export interface GenreConfig {
+  genres: GenreStyle[];
 }
 
 export interface StatusWindowDefaults {
@@ -36,7 +108,6 @@ export interface StatusWindowDefaults {
 export interface AppConfig {
   promptConfig: PromptConfig;
   gameplayConfig: GameplayConfig;
-  // Phase 2-A extension
-  genreList: string[];
+  genreConfig: GenreConfig;
   statusWindowDefaults: StatusWindowDefaults;
 }

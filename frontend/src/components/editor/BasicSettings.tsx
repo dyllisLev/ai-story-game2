@@ -3,13 +3,7 @@
 
 import { type FC } from 'react';
 import type { Preset } from '@story-game/shared';
-import { GENRES } from '../../lib/constants';
-const ICONS = ['🏛️', '⚔️', '🧙', '🏙️', '💀', '🚀', '👻', '💕', '🐉', '🌙', '🔥', '🗡️'];
-const AI_MODELS = [
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-  { value: 'gemini-2.0-pro', label: 'Gemini 2.0 Pro' },
-  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-];
+import { useConfig } from '@/hooks/useConfig';
 
 interface BasicSettingsProps {
   title: string;
@@ -38,6 +32,11 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
   onIconChange,
   onAiModelChange,
 }) => {
+  const { data: config } = useConfig();
+  const genres = config?.genreConfig.genres.map(g => g.name) ?? [];
+  const icons = config?.gameplayConfig.story_icons ?? [];
+  const aiModels = config?.gameplayConfig.available_models ?? [];
+
   return (
     <section id="section-basic" aria-labelledby="basic-heading">
       <div className="section-header">
@@ -74,7 +73,7 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
           <span className="label-badge optional">선택</span>
         </p>
         <div className="genre-chips" role="group" aria-label="장르 선택">
-          {GENRES.map(g => (
+          {genres.map(g => (
             <button
               key={g}
               className={`genre-chip${genre === g ? ' selected' : ''}`}
@@ -94,7 +93,7 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
           <span className="label-badge optional">선택</span>
         </p>
         <div className="icon-grid" role="group" aria-label="아이콘 선택">
-          {ICONS.map(ic => (
+          {icons.map(ic => (
             <button
               key={ic}
               className={`icon-btn${icon === ic ? ' selected' : ''}`}
@@ -120,8 +119,8 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
           value={aiModel}
           onChange={e => onAiModelChange(e.target.value)}
         >
-          {AI_MODELS.map(m => (
-            <option key={m.value} value={m.value}>{m.label}</option>
+          {aiModels.map(m => (
+            <option key={m.id} value={m.id}>{m.label}</option>
           ))}
         </select>
         <p className="form-hint">Flash는 빠른 응답, Pro는 더 정교한 서술에 적합합니다.</p>

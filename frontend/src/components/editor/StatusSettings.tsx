@@ -4,14 +4,8 @@
 import { type FC, useRef } from 'react';
 import type { StatusAttribute } from '../../hooks/useStoryEditor';
 import type { StatusPreset } from '@story-game/shared';
-
-const TYPE_OPTIONS: { value: StatusAttribute['type']; label: string }[] = [
-  { value: 'bar', label: '수치바' },
-  { value: 'percent', label: '퍼센트' },
-  { value: 'number', label: '숫자' },
-  { value: 'text', label: '텍스트' },
-  { value: 'list', label: '목록' },
-];
+import { useConfig } from '@/hooks/useConfig';
+import { generateId } from '@/lib/format';
 
 interface StatusSettingsProps {
   enabled: boolean;
@@ -25,53 +19,6 @@ interface StatusSettingsProps {
   onApplyPreset: (attrs: StatusAttribute[]) => void;
 }
 
-// Local built-in presets for quick selection
-const BUILTIN_PRESETS: { key: string; label: string; icon: string; attrs: Omit<StatusAttribute, 'id'>[] }[] = [
-  {
-    key: 'moo',
-    label: '무협',
-    icon: '⚔️',
-    attrs: [
-      { name: '경지', type: 'text', max: '' },
-      { name: '내공', type: 'bar', max: '100' },
-      { name: '외공', type: 'bar', max: '100' },
-      { name: '경공', type: 'text', max: '' },
-      { name: '검법', type: 'list', max: '' },
-      { name: '세력', type: 'text', max: '' },
-      { name: '장소', type: 'text', max: '' },
-    ],
-  },
-  {
-    key: 'fantasy',
-    label: '판타지',
-    icon: '🧙',
-    attrs: [
-      { name: '체력', type: 'bar', max: '100' },
-      { name: '마나', type: 'bar', max: '100' },
-      { name: '레벨', type: 'number', max: '' },
-      { name: '힘', type: 'number', max: '' },
-      { name: '민첩', type: 'number', max: '' },
-      { name: '지능', type: 'number', max: '' },
-      { name: '장소', type: 'text', max: '' },
-    ],
-  },
-  {
-    key: 'modern',
-    label: '현대',
-    icon: '🏙️',
-    attrs: [
-      { name: '체력', type: 'bar', max: '100' },
-      { name: '스트레스', type: 'bar', max: '100' },
-      { name: '소지금', type: 'number', max: '' },
-      { name: '호감도', type: 'percent', max: '' },
-      { name: '장소', type: 'text', max: '' },
-    ],
-  },
-];
-
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 10);
-}
 
 export const StatusSettings: FC<StatusSettingsProps> = ({
   enabled,
@@ -84,6 +31,12 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
   onReorder,
   onApplyPreset,
 }) => {
+  const { data: config } = useConfig();
+  const typeOptions = (config?.gameplayConfig.status_attribute_types ?? []).map(t => ({
+    value: t.id as StatusAttribute['type'],
+    label: t.label,
+  }));
+
   const dragIndexRef = useRef<number | null>(null);
 
   const handleDragStart = (index: number) => {
@@ -99,10 +52,6 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
 
   const handleDragEnd = () => {
     dragIndexRef.current = null;
-  };
-
-  const handleBuiltinPreset = (attrs: Omit<StatusAttribute, 'id'>[]) => {
-    onApplyPreset(attrs.map(a => ({ ...a, id: generateId() })));
   };
 
   const handleStatusPreset = (preset: StatusPreset) => {
@@ -157,15 +106,6 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
         <div className="form-group">
           <p className="form-label">프리셋 선택</p>
           <div className="status-presets">
-            {BUILTIN_PRESETS.map(p => (
-              <button
-                key={p.key}
-                className="preset-chip"
-                onClick={() => handleBuiltinPreset(p.attrs)}
-              >
-                {p.icon} {p.label}
-              </button>
-            ))}
             {statusPresets.map(p => (
               <button
                 key={p.id}
@@ -226,7 +166,7 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
                   onChange={e => onUpdateAttribute(attr.id, { type: e.target.value as StatusAttribute['type'] })}
                   aria-label="타입"
                 >
-                  {TYPE_OPTIONS.map(t => (
+                  {typeOptions.map(t => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>

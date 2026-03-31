@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Story, StoryCreateInput, StoryUpdateInput } from '@story-game/shared';
 import { api } from '@/lib/api';
+import { useConfig } from './useConfig';
+import { generateId } from '@/lib/format';
 
 export interface Character {
   id: string;
@@ -46,30 +48,29 @@ export interface EditorFormState {
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved';
 
-const DEFAULT_FORM: EditorFormState = {
-  title: '',
-  presetId: '',
-  genre: '',
-  icon: '📖',
-  aiModel: 'gemini-2.0-flash',
-  systemRules: '',
-  worldSetting: '',
-  story: '',
-  characterName: '',
-  characterSetting: '',
-  characters: [],
-  useStatusWindow: true,
-  statusAttributes: [],
-  narrativeLength: 3,
-  useLatex: false,
-  useCache: true,
-  isPublic: false,
-  password: '',
-  userNote: '',
-};
-
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 10);
+function getDefaultForm(config: any): EditorFormState {
+  const editorDefaults = config?.gameplayConfig?.editor_defaults;
+  return {
+    title: '',
+    presetId: '',
+    genre: '',
+    icon: editorDefaults?.icon ?? '',
+    aiModel: editorDefaults?.aiModel ?? '',
+    systemRules: '',
+    worldSetting: '',
+    story: '',
+    characterName: '',
+    characterSetting: '',
+    characters: [],
+    useStatusWindow: true,
+    statusAttributes: [],
+    narrativeLength: editorDefaults?.narrativeLength ?? 3,
+    useLatex: editorDefaults?.useLatex ?? false,
+    useCache: editorDefaults?.useCache ?? true,
+    isPublic: editorDefaults?.isPublic ?? false,
+    password: '',
+    userNote: '',
+  };
 }
 
 function calcCompleteness(form: EditorFormState): number {
@@ -108,7 +109,7 @@ function formToUpdateInput(form: EditorFormState): StoryUpdateInput & { preset?:
   };
 }
 
-function storyToForm(story: Story): EditorFormState {
+function storyToForm(story: Story, config: any): EditorFormState {
   let parsedChars: Character[] = [];
   try {
     const raw = JSON.parse(story.characters || '[]');
@@ -140,8 +141,9 @@ function storyToForm(story: Story): EditorFormState {
     }));
   }
 
+  const defaults = getDefaultForm(config);
   return {
-    ...DEFAULT_FORM,
+    ...defaults,
     title: story.title,
     systemRules: story.system_rules || '',
     worldSetting: story.world_setting || '',
@@ -188,7 +190,9 @@ interface UseStoryEditorReturn {
 }
 
 export function useStoryEditor({ storyId: initialId }: UseStoryEditorOptions = {}): UseStoryEditorReturn {
-  const [form, setForm] = useState<EditorFormState>(DEFAULT_FORM);
+  const { data: config } = useConfig();
+
+  const [form, setForm] = useState<EditorFormState>(() => getDefaultForm(config));
   const [storyId, setStoryId] = useState<string | null>(initialId ?? null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -227,7 +231,7 @@ export function useStoryEditor({ storyId: initialId }: UseStoryEditorOptions = {
     setError(null);
     try {
       const story = await api.get<Story>(`/stories/${id}`);
-      setForm(storyToForm(story));
+      setForm(storyToForm(story, config));
       setStoryId(id);
       setSaveStatus('saved');
       setLastSaved(new Date(story.updated_at));
@@ -243,9 +247,9 @@ export function useStoryEditor({ storyId: initialId }: UseStoryEditorOptions = {
     if (!storyId) return;
     await api.delete(`/stories/${storyId}`);
     setStoryId(null);
-    setForm(DEFAULT_FORM);
+    setForm(getDefaultForm(config));
     setSaveStatus('saved');
-  }, [storyId]);
+  }, [storyId, config]);
 
   // ── Load on mount ────────────────────────────────────────────
   useEffect(() => {

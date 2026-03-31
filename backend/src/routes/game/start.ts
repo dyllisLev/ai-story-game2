@@ -48,7 +48,7 @@ export default async function (app: FastifyInstance) {
       .insert({
         id: sessionId,
         story_id: body.storyId,
-        title: story.title || '제목 없음',
+        title: story.title || config.gameplayConfig.default_labels.untitled_story,
         preset,
         messages: [],
         model: body.model,

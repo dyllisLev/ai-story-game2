@@ -70,6 +70,15 @@ await app.register(authPlugin);
 import requestLoggerPlugin from './plugins/request-logger.js';
 await app.register(requestLoggerPlugin);
 
+// Startup check: validate required config
+try {
+  const config = await app.getAppConfig();
+  app.log.info('Config validation passed');
+} catch (err) {
+  app.log.error('Config validation failed: %s', err);
+  process.exit(1);
+}
+
 // Health check (no rate limit)
 app.get('/api/health', async () => {
   let supabaseStatus = 'disconnected';

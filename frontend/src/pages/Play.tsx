@@ -8,6 +8,7 @@ import '@/styles/play.css';
 import { useGameEngine } from '@/hooks/useGameEngine';
 import { useSession } from '@/hooks/useSession';
 import { useMemory } from '@/hooks/useMemory';
+import { useConfig } from '@/hooks/useConfig';
 
 import { TopBar } from '@/components/play/TopBar';
 import { SessionPanel } from '@/components/play/SessionPanel';
@@ -20,7 +21,6 @@ import type { SessionMemory } from '@story-game/shared';
 import type { SettingsData, StatusAttribute, InputMode } from '@/types/play';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
-import { DEFAULT_SUGGESTIONS } from '@/lib/constants';
 
 // ---- Theme ----
 type Theme = 'dark' | 'light';
@@ -32,16 +32,17 @@ function getInitialTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }
 
-// ---- Input mode prefixes ----
-const MODE_PREFIXES: Record<InputMode, string> = {
-  action: '[행동] ',
-  thought: '[생각] ',
-  dialogue: '[대사] ',
-  scene: '[장면 지시] ',
-};
-
 // ---- Play Page ----
 const Play: FC = () => {
+  const { data: config } = useConfig();
+
+  // Build mode prefixes from config
+  const inputModes = config?.gameplayConfig.input_modes ?? [];
+  const MODE_PREFIXES: Partial<Record<InputMode, string>> = {};
+  inputModes.forEach(({ id, prefix }) => {
+    MODE_PREFIXES[id as InputMode] = prefix;
+  });
+  const DEFAULT_SUGGESTIONS = config?.gameplayConfig.default_suggestions ?? [];
   // --- Route params ---
   const { storyId: routeStoryId } = useParams<{ storyId?: string }>();
 
@@ -225,7 +226,7 @@ const Play: FC = () => {
 
   // --- Send message ---
   const handleSend = (text: string, mode: InputMode = 'action') => {
-    const prefix = MODE_PREFIXES[mode];
+    const prefix = MODE_PREFIXES[mode] ?? '';
     engine.sendMessage(apiKey, `${prefix}${text}`);
   };
 
@@ -310,6 +311,7 @@ const Play: FC = () => {
             canRegenerate={engine.conversationHistory.length >= 2 && !engine.isGenerating}
             onRegenerate={handleRegenerate}
             tokenUsage={engine.tokenUsage}
+            selectedModel={model}
           />
         </main>
 

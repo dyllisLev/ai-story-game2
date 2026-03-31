@@ -1,5 +1,6 @@
-import { type FC, useState } from 'react';
+import { type FC, useState, useMemo } from 'react';
 import type { SessionMemory } from '@/types/play';
+import { useConfig } from '@/hooks/useConfig';
 
 interface MemoryTabProps {
   memory: SessionMemory | null;
@@ -8,22 +9,16 @@ interface MemoryTabProps {
 
 type MemoryCategory = 'shortTerm' | 'longTerm' | 'characters' | 'goals';
 
-const CATEGORY_CONFIG: Record<MemoryCategory, { label: string; dotClass: string; icon: string }> = {
-  shortTerm:  { label: '단기 기억', dotClass: 'short-term',  icon: '⚡' },
-  longTerm:   { label: '장기 기억', dotClass: 'long-term',   icon: '🧠' },
-  characters: { label: '등장인물', dotClass: 'characters',  icon: '👤' },
-  goals:      { label: '목표',     dotClass: 'goals',       icon: '🎯' },
-};
-
 interface CategorySectionProps {
   category: MemoryCategory;
   items: string[];
   defaultOpen?: boolean;
+  categoryConfig: Record<MemoryCategory, { label: string; dotClass: string; icon: string }>;
 }
 
-const CategorySection: FC<CategorySectionProps> = ({ category, items, defaultOpen = true }) => {
+const CategorySection: FC<CategorySectionProps> = ({ category, items, defaultOpen = true, categoryConfig }) => {
   const [open, setOpen] = useState(defaultOpen);
-  const cfg = CATEGORY_CONFIG[category];
+  const cfg = categoryConfig[category];
 
   return (
     <div className="memory-category-section">
@@ -60,7 +55,28 @@ const CategorySection: FC<CategorySectionProps> = ({ category, items, defaultOpe
 };
 
 export const MemoryTab: FC<MemoryTabProps> = ({ memory }) => {
-  if (!memory) {
+  const { data: config } = useConfig();
+
+  // Build category config from gameplayConfig.memory_categories (memoized)
+  const categoryConfig: Record<MemoryCategory, { label: string; dotClass: string; icon: string }> | null = useMemo(() => {
+    if (!config) return null;
+    const memoryCategories = config.gameplayConfig.memory_categories;
+    const map = new Map(memoryCategories.map(c => [c.dbKey, c]));
+
+    const get = (key: MemoryCategory) => {
+      const entry = map.get(key);
+      if (!entry) throw new Error(`Missing memory_categories config for "${key}"`);
+      return entry;
+    };
+    return {
+      shortTerm:  { label: get('shortTerm').label,  dotClass: 'short-term',  icon: get('shortTerm').icon },
+      longTerm:   { label: get('longTerm').label,   dotClass: 'long-term',   icon: get('longTerm').icon },
+      characters: { label: get('characters').label, dotClass: 'characters',  icon: get('characters').icon },
+      goals:      { label: get('goals').label,      dotClass: 'goals',       icon: get('goals').icon },
+    };
+  }, [config]);
+
+  if (!memory || !categoryConfig) {
     return (
       <div className="tab-panel active" id="tab-memory" role="tabpanel">
         <div className="panel-content">
@@ -84,10 +100,10 @@ export const MemoryTab: FC<MemoryTabProps> = ({ memory }) => {
   return (
     <div className="tab-panel active" id="tab-memory" role="tabpanel">
       <div className="panel-content">
-        <CategorySection category="shortTerm" items={shortTermItems} />
-        <CategorySection category="longTerm"  items={longTermItems} />
-        <CategorySection category="characters" items={characterItems} defaultOpen={false} />
-        <CategorySection category="goals"      items={goalItems}     defaultOpen={false} />
+        <CategorySection category="shortTerm" items={shortTermItems} categoryConfig={categoryConfig} />
+        <CategorySection category="longTerm"  items={longTermItems} categoryConfig={categoryConfig} />
+        <CategorySection category="characters" items={characterItems} defaultOpen={false} categoryConfig={categoryConfig} />
+        <CategorySection category="goals"      items={goalItems}     defaultOpen={false} categoryConfig={categoryConfig} />
       </div>
     </div>
   );

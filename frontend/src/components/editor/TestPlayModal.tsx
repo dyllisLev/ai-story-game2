@@ -10,7 +10,7 @@ import { CharacterModal } from '@/components/play/CharacterModal';
 import type { SettingsData, StatusAttribute, InputMode } from '@/types/play';
 import { useToast } from '@/components/ui/Toast';
 
-import { DEFAULT_SUGGESTIONS } from '@/lib/constants';
+import { useConfig } from '@/hooks/useConfig';
 
 // Test play has no live status tracking — status window shows attributes but no runtime values.
 const EMPTY_STATUS_VALUES: Record<string, string> = {};
@@ -29,6 +29,8 @@ export const TestPlayModal: FC<TestPlayModalProps> = ({
   onReset,
 }) => {
   const toast = useToast();
+  const { data: appConfig } = useConfig();
+  const defaultSuggestions = appConfig?.gameplayConfig.default_suggestions ?? [];
   const formRef = useRef<EditorFormState | null>(editorForm);
   formRef.current = editorForm;
 
@@ -120,7 +122,7 @@ export const TestPlayModal: FC<TestPlayModalProps> = ({
             isGenerating={engine.isGenerating}
             streamingText={engine.streamingText}
             onRegenerate={handleRegenerate}
-            suggestions={!engine.isGenerating && engine.messages.length > 0 ? DEFAULT_SUGGESTIONS : []}
+            suggestions={!engine.isGenerating && engine.messages.length > 0 ? defaultSuggestions : []}
             onSuggestionSelect={handleSend}
           />
           <InputArea

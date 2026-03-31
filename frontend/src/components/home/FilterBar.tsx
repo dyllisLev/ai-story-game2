@@ -1,6 +1,6 @@
 import { type FC } from 'react';
 import type { StoryFilterParams } from '@story-game/shared';
-import { GENRES_WITH_ALL } from '../../lib/constants';
+import { useConfig } from '@/hooks/useConfig';
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -23,6 +23,8 @@ export const FilterBar: FC<FilterBarProps> = ({
   onViewModeChange,
   onClearSearch,
 }) => {
+  const { data: config } = useConfig();
+  const GENRES_WITH_ALL = ['전체', ...(config?.genreConfig.genres.map(g => g.name) ?? [])];
   const activeGenre = filters.genre ?? 'all';
 
   return (

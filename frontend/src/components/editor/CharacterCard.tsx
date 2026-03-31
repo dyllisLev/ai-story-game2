@@ -3,14 +3,7 @@
 
 import { type FC, useState } from 'react';
 import type { Character } from '../../hooks/useStoryEditor';
-
-const CHAR_EMOJIS = ['🧙', '⚔️', '🏹', '🛡️', '🗡️', '👁️', '🔥', '🌙'];
-const CHAR_COLORS = [
-  { bg: 'var(--purple-dim)', text: 'var(--purple)' },
-  { bg: 'var(--accent-dim)', text: 'var(--accent)' },
-  { bg: 'var(--rose-dim)', text: 'var(--rose)' },
-  { bg: 'var(--green-dim)', text: 'var(--green)' },
-];
+import { useConfig } from '@/hooks/useConfig';
 
 interface CharacterCardProps {
   character: Character;
@@ -21,9 +14,18 @@ interface CharacterCardProps {
 
 export const CharacterCard: FC<CharacterCardProps> = ({ character, index, onUpdate, onRemove }) => {
   const [isOpen, setIsOpen] = useState(index === 0);
+  const { data: config } = useConfig();
 
-  const color = CHAR_COLORS[index % CHAR_COLORS.length];
-  const emoji = CHAR_EMOJIS[index % CHAR_EMOJIS.length];
+  const characterIcons = config?.gameplayConfig.character_icons ?? [];
+  const charColors = [
+    { bg: 'var(--purple-dim)', text: 'var(--purple)' },
+    { bg: 'var(--accent-dim)', text: 'var(--accent)' },
+    { bg: 'var(--rose-dim)', text: 'var(--rose)' },
+    { bg: 'var(--green-dim)', text: 'var(--green)' },
+  ];
+
+  const color = charColors[index % charColors.length];
+  const emoji = characterIcons[index % characterIcons.length];
 
   // Map relation value to data attribute for CSS color styling
   const relationDataVal =
@@ -130,9 +132,9 @@ export const CharacterCard: FC<CharacterCardProps> = ({ character, index, onUpda
                 data-val={relationDataVal}
                 onChange={e => onUpdate(character.id, { relation: e.target.value as Character['relation'] })}
               >
-                <option value="우호적">우호적</option>
-                <option value="중립">중립</option>
-                <option value="적대">적대</option>
+                {(config?.gameplayConfig.character_relations ?? []).map(rel => (
+                  <option key={rel} value={rel}>{rel}</option>
+                ))}
               </select>
             </div>
 

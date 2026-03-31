@@ -1,20 +1,7 @@
 // lib/constants.ts — Shared application constants
+// Hardcoded values removed in Phase 2 - now loaded from /api/config
 
-/**
- * Canonical list of story genres used across FilterBar, BasicSettings,
- * StatusPresets, StoryManagement, and PresetEditModal.
- */
-export const GENRES = ['무협', '판타지', '현대', '로맨스', '공포', 'SF', '미스터리', '역사', '심리'] as const;
-
-/** GENRES including the "all" sentinel value used in filter UIs. */
-export const GENRES_WITH_ALL = ['전체', ...GENRES] as const;
-
-export type Genre = typeof GENRES[number];
-
-/** Default suggestion chips for game input */
-export const DEFAULT_SUGGESTIONS: string[] = [
-  '⚔️ 행동으로 맞서다',
-  '🤔 신중하게 생각해보다',
-  '💬 대화를 시도하다',
-  '🌀 상황을 관찰하다',
-];
+// Use useConfig() hook to get:
+// - GENRES: config.genreConfig.genres.map(g => g.name)
+// - GENRES_WITH_ALL: ['전체', ...config.genreConfig.genres.map(g => g.name)]
+// - DEFAULT_SUGGESTIONS: config.gameplayConfig.default_suggestions

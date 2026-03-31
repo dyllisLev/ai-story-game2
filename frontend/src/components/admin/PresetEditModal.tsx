@@ -1,5 +1,5 @@
 import { type FC, useState, useEffect } from 'react';
-import { GENRES } from '../../lib/constants';
+import { useConfig } from '@/hooks/useConfig';
 
 export interface StoryPreset {
   id?: string;
@@ -33,11 +33,11 @@ const BLANK_PRESET: StoryPreset = {
   status_preset_id: null,
 };
 
-const GENRE_OPTIONS = [...GENRES, '기타'] as const;
-
 export const PresetEditModal: FC<PresetEditModalProps> = ({
   preset, statusPresets, onSave, onClose,
 }) => {
+  const { data: config } = useConfig();
+  const GENRE_OPTIONS = [...(config?.genreConfig.genres.map(g => g.name) ?? []), '기타'];
   const [form, setForm] = useState<StoryPreset>(preset ?? BLANK_PRESET);
 
   useEffect(() => {

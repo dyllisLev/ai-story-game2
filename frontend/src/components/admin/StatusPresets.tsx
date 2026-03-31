@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import type { StatusAttribute, StatusPreset } from '@story-game/shared';
 import { genreClass } from '../../lib/genre';
-import { GENRES } from '../../lib/constants';
+import { useConfig } from '@/hooks/useConfig';
 
 /* ── Helpers ── */
 
@@ -24,13 +24,15 @@ interface StatusPresetCardProps {
 }
 
 const StatusPresetCard: FC<StatusPresetCardProps> = ({ preset, onEdit, onDelete }) => {
+  const { data: config } = useConfig();
+  const genreConfig = config?.genreConfig || { genres: [] };
   const [open, setOpen] = useState(false);
 
   return (
     <div className={`a-preset-card${open ? ' open' : ''}`}>
       <div className="a-preset-card-header" onClick={() => setOpen(o => !o)}>
         <span className="a-preset-expand-icon">▶</span>
-        <span className={genreClass(preset.genre)}>{preset.genre || '—'}</span>
+        <span className={genreClass(preset.genre, genreConfig)}>{preset.genre || '—'}</span>
         <span className="a-preset-name">{preset.title}</span>
         <span className="a-preset-attr-count">{preset.attributes.length} 속성</span>
         <div
@@ -103,6 +105,8 @@ const BLANK: Omit<StatusPreset, 'id' | 'created_at' | 'updated_at'> = {
 };
 
 const StatusPresetEditModal: FC<EditModalProps> = ({ preset, onSave, onClose }) => {
+  const { data: config } = useConfig();
+  const genres = config?.genreConfig.genres.map(g => g.name) ?? [];
   const [form, setForm] = useState(preset ?? BLANK);
   const [newAttr, setNewAttr] = useState<StatusAttribute>({ name: '', type: 'text' });
 
@@ -143,7 +147,7 @@ const StatusPresetEditModal: FC<EditModalProps> = ({ preset, onSave, onClose }) 
                 onChange={e => setForm(p => ({ ...p, genre: e.target.value }))}
               >
                 <option value="">선택...</option>
-                {GENRES.map(g => (
+                {genres.map(g => (
                   <option key={g} value={g}>{g}</option>
                 ))}
               </select>

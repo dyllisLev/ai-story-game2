@@ -1,5 +1,7 @@
 import { type FC, useState, useRef, useCallback, useEffect } from 'react';
 import type { InputMode, TokenUsage } from '@/types/play';
+import { useConfig } from '@/hooks/useConfig';
+import { formatTokens } from '@/lib/format';
 
 interface InputAreaProps {
   onSend: (text: string, mode: InputMode) => void;
@@ -10,26 +12,12 @@ interface InputAreaProps {
   canRegenerate: boolean;
   onRegenerate: () => void;
   tokenUsage: TokenUsage | null;
+  selectedModel?: string;
 }
 
-const INPUT_MODES: { mode: InputMode; label: string }[] = [
-  { mode: 'action', label: '⚔ 행동' },
-  { mode: 'thought', label: '💭 생각' },
-  { mode: 'dialogue', label: '💬 대사' },
-  { mode: 'scene', label: '🎬 장면 지시' },
-];
-
-function formatTokens(n: number | undefined): string {
-  if (!n) return '0';
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return String(n);
-}
-
-function tokenPercent(usage: TokenUsage | null): number {
-  if (!usage?.totalTokenCount || !usage?.promptTokenCount) return 0;
-  // Use promptTokenCount as context fill indicator (approximate)
-  const max = 128_000; // Gemini 2.0 Flash context
-  return Math.min((usage.totalTokenCount / max) * 100, 100);
+function tokenPercent(usage: TokenUsage | null, maxTokens: number): number {
+  if (!usage?.totalTokenCount || !maxTokens) return 0;
+  return Math.min((usage.totalTokenCount / maxTokens) * 100, 100);
 }
 
 export const InputArea: FC<InputAreaProps> = ({
@@ -41,7 +29,15 @@ export const InputArea: FC<InputAreaProps> = ({
   canRegenerate,
   onRegenerate,
   tokenUsage,
+  selectedModel,
 }) => {
+  const { data: config } = useConfig();
+  const inputModes = config?.gameplayConfig.input_modes ?? [];
+  const models = config?.gameplayConfig.available_models ?? [];
+
+  // Find the selected model's context window
+  const maxTokens = models.find(m => m.id === selectedModel)?.context_window ?? 0;
+
   const [inputMode, setInputMode] = useState<InputMode>('action');
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -73,20 +69,20 @@ export const InputArea: FC<InputAreaProps> = ({
   };
 
   const totalTokens = tokenUsage?.totalTokenCount ?? 0;
-  const pct = tokenPercent(tokenUsage);
+  const pct = tokenPercent(tokenUsage, maxTokens);
 
   return (
     <div className="input-area">
       <div className="input-area-inner">
         {/* Mode toolbar */}
         <div className="input-toolbar">
-          {INPUT_MODES.map(({ mode, label }) => (
+          {inputModes.map(({ id, label, emoji }) => (
             <button
-              key={mode}
-              className={`input-toolbar-btn${inputMode === mode ? ' active' : ''}`}
-              onClick={() => setInputMode(mode)}
+              key={id}
+              className={`input-toolbar-btn${inputMode === id ? ' active' : ''}`}
+              onClick={() => setInputMode(id as InputMode)}
             >
-              {label}
+              {emoji} {label}
             </button>
           ))}
           {canRegenerate && (

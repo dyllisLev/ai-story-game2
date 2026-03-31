@@ -2,12 +2,14 @@ import { type FC } from 'react';
 import { useAdminStories } from '../../hooks/useAdminStories';
 import { Pagination } from '../ui/Pagination';
 import { genreStyle } from '../../lib/genre';
-import { GENRES } from '../../lib/constants';
+import { useConfig } from '@/hooks/useConfig';
 import { AdminTablePlaceholder } from './AdminTablePlaceholder';
 
 /* ── Main component ── */
 
 export const StoryManagement: FC = () => {
+  const { data: config } = useConfig();
+  const genres = config?.genreConfig.genres.map(g => g.name) ?? [];
   const {
     stories, totalPages, isLoading,
     filters, updateFilters,
@@ -30,7 +32,7 @@ export const StoryManagement: FC = () => {
             onChange={e => updateFilters({ genre: e.target.value })}
           >
             <option value="">모든 장르</option>
-            {GENRES.map(g => (
+            {genres.map(g => (
               <option key={g} value={g}>{g}</option>
             ))}
           </select>
@@ -98,7 +100,7 @@ export const StoryManagement: FC = () => {
                         {genreTag && (
                           <span
                             className="a-genre-tag"
-                            style={{ ...genreStyle(genreTag), fontSize: '8px' }}
+                            style={{ ...(config?.genreConfig ? genreStyle(genreTag, config.genreConfig) : {}), fontSize: '8px' }}
                           >
                             {genreTag}
                           </span>

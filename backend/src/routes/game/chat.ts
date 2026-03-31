@@ -7,6 +7,7 @@ import { buildPrompt, buildMemoryPrompt } from '../../services/prompt-builder.js
 import { applySlidingWindow, prepareContents } from '../../services/session-manager.js';
 import { buildMemoryFromRows } from '../../services/memory-handler.js';
 import { verifySessionAccess } from '../../plugins/auth.js';
+import { resolveModelId } from '../../lib/config-helpers.js';
 
 export default async function (app: FastifyInstance) {
   app.post('/api/game/chat', {
@@ -70,7 +71,7 @@ export default async function (app: FastifyInstance) {
     const windowMessages = applySlidingWindow(allMessages, windowSize);
     const contents = prepareContents(windowMessages);
 
-    const modelName = session.model || 'gemini-2.0-flash';
+    const modelName = resolveModelId(config, session.model);
     const hasMemory = (memoryResult.data?.length ?? 0) > 0;
 
     return reply.send({

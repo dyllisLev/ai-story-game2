@@ -1,6 +1,7 @@
 // backend/src/routes/sessions/crud.ts
 import type { FastifyInstance } from 'fastify';
 import { requireAuth, verifySessionAccess } from '../../plugins/auth.js';
+import { getDefaultModelId } from '../../lib/config-helpers.js';
 
 // PUT에서 변경 가능한 필드만 허용 (권한 상승 방지)
 const ALLOWED_UPDATE_FIELDS = ['title', 'preset', 'last_played_at'];
@@ -15,13 +16,16 @@ export default async function (app: FastifyInstance) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'story_id를 입력해주세요' } });
     }
 
+    const config = await app.getAppConfig();
+    const defaultModel = getDefaultModelId(config.gameplayConfig);
+
     const { data, error } = await app.supabaseAdmin
       .from('sessions')
       .insert({
         id: crypto.randomUUID(),
         story_id: body.story_id,
-        title: body.title || '새 세션',
-        model: body.model || 'gemini-2.0-flash',
+        title: body.title || config.gameplayConfig.default_labels.new_session,
+        model: body.model || defaultModel,
         messages: [],
         preset: {},
         owner_uid: user.id,

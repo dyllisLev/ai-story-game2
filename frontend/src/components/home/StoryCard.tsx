@@ -1,38 +1,9 @@
 import { type FC } from 'react';
 import { Link } from 'react-router';
 import type { StoryListItem } from '@story-game/shared';
-
-// ─── Tag color map ────────────────────────────────────────────────────────────
-
-const TAG_COLORS: Record<string, { bg: string; color: string }> = {
-  무협:   { bg: 'rgba(197,168,74,0.12)',   color: '#e0c870' },
-  판타지: { bg: 'rgba(124,109,240,0.15)', color: '#a99eff' },
-  현대:   { bg: 'rgba(74,184,168,0.12)',   color: '#7ae0d4' },
-  로맨스: { bg: 'rgba(224,90,122,0.12)',   color: '#f0a0b8' },
-  공포:   { bg: 'rgba(180,60,60,0.15)',    color: '#f07070' },
-  SF:     { bg: 'rgba(74,184,168,0.12)',   color: '#7ae0d4' },
-  미스터리:{ bg: 'rgba(160,140,200,0.15)', color: '#c0aee8' },
-  역사:   { bg: 'rgba(197,168,74,0.12)',   color: '#e0c870' },
-  심리:   { bg: 'rgba(224,90,122,0.12)',   color: '#f0a0b8' },
-};
-
-function tagStyle(tag: string): React.CSSProperties {
-  const c = TAG_COLORS[tag] ?? { bg: 'var(--bg-elevated)', color: 'var(--text-secondary)' };
-  return {
-    padding: '2px 8px',
-    borderRadius: 4,
-    fontSize: 11,
-    fontWeight: 500,
-    background: c.bg,
-    color: c.color,
-  };
-}
-
-// ─── Stat icon helpers ────────────────────────────────────────────────────────
-
-function formatCount(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
-}
+import { useConfig } from '@/hooks/useConfig';
+import { tagStyle } from '@/lib/genre';
+import { formatCount } from '@/lib/format';
 
 // ─── StoryCard (grid view) ────────────────────────────────────────────────────
 
@@ -42,6 +13,9 @@ export interface StoryCardProps {
 }
 
 export const StoryCard: FC<StoryCardProps> = ({ story, animationDelay = 0 }) => {
+  const { data: config } = useConfig();
+  const genreConfig = config?.genreConfig ?? { genres: [] };
+
   return (
     <Link
       to={`/play/${story.id}`}
@@ -172,7 +146,7 @@ export const StoryCard: FC<StoryCardProps> = ({ story, animationDelay = 0 }) => 
         {story.tags.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {story.tags.slice(0, 3).map((tag) => (
-              <span key={tag} style={tagStyle(tag)}>
+              <span key={tag} style={tagStyle(tag, genreConfig)}>
                 {tag}
               </span>
             ))}
