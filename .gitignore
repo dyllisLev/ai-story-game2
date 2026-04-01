@@ -42,3 +42,8 @@ AI-*.md
 
 # Temporary scripts (kept for reference but not tracked in git)
 backend/scripts/*.ts
+backend/scripts/*.md
+backend/scripts/*.mjs
+backend/update-prompts.mjs
+backend/MANUAL_SETUP.md
+HEARTBEAT.md
