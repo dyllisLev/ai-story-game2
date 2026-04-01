@@ -1,4 +1,5 @@
 import type { Page, Locator } from '@playwright/test';
+import { e2eConfig } from '../config';
 
 export class AdminPage {
   readonly page: Page;
@@ -70,7 +71,7 @@ export class AdminPage {
   }
 
   async goto() {
-    await this.page.goto('/admin');
+    await this.page.goto(e2eConfig.baseURL + '/admin');
     await this.page.waitForLoadState('networkidle');
   }
 

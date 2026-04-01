@@ -4,7 +4,7 @@ import { verifySessionAccess } from '../../plugins/auth.js';
 import type { SessionMemory } from '@story-game/shared';
 
 export default async function (app: FastifyInstance) {
-  app.get<{ Params: { id: string } }>('/api/sessions/:id/memory', async (request) => {
+  app.get<{ Params: { id: string } }>('/sessions/:id/memory', async (request) => {
     const { id } = request.params;
     await verifySessionAccess(app, request, id);
 

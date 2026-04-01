@@ -1,4 +1,4 @@
-// backend/src/routes/stories/list.ts
+// backend/src/routes/stories/mine.ts
 import type { FastifyInstance } from 'fastify';
 import type {
   StoryFilterParams,
@@ -6,11 +6,12 @@ import type {
   StoryListItem,
 } from '@story-game/shared';
 import { buildPaginatedResponse } from '../../lib/pagination.js';
-import { STORIES_SAFE_VIEW_FIELDS_STR } from '../../lib/story-constants.js';
+import { requireAuth } from '../../plugins/auth.js';
+import { STORIES_TABLE_FIELDS_STR } from '../../lib/story-constants.js';
 import { sanitizeLikePattern } from '../../lib/sanitization.js';
 
-export default async function storiesListRoute(app: FastifyInstance) {
-  app.get('/stories', {
+export default async function storiesMineRoute(app: FastifyInstance) {
+  app.get('/stories/mine', {
     schema: {
       querystring: {
         type: 'object',
@@ -25,6 +26,7 @@ export default async function storiesListRoute(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
+    const user = requireAuth(request);
     const query = request.query as StoryFilterParams;
     const {
       genre,
@@ -39,10 +41,11 @@ export default async function storiesListRoute(app: FastifyInstance) {
     const limitNum = Math.min(Number(limit), 100);
     const offset = (pageNum - 1) * limitNum;
 
-    // Use stories_safe view: RLS pre-filtered + has_password computed field
+    // Query stories table for user's own stories
     let q = app.supabaseAdmin
-      .from('stories_safe')
-      .select(STORIES_SAFE_VIEW_FIELDS_STR, { count: 'exact' });
+      .from('stories')
+      .select(STORIES_TABLE_FIELDS_STR, { count: 'exact' })
+      .eq('owner_uid', user.id);
 
     if (genre) {
       q = q.contains('tags', [genre]);
@@ -67,9 +70,9 @@ export default async function storiesListRoute(app: FastifyInstance) {
 
     const { data, count, error } = await q;
     if (error) {
-      app.log.error(error, 'storiesListRoute: supabase query failed');
+      app.log.error(error, 'storiesMineRoute: supabase query failed');
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: '스토리 목록을 불러오는데 실패했습니다' },
+        error: { code: 'INTERNAL_ERROR', message: '내 스토리 목록을 불러오는데 실패했습니다' },
       });
     }
 

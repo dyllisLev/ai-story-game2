@@ -68,6 +68,41 @@ export function requireAdmin(request: FastifyRequest): AuthUser {
 }
 
 /**
+ * Requires HTTP Basic Authentication for admin routes.
+ * This provides an additional security layer for admin access.
+ */
+export function requireAdminBasicAuth(request: FastifyRequest): void {
+  const authHeader = request.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Basic Authentication required' };
+  }
+
+  // Decode Basic Auth credentials
+  const base64Credentials = authHeader.slice(6);
+  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
+  const [username, password] = credentials.split(':');
+
+  const adminUsername = request.server.config.ADMIN_BASIC_AUTH_USERNAME;
+  const adminPassword = request.server.config.ADMIN_BASIC_AUTH_PASSWORD;
+
+  if (!username || !password || username !== adminUsername || password !== adminPassword) {
+    throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Invalid admin credentials' };
+  }
+}
+
+/**
+ * Requires both Basic Authentication AND JWT admin role.
+ * This provides dual-layer security for sensitive admin operations.
+ */
+export function requireAdminWithBasicAuth(request: FastifyRequest): AuthUser {
+  // First check Basic Auth
+  requireAdminBasicAuth(request);
+  // Then check JWT admin role
+  return requireAdmin(request);
+}
+
+/**
  * Verifies that the authenticated user owns a resource (or is admin).
  */
 export async function verifyResourceOwner(

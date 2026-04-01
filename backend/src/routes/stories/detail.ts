@@ -6,8 +6,8 @@ import type { Story } from '@story-game/shared';
 import { STORY_FIELDS } from './constants.js';
 
 export default async function storiesDetailRoute(app: FastifyInstance) {
-  // GET /api/stories/:id
-  app.get('/api/stories/:id', async (request, reply) => {
+  // GET /stories/:id
+  app.get('/stories/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
 
     // Query from stories table with full STORY_FIELDS + password_hash to
@@ -37,8 +37,8 @@ export default async function storiesDetailRoute(app: FastifyInstance) {
     });
   });
 
-  // POST /api/stories/:id/verify — verify story password
-  app.post('/api/stories/:id/verify', async (request, reply) => {
+  // POST /stories/:id/verify — verify story password
+  app.post('/stories/:id/verify', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { password } = request.body as { password: string };
 

@@ -3,8 +3,29 @@ import type { FastifyInstance } from 'fastify';
 import { requireAdmin } from '../plugins/auth.js';
 
 export default async function configRoutes(app: FastifyInstance) {
-  // GET /api/config — 공개
-  app.get('/api/config', async (request, reply) => {
+  // GET /config/public — public config (genre list, models, input modes)
+  app.get('/config/public', async (_request, reply) => {
+    try {
+      const config = await app.getAppConfig();
+      // Return only non-sensitive configuration
+      return {
+        genreConfig: config.genreConfig,
+        gameplayConfig: {
+          availableModels: config.gameplayConfig.availableModels,
+          input_modes: config.gameplayConfig.input_modes,
+          default_suggestions: config.gameplayConfig.default_suggestions,
+        },
+      };
+    } catch (err) {
+      app.log.error(err, 'Failed to load public config');
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: '설정을 불러올 수 없습니다' } });
+    }
+  });
+
+  // GET /config — 관리자만
+  app.get('/config', async (request, reply) => {
+    requireAdmin(request);
+
     try {
       const config = await app.getAppConfig();
       return config;
@@ -14,8 +35,8 @@ export default async function configRoutes(app: FastifyInstance) {
     }
   });
 
-  // PUT /api/config — 관리자만
-  app.put('/api/config', async (request, reply) => {
+  // PUT /config — 관리자만
+  app.put('/config', async (request, reply) => {
     requireAdmin(request);
 
     const body = request.body as { promptConfig?: unknown; gameplayConfig?: unknown };

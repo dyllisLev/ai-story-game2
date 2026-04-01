@@ -33,7 +33,7 @@ function AppRoutes() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/play/:storyId?" element={<Play />} />
       <Route path="/editor/:storyId?" element={<Editor />} />
-      <Route path="/admin/*" element={<Admin />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/settings/apikey" element={<ApiKeySettings />} />
     </Routes>

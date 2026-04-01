@@ -2,7 +2,7 @@
 // GET /api/admin/dashboard — aggregate stats for admin overview
 import type { FastifyInstance } from 'fastify';
 import type { ApiLog } from '@story-game/shared';
-import { requireAdmin } from '../../plugins/auth.js';
+import { requireAdminWithBasicAuth } from '../../plugins/auth.js';
 
 interface DashboardResponse {
   stories: {
@@ -26,8 +26,8 @@ interface DashboardResponse {
 }
 
 export default async function adminDashboardRoute(app: FastifyInstance) {
-  app.get('/api/admin/dashboard', async (request, reply) => {
-    requireAdmin(request);
+  app.get('/admin/dashboard', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
 
     const now = new Date();
     const todayStart = new Date(

@@ -58,11 +58,11 @@ export const ServiceLogs: FC = () => {
             onChange={e => updateFilters({ path: e.target.value })}
           >
             <option value="">모든 경로</option>
-            <option value="/api/config">/api/config</option>
-            <option value="/api/game/start">/api/game/start</option>
-            <option value="/api/game/chat">/api/game/chat</option>
-            <option value="/api/memory">/api/memory</option>
-            <option value="/api/stories">/api/stories</option>
+            <option value="/api/v1/config">/api/v1/config</option>
+            <option value="/api/v1/game/start">/api/v1/game/start</option>
+            <option value="/api/v1/game/chat">/api/v1/game/chat</option>
+            <option value="/api/v1/sessions">/api/v1/sessions</option>
+            <option value="/api/v1/stories">/api/v1/stories</option>
           </select>
 
           <select

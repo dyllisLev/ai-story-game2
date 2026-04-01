@@ -3,13 +3,13 @@
 // PUT    /api/admin/users/:id/role — 유저 role 변경
 // DELETE /api/admin/users/:id      — 유저 삭제
 import type { FastifyInstance } from 'fastify';
-import { requireAdmin } from '../../plugins/auth.js';
+import { requireAdmin, requireAdminWithBasicAuth } from '../../plugins/auth.js';
 
 export default async function adminUsersRoutes(app: FastifyInstance) {
-  // GET /api/admin/users
+  // GET /admin/users
   app.get<{
     Querystring: { role?: string; page?: string; limit?: string; search?: string };
-  }>('/api/admin/users', async (request, reply) => {
+  }>('/admin/users', async (request, reply) => {
     requireAdmin(request);
 
     const role = request.query.role;
@@ -62,12 +62,12 @@ export default async function adminUsersRoutes(app: FastifyInstance) {
     });
   });
 
-  // PUT /api/admin/users/:id/role
+  // PUT /admin/users/:id/role
   app.put<{
     Params: { id: string };
     Body: { role: string };
-  }>('/api/admin/users/:id/role', async (request, reply) => {
-    requireAdmin(request);
+  }>('/admin/users/:id/role', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
 
     const { id } = request.params;
     const { role } = request.body;
@@ -101,9 +101,9 @@ export default async function adminUsersRoutes(app: FastifyInstance) {
     return reply.send(data);
   });
 
-  // DELETE /api/admin/users/:id
-  app.delete<{ Params: { id: string } }>('/api/admin/users/:id', async (request, reply) => {
-    requireAdmin(request);
+  // DELETE /admin/users/:id
+  app.delete<{ Params: { id: string } }>('/admin/users/:id', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
 
     const { id } = request.params;
 

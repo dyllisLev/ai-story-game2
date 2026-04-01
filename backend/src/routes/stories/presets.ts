@@ -1,16 +1,16 @@
 // backend/src/routes/stories/presets.ts
-// GET    /api/presets          — list all presets (public)
-// POST   /api/presets          — create preset (admin)
-// PUT    /api/presets/:id      — update preset (admin)
-// DELETE /api/presets/:id      — delete preset (admin)
-// GET    /api/status-presets   — list status presets (public, for editor)
+// GET    /presets          — list all presets (public)
+// POST   /presets          — create preset (admin)
+// PUT    /presets/:id      — update preset (admin)
+// DELETE /presets/:id      — delete preset (admin)
+// GET    /status-presets   — list status presets (public, for editor)
 import type { FastifyInstance } from 'fastify';
 import type { PresetCreateInput, PresetUpdateInput } from '@story-game/shared';
 import { requireAdmin } from '../../plugins/auth.js';
 
 export default async function presetsRoute(app: FastifyInstance) {
-  // GET /api/presets — public list with status_preset JOIN
-  app.get('/api/presets', async (_request, reply) => {
+  // GET /presets — public list with status_preset JOIN
+  app.get('/presets', async (_request, reply) => {
     const { data, error } = await app.supabaseAdmin
       .from('presets')
       .select('*, status_preset:status_presets(id, title, genre)')
@@ -26,8 +26,8 @@ export default async function presetsRoute(app: FastifyInstance) {
     return reply.send(data ?? []);
   });
 
-  // GET /api/status-presets — public list for editor dropdown
-  app.get('/api/status-presets', async (_request, reply) => {
+  // GET /status-presets — public list for editor dropdown
+  app.get('/status-presets', async (_request, reply) => {
     const { data, error } = await app.supabaseAdmin
       .from('status_presets')
       .select('*')
@@ -43,8 +43,8 @@ export default async function presetsRoute(app: FastifyInstance) {
     return reply.send(data ?? []);
   });
 
-  // POST /api/presets — create (admin only)
-  app.post('/api/presets', async (request, reply) => {
+  // POST /presets — create (admin only)
+  app.post('/presets', async (request, reply) => {
     requireAdmin(request);
     const body = request.body as PresetCreateInput;
 
@@ -70,8 +70,8 @@ export default async function presetsRoute(app: FastifyInstance) {
     return reply.status(201).send(data);
   });
 
-  // PUT /api/presets/:id — update (admin only)
-  app.put('/api/presets/:id', async (request, reply) => {
+  // PUT /presets/:id — update (admin only)
+  app.put('/presets/:id', async (request, reply) => {
     requireAdmin(request);
     const { id } = request.params as { id: string };
     const body = request.body as PresetUpdateInput;
@@ -98,8 +98,8 @@ export default async function presetsRoute(app: FastifyInstance) {
     return reply.send(data);
   });
 
-  // DELETE /api/presets/:id — delete (admin only)
-  app.delete('/api/presets/:id', async (request, reply) => {
+  // DELETE /presets/:id — delete (admin only)
+  app.delete('/presets/:id', async (request, reply) => {
     requireAdmin(request);
     const { id } = request.params as { id: string };
 

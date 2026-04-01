@@ -20,8 +20,15 @@ const Signup: FC = () => {
       setError('비밀번호가 일치하지 않습니다');
       return;
     }
-    if (password.length < 6) {
-      setError('비밀번호는 6자 이상이어야 합니다');
+
+    // Supabase Auth password requirements: 8+ chars, uppercase, lowercase, number
+    const passwordRegex = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+    if (password.length < 8) {
+      setError('비밀번호는 8자 이상이어야 합니다');
+      return;
+    }
+    if (!passwordRegex.test(password)) {
+      setError('비밀번호는 대문자, 소문자, 숫자를 모두 포함해야 합니다');
       return;
     }
 
@@ -107,9 +114,8 @@ const Signup: FC = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="6자 이상"
+              placeholder="8자 이상, 대문자/소문자/숫자 포함"
               required
-              minLength={6}
               style={styles.input}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = 'var(--accent)';
@@ -131,7 +137,6 @@ const Signup: FC = () => {
               onChange={(e) => setPasswordConfirm(e.target.value)}
               placeholder="비밀번호를 다시 입력하세요"
               required
-              minLength={6}
               style={styles.input}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = 'var(--accent)';

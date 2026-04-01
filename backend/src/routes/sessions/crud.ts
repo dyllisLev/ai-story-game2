@@ -7,9 +7,11 @@ import { getDefaultModelId } from '../../lib/config-helpers.js';
 const ALLOWED_UPDATE_FIELDS = ['title', 'preset', 'last_played_at'];
 
 export default async function (app: FastifyInstance) {
-  // POST /api/sessions — 빈 세션 생성 (game/start를 사용하지 않는 경우)
-  app.post('/api/sessions', async (request, reply) => {
-    const user = requireAuth(request);
+  // POST /sessions — 빈 세션 생성 (game/start를 사용하지 않는 경우)
+  // Will be prefixed with /api/v1
+  app.post('/sessions', async (request, reply) => {
+    // Authentication optional for anonymous sessions
+    const user = request.user; // Can be null for anonymous sessions
     const body = request.body as { story_id: string; title?: string; model?: string };
 
     if (!body.story_id) {
@@ -28,7 +30,7 @@ export default async function (app: FastifyInstance) {
         model: body.model || defaultModel,
         messages: [],
         preset: {},
-        owner_uid: user.id,
+        owner_uid: user?.id || null, // Allow null for anonymous sessions
       })
       .select('id, session_token')
       .single();
@@ -37,7 +39,7 @@ export default async function (app: FastifyInstance) {
     return reply.status(201).send({ id: data.id, sessionToken: data.session_token });
   });
 
-  app.put<{ Params: { id: string } }>('/api/sessions/:id', async (request, reply) => {
+  app.put<{ Params: { id: string } }>('/sessions/:id', async (request, reply) => {
     const { id } = request.params;
     await verifySessionAccess(app, request, id);
 
@@ -61,7 +63,7 @@ export default async function (app: FastifyInstance) {
     return { ok: true };
   });
 
-  app.delete<{ Params: { id: string } }>('/api/sessions/:id', async (request, reply) => {
+  app.delete<{ Params: { id: string } }>('/sessions/:id', async (request, reply) => {
     const { id } = request.params;
     await verifySessionAccess(app, request, id);
 

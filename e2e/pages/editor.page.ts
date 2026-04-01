@@ -1,4 +1,5 @@
 import type { Page, Locator } from '@playwright/test';
+import { e2eConfig } from '../config';
 
 export class EditorPage {
   readonly page: Page;
@@ -151,7 +152,7 @@ export class EditorPage {
 
   async goto(storyId?: string) {
     const path = storyId ? `/editor/${storyId}` : '/editor';
-    await this.page.goto(path);
+    await this.page.goto(e2eConfig.baseURL + path);
     await this.page.waitForLoadState('networkidle');
   }
 

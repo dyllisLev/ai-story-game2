@@ -10,7 +10,7 @@ import { verifySessionAccess } from '../../plugins/auth.js';
 import { resolveModelId } from '../../lib/config-helpers.js';
 
 export default async function (app: FastifyInstance) {
-  app.post('/api/game/chat', {
+  app.post('/game/chat', {
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const body = request.body as GameChatRequest;

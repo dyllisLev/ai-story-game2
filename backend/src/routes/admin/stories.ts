@@ -3,13 +3,13 @@
 // PUT /api/admin/stories/:id/featured     — toggle featured flag
 import type { FastifyInstance } from 'fastify';
 import type { AdminStoryFilterParams, PaginatedResponse, Story } from '@story-game/shared';
-import { requireAdmin } from '../../plugins/auth.js';
+import { requireAdminWithBasicAuth } from '../../plugins/auth.js';
 import { STORY_FIELDS } from '../stories/constants.js';
 import { buildPaginatedResponse } from '../../lib/pagination.js';
 
 export default async function adminStoriesRoute(app: FastifyInstance) {
   // GET /api/admin/stories
-  app.get('/api/admin/stories', {
+  app.get('/admin/stories', {
     schema: {
       querystring: {
         type: 'object',
@@ -25,7 +25,7 @@ export default async function adminStoriesRoute(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    requireAdmin(request);
+    requireAdminWithBasicAuth(request);
 
     const q = request.query as AdminStoryFilterParams;
     const {
@@ -82,8 +82,8 @@ export default async function adminStoriesRoute(app: FastifyInstance) {
   });
 
   // PUT /api/admin/stories/:id/featured — toggle featured flag
-  app.put('/api/admin/stories/:id/featured', async (request, reply) => {
-    requireAdmin(request);
+  app.put('/admin/stories/:id/featured', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
     const { id } = request.params as { id: string };
     const { featured } = request.body as { featured: boolean };
 
@@ -113,5 +113,30 @@ export default async function adminStoriesRoute(app: FastifyInstance) {
     }
 
     return reply.send(data);
+  });
+
+  // DELETE /api/admin/stories/:id — admin force-delete any story
+  app.delete('/admin/stories/:id', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
+    const { id } = request.params as { id: string };
+
+    const { error } = await app.supabaseAdmin
+      .from('stories')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return reply.status(404).send({
+          error: { code: 'NOT_FOUND', message: '스토리를 찾을 수 없습니다' },
+        });
+      }
+      app.log.error(error, 'adminStoriesRoute DELETE: failed');
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: '스토리 삭제에 실패했습니다' },
+      });
+    }
+
+    return reply.status(204).send();
   });
 }

@@ -4,6 +4,7 @@ import type { SessionMessage, SessionMemory } from '@story-game/shared';
 import { buildPrompt, buildMemoryPrompt } from '../../services/prompt-builder.js';
 import { logGeminiCall } from '../../services/gemini.js';
 import { applySlidingWindow, prepareContents } from '../../services/session-manager.js';
+import { requireAuth } from '../../plugins/auth.js';
 
 interface TestPromptRequest {
   editorData: {
@@ -29,9 +30,10 @@ interface TestPromptRequest {
 }
 
 export default async function (app: FastifyInstance) {
-  app.post('/api/game/test-prompt', {
+  app.post('/game/test-prompt', {
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
   }, async (request, reply) => {
+    requireAuth(request); // Auth required for prompt preview
     const body = request.body as TestPromptRequest;
 
     if (!body.editorData || !body.preset) {

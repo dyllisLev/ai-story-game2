@@ -9,11 +9,11 @@ import type {
   StatusPresetCreateInput,
   StatusPresetUpdateInput,
 } from '@story-game/shared';
-import { requireAdmin } from '../../plugins/auth.js';
+import { requireAdmin, requireAdminWithBasicAuth } from '../../plugins/auth.js';
 
 export default async function adminStatusPresetsRoute(app: FastifyInstance) {
   // GET /api/admin/status-presets
-  app.get('/api/admin/status-presets', async (request, reply) => {
+  app.get('/admin/status-presets', async (request, reply) => {
     requireAdmin(request);
 
     const { data, error } = await app.supabaseAdmin
@@ -32,8 +32,8 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
   });
 
   // POST /api/admin/status-presets
-  app.post('/api/admin/status-presets', async (request, reply) => {
-    requireAdmin(request);
+  app.post('/admin/status-presets', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
     const body = request.body as StatusPresetCreateInput;
 
     if (!body.title) {
@@ -63,8 +63,8 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
   });
 
   // PUT /api/admin/status-presets/:id
-  app.put('/api/admin/status-presets/:id', async (request, reply) => {
-    requireAdmin(request);
+  app.put('/admin/status-presets/:id', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
     const { id } = request.params as { id: string };
     const body = request.body as StatusPresetUpdateInput;
 
@@ -91,8 +91,8 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
   });
 
   // DELETE /api/admin/status-presets/:id
-  app.delete('/api/admin/status-presets/:id', async (request, reply) => {
-    requireAdmin(request);
+  app.delete('/admin/status-presets/:id', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
     const { id } = request.params as { id: string };
 
     const { error } = await app.supabaseAdmin

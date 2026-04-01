@@ -21,6 +21,7 @@ import type { SessionMemory } from '@story-game/shared';
 import type { SettingsData, StatusAttribute, InputMode } from '@/types/play';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 
 // ---- Theme ----
 type Theme = 'dark' | 'light';
@@ -121,9 +122,7 @@ const Play: FC = () => {
   // --- Load story data ---
   const loadStoryData = useCallback(async (storyId: string) => {
     try {
-      const res = await fetch(`/api/stories/${storyId}`);
-      if (!res.ok) return;
-      const data = await res.json() as {
+      const data = await api.get<{
         title?: string;
         world_setting?: string;
         story?: string;
@@ -138,7 +137,7 @@ const Play: FC = () => {
           useStatusWindow?: boolean;
           statusAttributes?: StatusAttribute[];
         };
-      };
+      }>(`/stories/${storyId}`);
       engine.updateSettingsData({
         title: data.title ?? '',
         worldSetting: data.world_setting ?? '',

@@ -7,7 +7,7 @@ import { buildPrompt } from '../../services/prompt-builder.js';
 import { resolveApiKey } from './utils.js';
 
 export default async function (app: FastifyInstance) {
-  app.post('/api/game/start', {
+  app.post('/game/start', {
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const body = request.body as GameStartRequest;

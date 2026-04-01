@@ -1,24 +1,24 @@
 // backend/src/routes/me.ts
-// GET    /api/me           — get own profile
-// PUT    /api/me           — update nickname
-// GET    /api/me/apikey    — get masked API key
-// PUT    /api/me/apikey    — save encrypted API key
-// DELETE /api/me/apikey    — remove API key
+// GET    /me           — get own profile
+// PUT    /me           — update nickname
+// GET    /me/apikey    — get masked API key
+// PUT    /me/apikey    — save encrypted API key
+// DELETE /me/apikey    — remove API key
 import type { FastifyInstance } from 'fastify';
 import type { UserProfile } from '@story-game/shared';
 import { requireLogin } from '../plugins/auth.js';
 import { encrypt, decrypt } from '../services/crypto.js';
 
 export default async function meRoutes(app: FastifyInstance) {
-  // GET /api/me
-  app.get('/api/me', async (request, reply) => {
+  // GET /me
+  app.get('/me', async (request, reply) => {
     const user = requireLogin(request);
 
     const { data: profile, error } = await app.supabaseAdmin
       .from('user_profiles')
-      .select('id, nickname, avatar_url, api_key_enc, role, created_at')
+      .select('id, nickname, api_key_enc, role, created_at')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (error || !profile) {
       return reply.status(404).send({
@@ -30,7 +30,7 @@ export default async function meRoutes(app: FastifyInstance) {
       id: profile.id,
       email: user.email,
       nickname: profile.nickname ?? null,
-      avatar_url: profile.avatar_url ?? null,
+      avatar_url: null, // TODO: add avatar_url column to user_profiles
       has_api_key: profile.api_key_enc != null,
       role: profile.role ?? 'pending',
       created_at: profile.created_at,
@@ -39,8 +39,8 @@ export default async function meRoutes(app: FastifyInstance) {
     return reply.send(response);
   });
 
-  // PUT /api/me — update nickname
-  app.put('/api/me', async (request, reply) => {
+  // PUT /me — update nickname
+  app.put('/me', async (request, reply) => {
     const user = requireLogin(request);
     const { nickname } = request.body as { nickname: string };
 
@@ -75,8 +75,8 @@ export default async function meRoutes(app: FastifyInstance) {
     return reply.send(response);
   });
 
-  // GET /api/me/apikey — masked API key
-  app.get('/api/me/apikey', async (request, reply) => {
+  // GET /me/apikey — masked API key
+  app.get('/me/apikey', async (request, reply) => {
     const user = requireLogin(request);
     const encryptionKey = app.config.API_KEY_ENCRYPTION_SECRET;
 
@@ -105,8 +105,8 @@ export default async function meRoutes(app: FastifyInstance) {
     }
   });
 
-  // PUT /api/me/apikey — save encrypted API key
-  app.put('/api/me/apikey', async (request, reply) => {
+  // PUT /me/apikey — save encrypted API key
+  app.put('/me/apikey', { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } }, async (request, reply) => {
     const user = requireLogin(request);
     const { apiKey } = request.body as { apiKey: string };
     const encryptionKey = app.config.API_KEY_ENCRYPTION_SECRET;
@@ -142,8 +142,8 @@ export default async function meRoutes(app: FastifyInstance) {
     return reply.send({ has_api_key: true });
   });
 
-  // DELETE /api/me/apikey — remove API key
-  app.delete('/api/me/apikey', async (request, reply) => {
+  // DELETE /me/apikey — remove API key
+  app.delete('/me/apikey', async (request, reply) => {
     const user = requireLogin(request);
 
     const { error } = await app.supabaseAdmin

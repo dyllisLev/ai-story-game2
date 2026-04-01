@@ -10,13 +10,13 @@ import type {
   ApiLogStats,
   PaginatedResponse,
 } from '@story-game/shared';
-import { requireAdmin } from '../../plugins/auth.js';
+import { requireAdminWithBasicAuth } from '../../plugins/auth.js';
 import { buildPaginatedResponse } from '../../lib/pagination.js';
 
 export default async function adminApiLogsRoute(app: FastifyInstance) {
   // GET /api/admin/api-logs/stats — must come before /:id route
-  app.get('/api/admin/api-logs/stats', async (request, reply) => {
-    requireAdmin(request);
+  app.get('/admin/api-logs/stats', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
 
     const now = new Date();
     const todayStart = new Date(
@@ -60,7 +60,7 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
   });
 
   // GET /api/admin/api-logs — paginated list
-  app.get('/api/admin/api-logs', {
+  app.get('/admin/api-logs', {
     schema: {
       querystring: {
         type: 'object',
@@ -76,7 +76,7 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    requireAdmin(request);
+    requireAdminWithBasicAuth(request);
 
     const f = request.query as ApiLogFilter;
     const pageNum = Number(f.page ?? 1);
@@ -120,8 +120,8 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
   });
 
   // GET /api/admin/api-logs/:id — full detail (includes prompts, messages, response)
-  app.get('/api/admin/api-logs/:id', async (request, reply) => {
-    requireAdmin(request);
+  app.get('/admin/api-logs/:id', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
     const { id } = request.params as { id: string };
 
     const { data, error } = await app.supabaseAdmin
@@ -140,8 +140,8 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
   });
 
   // DELETE /api/admin/api-logs — delete all (danger zone)
-  app.delete('/api/admin/api-logs', async (request, reply) => {
-    requireAdmin(request);
+  app.delete('/admin/api-logs', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
 
     const { error } = await app.supabaseAdmin
       .from('api_logs')

@@ -1,12 +1,13 @@
 // backend/src/routes/sessions/list.ts
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../plugins/auth.js';
+import { handleSupabaseError, ErrorHelpers } from '../../services/error-handler.js';
 
 export default async function (app: FastifyInstance) {
-  app.get('/api/sessions', async (request) => {
+  app.get('/sessions', async (request, reply) => {
     const user = requireAuth(request);
 
-    const { data } = await app.supabaseAdmin
+    const { data, error } = await app.supabaseAdmin
       .from('sessions')
       // Select only the fields needed for the list view.
       // Use the DB-maintained turn_count instead of fetching the full messages array.
@@ -15,6 +16,10 @@ export default async function (app: FastifyInstance) {
       .order('last_played_at', { ascending: false })
       .limit(50);
 
-    return data || [];
+    if (error) {
+      return handleSupabaseError(app, reply, 'GET /api/sessions', error, '세션 목록을 가져오는데 실패했습니다');
+    }
+
+    return reply.send(data || []);
   });
 }

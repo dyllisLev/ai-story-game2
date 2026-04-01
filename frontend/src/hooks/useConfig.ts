@@ -10,7 +10,7 @@ const STALE_TIME = 5 * 60 * 1000; // 5 minutes
 export function useConfig() {
   return useQuery<AppConfig>({
     queryKey: ['config'],
-    queryFn: () => api.get<AppConfig>('/config'),
+    queryFn: () => api.get<AppConfig>('/config/public'),
     staleTime: STALE_TIME,
     retry: 1,
   });

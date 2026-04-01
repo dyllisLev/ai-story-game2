@@ -9,12 +9,12 @@ import type {
   ServiceLogStats,
   PaginatedResponse,
 } from '@story-game/shared';
-import { requireAdmin } from '../../plugins/auth.js';
+import { requireAdmin, requireAdminWithBasicAuth } from '../../plugins/auth.js';
 import { buildPaginatedResponse } from '../../lib/pagination.js';
 
 export default async function adminServiceLogsRoute(app: FastifyInstance) {
   // GET /api/admin/service-logs/stats — must come before :id-style routes
-  app.get('/api/admin/service-logs/stats', async (request, reply) => {
+  app.get('/admin/service-logs/stats', async (request, reply) => {
     requireAdmin(request);
 
     const now = new Date();
@@ -87,7 +87,7 @@ export default async function adminServiceLogsRoute(app: FastifyInstance) {
   });
 
   // GET /api/admin/service-logs — paginated list
-  app.get('/api/admin/service-logs', {
+  app.get('/admin/service-logs', {
     schema: {
       querystring: {
         type: 'object',
@@ -142,8 +142,8 @@ export default async function adminServiceLogsRoute(app: FastifyInstance) {
   });
 
   // DELETE /api/admin/service-logs — delete all (danger zone)
-  app.delete('/api/admin/service-logs', async (request, reply) => {
-    requireAdmin(request);
+  app.delete('/admin/service-logs', async (request, reply) => {
+    requireAdminWithBasicAuth(request);
 
     // Delete all rows — Supabase requires a filter; use gte on a timestamp
     const { error } = await app.supabaseAdmin

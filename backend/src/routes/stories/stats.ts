@@ -1,10 +1,11 @@
 // backend/src/routes/stories/stats.ts
-// GET /api/stories/stats — aggregate stats (total stories, plays, authors)
+// GET /stories/stats — aggregate stats (total stories, plays, authors)
+// Will be prefixed with /api/v1
 import type { FastifyInstance } from 'fastify';
 import type { StoryStats } from '@story-game/shared';
 
 export default async function storiesStatsRoute(app: FastifyInstance) {
-  app.get('/api/stories/stats', async (_request, reply) => {
+  app.get('/stories/stats', async (_request, reply) => {
     try {
       // Count total stories (ai_story_game schema has no is_public column — all rows are public)
       const { count: total_stories, error: countErr } = await app.supabaseAdmin

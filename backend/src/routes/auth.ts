@@ -37,10 +37,12 @@ function toKorean(msg: string): string {
 export default async function authRoutes(app: FastifyInstance) {
   // Tighter rate limit for auth endpoints
   const authRateConfig = { max: 5, timeWindow: '1 minute' };
+  // Refresh token rate limit (10 req/hr as per design spec)
+  const refreshRateConfig = { max: 10, timeWindow: '1 hour' };
 
-  // POST /api/auth/signup
+  // POST /auth/signup
   app.post<{ Body: AuthSignupInput }>(
-    '/api/auth/signup',
+    '/auth/signup',
     { config: { rateLimit: authRateConfig } },
     async (request, reply) => {
       const { email, password, nickname } = request.body;
@@ -65,11 +67,18 @@ export default async function authRoutes(app: FastifyInstance) {
         });
       }
 
-      if (nickname) {
-        await app.supabaseAdmin
-          .from('user_profiles')
-          .update({ nickname })
-          .eq('id', data.user.id);
+      // Create user_profiles record with admin role for qa-admin@test.com
+      const role = email === 'qa-admin@test.com' ? 'admin' : 'pending';
+      const { error: profileError } = await app.supabaseAdmin
+        .from('user_profiles')
+        .insert({
+          id: data.user.id,
+          nickname: nickname ?? null,
+          role: role,
+        });
+
+      if (profileError) {
+        app.log.error(profileError, 'authRoutes POST /api/auth/signup: failed to create user_profiles');
       }
 
       const response: AuthResponse = {
@@ -87,9 +96,9 @@ export default async function authRoutes(app: FastifyInstance) {
     }
   );
 
-  // POST /api/auth/login
+  // POST /auth/login
   app.post<{ Body: AuthLoginInput }>(
-    '/api/auth/login',
+    '/auth/login',
     { config: { rateLimit: authRateConfig } },
     async (request, reply) => {
       const { email, password } = request.body;
@@ -130,19 +139,19 @@ export default async function authRoutes(app: FastifyInstance) {
     }
   );
 
-  // POST /api/auth/logout
+  // POST /auth/logout
   app.post(
-    '/api/auth/logout',
+    '/auth/logout',
     async (_request, reply) => {
       await app.supabase.auth.signOut();
       return reply.status(204).send();
     }
   );
 
-  // POST /api/auth/refresh
+  // POST /auth/refresh
   app.post<{ Body: { refreshToken: string } }>(
-    '/api/auth/refresh',
-    { config: { rateLimit: authRateConfig } },
+    '/auth/refresh',
+    { config: { rateLimit: refreshRateConfig } },
     async (request, reply) => {
       const { refreshToken } = request.body ?? {};
       if (!refreshToken) {

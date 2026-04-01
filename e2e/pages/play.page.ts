@@ -1,4 +1,5 @@
 import type { Page, Locator } from '@playwright/test';
+import { e2eConfig } from '../config';
 
 export class PlayPage {
   readonly page: Page;
@@ -125,7 +126,7 @@ export class PlayPage {
 
   async goto(storyId?: string) {
     const path = storyId ? `/play/${storyId}` : '/play';
-    await this.page.goto(path);
+    await this.page.goto(e2eConfig.baseURL + path);
     await this.page.waitForLoadState('networkidle');
   }
 

@@ -1,4 +1,5 @@
 import type { Page, Locator } from '@playwright/test';
+import { e2eConfig } from '../config';
 
 export class HomePage {
   readonly page: Page;
@@ -88,7 +89,7 @@ export class HomePage {
   }
 
   async goto() {
-    await this.page.goto('/');
+    await this.page.goto(e2eConfig.baseURL + '/');
     await this.page.waitForLoadState('networkidle');
   }
 
