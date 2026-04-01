@@ -11,6 +11,8 @@ const config = loadConfig();
 declare module 'fastify' {
   interface FastifyInstance {
     config: EnvConfig;
+    redisClient?: import('ioredis').Redis | null;
+    cache: import('./services/cache.js').CacheService;
   }
 }
 
@@ -47,6 +49,69 @@ app.setErrorHandler((error: FastifyError, request, reply) => {
 // CORS
 await app.register(cors, {
   origin: config.NODE_ENV === 'development' ? config.CORS_ORIGIN : false,
+  credentials: true, // Required for cookies
+});
+
+// Cookie support for httpOnly auth cookies
+import cookie from '@fastify/cookie';
+await app.register(cookie, {
+  secret: config.API_KEY_ENCRYPTION_SECRET, // Use existing secret for cookie signing
+});
+
+// Swagger/OpenAPI documentation
+import swagger from '@fastify/swagger';
+import swaggerUI from '@fastify/swagger-ui';
+
+await app.register(swagger, {
+  openapi: {
+    info: {
+      title: 'AI Story Game API',
+      description: 'Interactive AI-powered storytelling platform API',
+      version: '1.0.0',
+      contact: {
+        name: 'API Support',
+        email: 'api@example.com',
+      },
+    },
+    servers: [
+      {
+        url: 'http://localhost:3000',
+        description: 'Development server',
+      },
+      {
+        url: 'https://api.example.com',
+        description: 'Production server',
+      },
+    ],
+    tags: [
+      { name: 'Stories', description: 'Story management endpoints' },
+      { name: 'Sessions', description: 'Game session endpoints' },
+      { name: 'Game', description: 'Gameplay endpoints' },
+      { name: 'Auth', description: 'Authentication endpoints' },
+      { name: 'User', description: 'User profile endpoints' },
+      { name: 'Config', description: 'Configuration endpoints' },
+      { name: 'Admin', description: 'Admin dashboard endpoints' },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+  },
+});
+
+await app.register(swaggerUI, {
+  routePrefix: '/docs',
+  uiConfig: {
+    docExpansion: 'list',
+    deepLinking: false,
+    persistAuthorization: true,
+  },
+  staticCSP: true,
 });
 
 // Rate limiting - Redis-backed with graceful fallback to memory
@@ -67,6 +132,13 @@ await app.register(rateLimit, {
   skipOnError: true, // Don't block requests if Redis fails
 });
 
+// Cache service initialization (for data caching)
+import { initCache } from './services/cache.js';
+const cacheService = initCache(app);
+
+// Decorate app with redis client for cache service
+app.decorate('redisClient', redisClient);
+
 // Supabase 플러그인
 import supabasePlugin from './plugins/supabase.js';
 await app.register(supabasePlugin);
@@ -74,6 +146,10 @@ await app.register(supabasePlugin);
 // Config 캐시 플러그인
 import configCachePlugin from './plugins/config-cache.js';
 await app.register(configCachePlugin);
+
+// Sentry 에러 트래킹 플러그인
+import sentryPlugin from './plugins/sentry.js';
+await app.register(sentryPlugin);
 
 // Auth 플러그인
 import authPlugin from './plugins/auth.js';

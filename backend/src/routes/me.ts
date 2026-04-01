@@ -8,35 +8,53 @@ import type { FastifyInstance } from 'fastify';
 import type { UserProfile } from '@story-game/shared';
 import { requireLogin } from '../plugins/auth.js';
 import { encrypt, decrypt } from '../services/crypto.js';
+import { cachedQuery, CacheTags, CacheTTL } from '../services/cache.js';
 
 export default async function meRoutes(app: FastifyInstance) {
-  // GET /me
+  // GET /me (cached)
   app.get('/me', async (request, reply) => {
     const user = requireLogin(request);
 
-    const { data: profile, error } = await app.supabaseAdmin
-      .from('user_profiles')
-      .select('id, nickname, api_key_enc, role, created_at')
-      .eq('id', user.id)
-      .maybeSingle();
+    try {
+      const profile = await cachedQuery(
+        app.cache,
+        `user:${user.id}`,
+        async () => {
+          const { data, error } = await app.supabaseAdmin
+            .from('user_profiles')
+            .select('id, nickname, api_key_enc, role, created_at')
+            .eq('id', user.id)
+            .maybeSingle();
 
-    if (error || !profile) {
+          if (error || !data) {
+            throw new Error('Profile not found');
+          }
+
+          return data;
+        },
+        {
+          ttl: CacheTTL.MEDIUM, // 1 hour - changes infrequently
+          tags: [CacheTags.USER_PROFILES, CacheTags.USER(user.id)],
+        }
+      );
+
+      const response = {
+        id: profile.id,
+        email: user.email,
+        nickname: profile.nickname ?? null,
+        avatar_url: null, // TODO: add avatar_url column to user_profiles
+        has_api_key: profile.api_key_enc != null,
+        role: profile.role ?? 'pending',
+        created_at: profile.created_at,
+      };
+
+      return reply.send(response);
+    } catch (error) {
+      app.log.error(error, 'GET /me: failed to fetch profile');
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: '프로필을 찾을 수 없습니다' },
       });
     }
-
-    const response = {
-      id: profile.id,
-      email: user.email,
-      nickname: profile.nickname ?? null,
-      avatar_url: null, // TODO: add avatar_url column to user_profiles
-      has_api_key: profile.api_key_enc != null,
-      role: profile.role ?? 'pending',
-      created_at: profile.created_at,
-    };
-
-    return reply.send(response);
   });
 
   // PUT /me — update nickname
@@ -63,6 +81,9 @@ export default async function meRoutes(app: FastifyInstance) {
         error: { code: 'INTERNAL_ERROR', message: '프로필 업데이트에 실패했습니다' },
       });
     }
+
+    // Invalidate user profile cache
+    await app.cache.invalidateByTag(CacheTags.USER(user.id));
 
     const response: UserProfile = {
       id: data.id,

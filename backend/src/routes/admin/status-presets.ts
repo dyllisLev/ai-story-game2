@@ -10,6 +10,7 @@ import type {
   StatusPresetUpdateInput,
 } from '@story-game/shared';
 import { requireAdmin, requireAdminWithBasicAuth } from '../../plugins/auth.js';
+import { CacheTags } from '../../services/cache.js';
 
 export default async function adminStatusPresetsRoute(app: FastifyInstance) {
   // GET /api/admin/status-presets
@@ -59,6 +60,9 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
       });
     }
 
+    // Invalidate cache
+    await app.cache.invalidateByTag(CacheTags.STATUS_PRESETS);
+
     return reply.status(201).send(data as StatusPreset);
   });
 
@@ -87,6 +91,9 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
       });
     }
 
+    // Invalidate cache
+    await app.cache.invalidateByTag(CacheTags.STATUS_PRESETS);
+
     return reply.send(data as StatusPreset);
   });
 
@@ -106,6 +113,9 @@ export default async function adminStatusPresetsRoute(app: FastifyInstance) {
         error: { code: 'INTERNAL_ERROR', message: '상태 프리셋 삭제에 실패했습니다' },
       });
     }
+
+    // Invalidate cache
+    await app.cache.invalidateByTag(CacheTags.STATUS_PRESETS);
 
     return reply.status(204).send();
   });

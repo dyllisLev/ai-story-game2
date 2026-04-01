@@ -1,14 +1,52 @@
 // backend/src/routes/auth.ts
-// POST /api/auth/signup  — create account
-// POST /api/auth/login   — sign in
-// POST /api/auth/logout  — invalidate session (requires auth)
-// POST /api/auth/refresh — exchange refresh token
-import type { FastifyInstance } from 'fastify';
+import type { FastifyReply, FastifyInstance } from 'fastify';
 import type {
   AuthSignupInput,
   AuthLoginInput,
   AuthResponse,
 } from '@story-game/shared';
+import {
+  AUTH_RATE_LIMITS,
+  COOKIE_NAMES,
+  TOKEN_EXPIRATION,
+  extractCookieToken,
+} from '../lib/auth-helpers.js';
+
+/**
+ * Set httpOnly authentication cookies
+ * Access token expires in 1 hour, refresh token in 7 days
+ */
+function setAuthCookies(
+  reply: FastifyReply,
+  accessToken: string,
+  refreshToken: string,
+  isProduction: boolean
+): void {
+  const baseOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'strict' as const,
+    path: '/' as const,
+  };
+
+  reply.setCookie(COOKIE_NAMES.ACCESS_TOKEN, accessToken, {
+    ...baseOptions,
+    maxAge: TOKEN_EXPIRATION.ACCESS,
+  });
+
+  reply.setCookie(COOKIE_NAMES.REFRESH_TOKEN, refreshToken, {
+    ...baseOptions,
+    maxAge: TOKEN_EXPIRATION.REFRESH,
+  });
+}
+
+/**
+ * Clear authentication cookies (logout)
+ */
+function clearAuthCookies(reply: FastifyReply): void {
+  reply.clearCookie(COOKIE_NAMES.ACCESS_TOKEN, { path: '/' });
+  reply.clearCookie(COOKIE_NAMES.REFRESH_TOKEN, { path: '/' });
+}
 
 // Supabase Auth 영문 에러 → 한글 변환
 const ERROR_KO: Record<string, string> = {
@@ -36,14 +74,78 @@ function toKorean(msg: string): string {
 
 export default async function authRoutes(app: FastifyInstance) {
   // Tighter rate limit for auth endpoints
-  const authRateConfig = { max: 5, timeWindow: '1 minute' };
-  // Refresh token rate limit (10 req/hr as per design spec)
-  const refreshRateConfig = { max: 10, timeWindow: '1 hour' };
+  const authRateConfig = {
+    max: AUTH_RATE_LIMITS.SIGNUP_MAX,
+    timeWindow: AUTH_RATE_LIMITS.SIGNUP_WINDOW,
+  };
+  const refreshRateConfig = {
+    max: AUTH_RATE_LIMITS.REFRESH_MAX,
+    timeWindow: AUTH_RATE_LIMITS.REFRESH_WINDOW,
+  };
 
   // POST /auth/signup
   app.post<{ Body: AuthSignupInput }>(
     '/auth/signup',
-    { config: { rateLimit: authRateConfig } },
+    {
+      config: { rateLimit: authRateConfig },
+      schema: {
+        tags: ['Auth'],
+        summary: 'Create a new user account',
+        description: 'Register a new user account with email and password. Returns access and refresh tokens.',
+        body: {
+          type: 'object',
+          required: ['email', 'password'],
+          properties: {
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'User email address',
+            },
+            password: {
+              type: 'string',
+              minLength: 6,
+              description: 'User password (minimum 6 characters)',
+            },
+            nickname: {
+              type: 'string',
+              description: 'Optional display name',
+              minLength: 1,
+              maxLength: 50,
+            },
+          },
+        },
+        response: {
+          201: {
+            description: 'Account created successfully. Tokens are set as httpOnly cookies.',
+            type: 'object',
+            properties: {
+              user: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  email: { type: 'string' },
+                  nickname: { type: ['string', 'null'] },
+                  role: { type: 'string', enum: ['pending', 'user', 'admin'] },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Validation error or bad request',
+            type: 'object',
+            properties: {
+              error: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string' },
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const { email, password, nickname } = request.body;
       if (!email || !password) {
@@ -67,14 +169,13 @@ export default async function authRoutes(app: FastifyInstance) {
         });
       }
 
-      // Create user_profiles record with admin role for qa-admin@test.com
-      const role = email === 'qa-admin@test.com' ? 'admin' : 'pending';
+      // Create user_profiles record with default role
       const { error: profileError } = await app.supabaseAdmin
         .from('user_profiles')
         .insert({
           id: data.user.id,
           nickname: nickname ?? null,
-          role: role,
+          role: 'pending',
         });
 
       if (profileError) {
@@ -88,9 +189,9 @@ export default async function authRoutes(app: FastifyInstance) {
           nickname: nickname ?? null,
           role: 'pending',
         },
-        accessToken: data.session.access_token,
-        refreshToken: data.session.refresh_token,
       };
+
+      setAuthCookies(reply, data.session.access_token, data.session.refresh_token, app.config.NODE_ENV === 'production');
 
       return reply.status(201).send(response);
     }
@@ -99,7 +200,72 @@ export default async function authRoutes(app: FastifyInstance) {
   // POST /auth/login
   app.post<{ Body: AuthLoginInput }>(
     '/auth/login',
-    { config: { rateLimit: authRateConfig } },
+    {
+      config: { rateLimit: authRateConfig },
+      schema: {
+        tags: ['Auth'],
+        summary: 'Sign in with email and password',
+        description: 'Authenticate a user and return access and refresh tokens.',
+        body: {
+          type: 'object',
+          required: ['email', 'password'],
+          properties: {
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'User email address',
+            },
+            password: {
+              type: 'string',
+              description: 'User password',
+            },
+          },
+        },
+        response: {
+          200: {
+            description: 'Login successful. Tokens are set as httpOnly cookies.',
+            type: 'object',
+            properties: {
+              user: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  email: { type: 'string' },
+                  nickname: { type: ['string', 'null'] },
+                  role: { type: 'string', enum: ['pending', 'user', 'admin'] },
+                },
+              },
+            },
+          },
+          401: {
+            description: 'Authentication failed',
+            type: 'object',
+            properties: {
+              error: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string' },
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Validation error',
+            type: 'object',
+            properties: {
+              error: {
+                type: 'object',
+                properties: {
+                  code: { type: 'string' },
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const { email, password } = request.body;
       if (!email || !password) {
@@ -131,9 +297,9 @@ export default async function authRoutes(app: FastifyInstance) {
           nickname: profile?.nickname ?? null,
           role: (profile?.role as AuthResponse['user']['role']) ?? 'pending',
         },
-        accessToken: data.session.access_token,
-        refreshToken: data.session.refresh_token,
       };
+
+      setAuthCookies(reply, data.session.access_token, data.session.refresh_token, app.config.NODE_ENV === 'production');
 
       return reply.send(response);
     }
@@ -144,6 +310,7 @@ export default async function authRoutes(app: FastifyInstance) {
     '/auth/logout',
     async (_request, reply) => {
       await app.supabase.auth.signOut();
+      clearAuthCookies(reply);
       return reply.status(204).send();
     }
   );
@@ -172,10 +339,9 @@ export default async function authRoutes(app: FastifyInstance) {
         });
       }
 
-      return reply.send({
-        accessToken: data.session.access_token,
-        refreshToken: data.session.refresh_token,
-      });
+      setAuthCookies(reply, data.session.access_token, data.session.refresh_token, app.config.NODE_ENV === 'production');
+
+      return reply.send({});
     }
   );
 }

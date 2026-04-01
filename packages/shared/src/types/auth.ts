@@ -28,8 +28,6 @@ export interface AuthLoginInput {
 
 export interface AuthResponse {
   user: AuthUser;
-  accessToken: string;
-  refreshToken: string;
 }
 
 export interface VerifyAdminResponse {

@@ -7,6 +7,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { PresetCreateInput, PresetUpdateInput } from '@story-game/shared';
 import { requireAdmin } from '../../plugins/auth.js';
+import { cachedQuery, CacheTags, CacheTTL } from '../../services/cache.js';
 
 export default async function presetsRoute(app: FastifyInstance) {
   // GET /presets — public list with status_preset JOIN
@@ -26,21 +27,34 @@ export default async function presetsRoute(app: FastifyInstance) {
     return reply.send(data ?? []);
   });
 
-  // GET /status-presets — public list for editor dropdown
+  // GET /status-presets — public list for editor dropdown (cached)
   app.get('/status-presets', async (_request, reply) => {
-    const { data, error } = await app.supabaseAdmin
-      .from('status_presets')
-      .select('*')
-      .order('genre', { ascending: true });
+    try {
+      const data = await cachedQuery(
+        app.cache,
+        'status-presets:all',
+        async () => {
+          const { data, error } = await app.supabaseAdmin
+            .from('status_presets')
+            .select('*')
+            .order('genre', { ascending: true });
 
-    if (error) {
+          if (error) throw error;
+          return data ?? [];
+        },
+        {
+          ttl: CacheTTL.LONG, // 1 day - rarely changes
+          tags: [CacheTags.STATUS_PRESETS],
+        }
+      );
+
+      return reply.send(data);
+    } catch (error) {
       app.log.error(error, 'presetsRoute GET /api/status-presets: query failed');
       return reply.status(500).send({
         error: { code: 'INTERNAL_ERROR', message: '상태 프리셋을 불러오는데 실패했습니다' },
       });
     }
-
-    return reply.send(data ?? []);
   });
 
   // POST /presets — create (admin only)

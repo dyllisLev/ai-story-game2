@@ -2,6 +2,8 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { AuthUser } from '@story-game/shared';
+import * as Sentry from '@sentry/node';
+import { extractBearerToken, extractCookieToken, COOKIE_NAMES } from '../lib/auth-helpers.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -12,17 +14,25 @@ declare module 'fastify' {
 export default fp(async (app: FastifyInstance) => {
   app.decorateRequest('user', null);
 
-  // preHandler — 모든 요청에서 JWT를 파싱 (실패해도 진행, 공개 라우트 허용)
+  // Parse JWT for all requests but don't fail - allows public routes to work
   app.addHook('preHandler', async (request) => {
-    const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) return;
+    let token: string | undefined;
 
-    const token = authHeader.slice(7);
+    // Try Authorization header first (for backward compatibility)
+    token = extractBearerToken(request.headers.authorization);
+
+    // Fall back to cookie-based auth if header not present
+    if (!token) {
+      token = extractCookieToken(request.headers.cookie, COOKIE_NAMES.ACCESS_TOKEN);
+    }
+
+    if (!token) return;
+
     const { data: { user }, error } = await app.supabase.auth.getUser(token);
 
     if (error || !user) return;
 
-    // user_profiles에서 닉네임과 role 조회
+    // Fetch nickname and role from user_profiles
     const { data: profile } = await app.supabaseAdmin
       .from('user_profiles')
       .select('nickname, role')
@@ -35,6 +45,15 @@ export default fp(async (app: FastifyInstance) => {
       nickname: profile?.nickname || null,
       role: (profile?.role as AuthUser['role']) || 'pending',
     };
+
+    // Set Sentry user context asynchronously (don't await - fire and forget)
+    setImmediate(() => {
+      Sentry.setUser({
+        id: user.id,
+        email: user.email || undefined,
+        role: (profile?.role as AuthUser['role']) || 'pending',
+      });
+    });
   });
 });
 

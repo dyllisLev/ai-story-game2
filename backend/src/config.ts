@@ -16,6 +16,8 @@ export interface EnvConfig {
   ADMIN_BASIC_AUTH_USERNAME: string;
   ADMIN_BASIC_AUTH_PASSWORD: string;
   REDIS_URL?: string; // Optional - if not provided, falls back to memory-based rate limiting
+  SENTRY_DSN?: string; // Optional - if not provided, error tracking is disabled
+  SENTRY_ENVIRONMENT?: string; // Optional - defaults to NODE_ENV
 }
 
 function requireEnv(key: string): string {
@@ -36,5 +38,7 @@ export function loadConfig(): EnvConfig {
     ADMIN_BASIC_AUTH_USERNAME: process.env.ADMIN_BASIC_AUTH_USERNAME || 'admin',
     ADMIN_BASIC_AUTH_PASSWORD: requireEnv('ADMIN_BASIC_AUTH_PASSWORD'),
     REDIS_URL: process.env.REDIS_URL, // Optional - graceful fallback to memory if not provided
+    SENTRY_DSN: process.env.SENTRY_DSN, // Optional - error tracking disabled if not provided
+    SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT, // Optional - defaults to NODE_ENV
   };
 }

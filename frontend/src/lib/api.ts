@@ -7,15 +7,8 @@ interface RequestOptions extends RequestInit {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const token = localStorage.getItem('access_token');
-
-  const authHeader = token
-    ? { Authorization: `Bearer ${token}` }
-    : {};
-
   const headers: Record<string, string> = {
     ...(options.body != null ? { 'Content-Type': 'application/json' } : {}),
-    ...authHeader,
     ...(options.headers ?? {}),
   };
 
