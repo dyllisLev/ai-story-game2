@@ -3,6 +3,8 @@ import { Navigate } from 'react-router';
 import '../styles/admin.css';
 
 import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
+import type { VerifyAdminResponse } from '@story-game/shared';
 import { AdminNav, type AdminSection } from '../components/admin/AdminNav';
 import { Dashboard } from '../components/admin/Dashboard';
 import { ServiceLogs } from '../components/admin/ServiceLogs';
@@ -144,6 +146,29 @@ const AdminContent: FC = () => {
 /* ── Page entry ── */
 const Admin: FC = () => {
   const { user, isLoading } = useAuth();
+  const [serverVerified, setServerVerified] = useState<boolean | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  // Server-side admin verification on mount
+  useEffect(() => {
+    if (!user) return;
+
+    const verifyAdmin = async () => {
+      try {
+        const response = await api.get<VerifyAdminResponse>('/admin/verify');
+        setServerVerified(response.isAdmin);
+        if (!response.isAdmin) {
+          setVerifyError('서버에서 관리자 권한이 확인되지 않았습니다');
+        }
+      } catch (err) {
+        console.error('Admin verification failed:', err);
+        setVerifyError('관리자 권한 확인에 실패했습니다');
+        setServerVerified(false);
+      }
+    };
+
+    verifyAdmin();
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -158,9 +183,25 @@ const Admin: FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // admin이 아닌 경우 → 홈으로
-  if (user.role !== 'admin') {
-    return <Navigate to="/" replace />;
+  // Server verification in progress
+  if (serverVerified === null) {
+    return (
+      <div className="admin-root" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>관리자 권한 확인 중...</span>
+      </div>
+    );
+  }
+
+  // Server verification failed or not admin
+  if (serverVerified === false || verifyError) {
+    return (
+      <div className="admin-root" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          {verifyError || '관리자 권한이 필요합니다'}
+        </span>
+        <a href="/" className="a-btn">홈으로</a>
+      </div>
+    );
   }
 
   return <AdminContent />;

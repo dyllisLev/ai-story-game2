@@ -31,3 +31,10 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
 }
+
+export interface VerifyAdminResponse {
+  isAdmin: boolean;
+  userId: string;
+  email: string;
+  role: 'pending' | 'user' | 'admin';
+}

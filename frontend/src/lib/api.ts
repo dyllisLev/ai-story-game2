@@ -1,6 +1,6 @@
 // API client — fetch wrapper with auth token injection
 
-const API_BASE = '/api';
+const API_BASE = '/api/v1';
 
 interface RequestOptions extends RequestInit {
   headers?: Record<string, string>;

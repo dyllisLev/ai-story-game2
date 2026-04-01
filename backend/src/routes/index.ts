@@ -20,6 +20,7 @@ import adminApiLogsRoute       from './admin/api-logs.js';
 import adminDashboardRoute     from './admin/dashboard.js';
 import adminDangerZoneRoute    from './admin/danger-zone.js';
 import adminUsersRoute         from './admin/users.js';
+import adminVerifyRoute        from './admin/verify.js';
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // --- Public stories ---
@@ -39,4 +40,5 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(adminDashboardRoute, { prefix: API_V1_PREFIX });
   await app.register(adminDangerZoneRoute, { prefix: API_V1_PREFIX });
   await app.register(adminUsersRoute, { prefix: API_V1_PREFIX });
+  await app.register(adminVerifyRoute, { prefix: API_V1_PREFIX });
 }
