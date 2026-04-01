@@ -11,6 +11,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    allowedHosts: [
+      'aistorygame.nuc.hmini.me',
+      '.hmini.me',
+      'localhost',
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
