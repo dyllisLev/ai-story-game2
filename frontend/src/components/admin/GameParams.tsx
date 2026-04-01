@@ -235,6 +235,211 @@ export const GameParams: FC<GameParamsProps> = ({ config, onChange }) => {
           </div>
         </div>
       </div>
+
+      {/* Editor Defaults */}
+      <div className="a-card">
+        <div className="a-card-header">
+          <span className="a-card-title">에디터 기본값</span>
+        </div>
+        <div className="a-card-body">
+          <div className="a-form-row">
+            <div className="a-form-group">
+              <div className="a-form-label-row">
+                <label className="a-form-label">기본 아이콘</label>
+                <Tooltip text="새 스토리의 기본 아이콘입니다." />
+              </div>
+              <input
+                className="a-form-control"
+                type="text"
+                value={local.editor_defaults.icon}
+                onChange={e => update('editor_defaults', { ...local.editor_defaults, icon: e.target.value })}
+                style={{ width: '80px', textAlign: 'center', fontSize: '18px' }}
+              />
+            </div>
+
+            <div className="a-form-group">
+              <div className="a-form-label-row">
+                <label className="a-form-label">기본 AI 모델</label>
+                <Tooltip text="새 세션의 기본 AI 모델입니다." />
+              </div>
+              <select
+                className="a-form-control"
+                value={local.editor_defaults.aiModel}
+                onChange={e => update('editor_defaults', { ...local.editor_defaults, aiModel: e.target.value })}
+              >
+                {local.available_models.map(m => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="a-form-group">
+              <div className="a-form-label-row">
+                <label className="a-form-label">기본 서술 길이</label>
+                <Tooltip text="새 세션의 기본 서술 문단 수입니다." />
+              </div>
+              <NumStepper
+                value={local.editor_defaults.narrativeLength}
+                min={1}
+                max={10}
+                onChange={v => update('editor_defaults', { ...local.editor_defaults, narrativeLength: v })}
+              />
+            </div>
+          </div>
+
+          <div className="a-form-row" style={{ marginTop: '12px' }}>
+            <div className="a-form-group" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={local.editor_defaults.useLatex}
+                  onChange={e => update('editor_defaults', { ...local.editor_defaults, useLatex: e.target.checked })}
+                />
+                <span>LaTeX 사용</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={local.editor_defaults.useCache}
+                  onChange={e => update('editor_defaults', { ...local.editor_defaults, useCache: e.target.checked })}
+                />
+                <span>캐시 사용</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={local.editor_defaults.useStatusWindow}
+                  onChange={e => update('editor_defaults', { ...local.editor_defaults, useStatusWindow: e.target.checked })}
+                />
+                <span>상태창 사용</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={local.editor_defaults.isPublic}
+                  onChange={e => update('editor_defaults', { ...local.editor_defaults, isPublic: e.target.checked })}
+                />
+                <span>공개 스토리</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Default Labels */}
+      <div className="a-card">
+        <div className="a-card-header">
+          <span className="a-card-title">기본 라벨</span>
+        </div>
+        <div className="a-card-body">
+          <div className="a-form-row">
+            <div className="a-form-group">
+              <div className="a-form-label-row">
+                <label className="a-form-label">새 세션 라벨</label>
+                <Tooltip text="새 세션의 기본 제목입니다." />
+              </div>
+              <input
+                className="a-form-control"
+                type="text"
+                value={local.default_labels.new_session}
+                onChange={e => update('default_labels', { ...local.default_labels, new_session: e.target.value })}
+              />
+            </div>
+
+            <div className="a-form-group">
+              <div className="a-form-label-row">
+                <label className="a-form-label">제목 없음 라벨</label>
+                <Tooltip text="제목이 없는 스토리의 기본 표시입니다." />
+              </div>
+              <input
+                className="a-form-control"
+                type="text"
+                value={local.default_labels.untitled_story}
+                onChange={e => update('default_labels', { ...local.default_labels, untitled_story: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Default Suggestions (comma-separated) */}
+      <div className="a-card">
+        <div className="a-card-header">
+          <span className="a-card-title">기본 제안</span>
+        </div>
+        <div className="a-card-body">
+          <div className="a-form-group" style={{ marginBottom: 0 }}>
+            <div className="a-form-label-row">
+              <label className="a-form-label">행동 제안 목록</label>
+              <Tooltip text="게임 플레이 중 표시되는 기본 행동 제안들입니다. 쉼표로 구분하세요." />
+            </div>
+            <textarea
+              className="a-form-control"
+              rows={3}
+              value={local.default_suggestions.join(', ')}
+              onChange={e => update('default_suggestions', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Character Relations (comma-separated) */}
+      <div className="a-card">
+        <div className="a-card-header">
+          <span className="a-card-title">캐릭터 관계</span>
+        </div>
+        <div className="a-card-body">
+          <div className="a-form-group" style={{ marginBottom: 0 }}>
+            <div className="a-form-label-row">
+              <label className="a-form-label">관계 유형 목록</label>
+              <Tooltip text="캐릭터 간 관계 유형들입니다. 쉼표로 구분하세요." />
+            </div>
+            <input
+              className="a-form-control"
+              type="text"
+              value={local.character_relations.join(', ')}
+              onChange={e => update('character_relations', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Icons (comma-separated) */}
+      <div className="a-card">
+        <div className="a-card-header">
+          <span className="a-card-title">아이콘</span>
+        </div>
+        <div className="a-card-body">
+          <div className="a-form-group">
+            <div className="a-form-label-row">
+              <label className="a-form-label">스토리 아이콘</label>
+              <Tooltip text="스토리 선택 시 사용할 수 있는 아이콘들입니다. 쉼표로 구분하세요." />
+            </div>
+            <input
+              className="a-form-control"
+              type="text"
+              value={local.story_icons.join(', ')}
+              onChange={e => update('story_icons', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+            />
+          </div>
+
+          <div className="a-form-group" style={{ marginBottom: 0 }}>
+            <div className="a-form-label-row">
+              <label className="a-form-label">캐릭터 아이콘</label>
+              <Tooltip text="캐릭터 선택 시 사용할 수 있는 아이콘들입니다. 쉼표로 구분하세요." />
+            </div>
+            <input
+              className="a-form-control"
+              type="text"
+              value={local.character_icons.join(', ')}
+              onChange={e => update('character_icons', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

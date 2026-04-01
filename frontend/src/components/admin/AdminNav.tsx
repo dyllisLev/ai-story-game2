@@ -7,6 +7,7 @@ export type AdminSection =
   | 'api-logs'
   | 'prompt'
   | 'game-params'
+  | 'genre'
   | 'story-presets'
   | 'stories'
   | 'status-presets'
@@ -36,6 +37,7 @@ const MONITORING_ITEMS: NavItem[] = [
 const SETTINGS_ITEMS: NavItem[] = [
   { id: 'prompt',         label: '프롬프트 설정', icon: '✦' },
   { id: 'game-params',    label: '게임 파라미터', icon: '⚙' },
+  { id: 'genre',          label: '장르 설정',     icon: '🎨' },
   { id: 'story-presets',  label: '스토리 프리셋', icon: '📋' },
   { id: 'stories',        label: '스토리 관리',  icon: '📚' },
   { id: 'status-presets', label: '상태창 프리셋', icon: '⊞' },

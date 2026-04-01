@@ -1,13 +1,14 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import type { PromptConfig, GameplayConfig } from '@story-game/shared';
+import type { PromptConfig, GameplayConfig, GenreConfig } from '@story-game/shared';
 
-export type { PromptConfig, GameplayConfig };
+export type { PromptConfig, GameplayConfig, GenreConfig };
 
 export interface AdminConfig {
   prompt_config: PromptConfig;
   gameplay_config: GameplayConfig;
+  genre_config: GenreConfig;
 }
 
 /* ── Hook ── */
@@ -20,11 +21,12 @@ export function useAdminConfig() {
   const { data: config, isLoading, error } = useQuery<AdminConfig>({
     queryKey: ['admin', 'config'],
     queryFn: async () => {
-      // API returns camelCase keys: promptConfig, gameplayConfig
-      const raw = await api.get<{ promptConfig: PromptConfig; gameplayConfig: GameplayConfig }>('/config');
+      // API returns camelCase keys: promptConfig, gameplayConfig, genreConfig
+      const raw = await api.get<{ promptConfig: PromptConfig; gameplayConfig: GameplayConfig; genreConfig: GenreConfig }>('/config');
       return {
         prompt_config: raw.promptConfig,
         gameplay_config: raw.gameplayConfig,
+        genre_config: raw.genreConfig,
       };
     },
     staleTime: 30_000,

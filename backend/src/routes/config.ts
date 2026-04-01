@@ -39,7 +39,7 @@ export default async function configRoutes(app: FastifyInstance) {
   app.put('/config', async (request, reply) => {
     requireAdmin(request);
 
-    const body = request.body as { promptConfig?: unknown; gameplayConfig?: unknown };
+    const body = request.body as { promptConfig?: unknown; gameplayConfig?: unknown; genreConfig?: unknown };
     if (!body.promptConfig || !body.gameplayConfig) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: '프롬프트 또는 게임플레이 설정이 누락되었습니다' } });
     }
@@ -54,8 +54,13 @@ export default async function configRoutes(app: FastifyInstance) {
       .update({ value: body.gameplayConfig })
       .eq('id', 'gameplay_config');
 
-    if (e1 || e2) {
-      app.log.error({ e1, e2 }, 'Config update failed');
+    const { error: e3 } = await app.supabaseAdmin
+      .from('config')
+      .update({ value: body.genreConfig })
+      .eq('id', 'genre_config');
+
+    if (e1 || e2 || e3) {
+      app.log.error({ e1, e2, e3 }, 'Config update failed');
       return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: '설정 업데이트에 실패했습니다' } });
     }
 

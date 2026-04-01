@@ -11,12 +11,13 @@ import { ServiceLogs } from '../components/admin/ServiceLogs';
 import { ApiLogs } from '../components/admin/ApiLogs';
 import { PromptSettings } from '../components/admin/PromptSettings';
 import { GameParams } from '../components/admin/GameParams';
+import { GenreSettings } from '../components/admin/GenreSettings';
 import { StoryPresets } from '../components/admin/StoryPresets';
 import { StoryManagement } from '../components/admin/StoryManagement';
 import { StatusPresets } from '../components/admin/StatusPresets';
 import { SystemSection } from '../components/admin/SystemSection';
 import { UserManagement } from '../components/admin/UserManagement';
-import { useAdminConfig, type AdminConfig, type PromptConfig, type GameplayConfig } from '../hooks/useAdminConfig';
+import { useAdminConfig, type AdminConfig, type PromptConfig, type GameplayConfig, type GenreConfig } from '../hooks/useAdminConfig';
 
 /* ── Theme toggle ── */
 type AdminTheme = 'dark' | 'light';
@@ -38,7 +39,7 @@ const AdminContent: FC = () => {
   }, []);
 
   /* Sections that show the bottom action bar (config save) */
-  const showActionBar = activeSection === 'prompt' || activeSection === 'game-params';
+  const showActionBar = activeSection === 'prompt' || activeSection === 'game-params' || activeSection === 'genre';
 
   // Sync draftRef when config loads
   useEffect(() => {
@@ -51,6 +52,10 @@ const AdminContent: FC = () => {
 
   const handleGameChange = useCallback((gc: GameplayConfig) => {
     if (draftRef.current) draftRef.current = { ...draftRef.current, gameplay_config: gc };
+  }, []);
+
+  const handleGenreChange = useCallback((gc: GenreConfig) => {
+    if (draftRef.current) draftRef.current = { ...draftRef.current, genre_config: gc };
   }, []);
 
   const handleSave = useCallback(() => {
@@ -112,6 +117,12 @@ const AdminContent: FC = () => {
             <GameParams
               config={config.gameplay_config}
               onChange={handleGameChange}
+            />
+          )}
+          {activeSection === 'genre'         && config && (
+            <GenreSettings
+              config={config.genre_config}
+              onChange={handleGenreChange}
             />
           )}
           {activeSection === 'story-presets'  && <StoryPresets />}
