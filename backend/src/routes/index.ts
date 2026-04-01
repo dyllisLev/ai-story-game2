@@ -2,12 +2,14 @@
 // Central route registration — import and register all Phase 2-B routes here.
 // This file is imported by server.ts.
 import type { FastifyInstance } from 'fastify';
+import { API_V1_PREFIX } from '../constants.js';
 
 // Stories
 import storiesListRoute   from './stories/list.js';
 import storiesDetailRoute from './stories/detail.js';
 import storiesCrudRoute   from './stories/crud.js';
 import storiesStatsRoute  from './stories/stats.js';
+import storiesMineRoute   from './stories/mine.js';
 import presetsRoute       from './stories/presets.js';
 
 // Admin
@@ -21,19 +23,20 @@ import adminUsersRoute         from './admin/users.js';
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // --- Public stories ---
-  // Note: stats must register BEFORE detail to avoid /:id matching "stats"
-  await app.register(storiesStatsRoute);
-  await app.register(storiesListRoute);
-  await app.register(storiesDetailRoute);
-  await app.register(storiesCrudRoute);
-  await app.register(presetsRoute);
+  // Note: stats and mine must register BEFORE detail to avoid /:id matching
+  await app.register(storiesStatsRoute, { prefix: API_V1_PREFIX });
+  await app.register(storiesListRoute, { prefix: API_V1_PREFIX });
+  await app.register(storiesMineRoute, { prefix: API_V1_PREFIX });
+  await app.register(storiesDetailRoute, { prefix: API_V1_PREFIX });
+  await app.register(storiesCrudRoute, { prefix: API_V1_PREFIX });
+  await app.register(presetsRoute, { prefix: API_V1_PREFIX });
 
   // --- Admin (all protected by requireAdmin inside each route) ---
-  await app.register(adminStoriesRoute);
-  await app.register(adminStatusPresetsRoute);
-  await app.register(adminServiceLogsRoute);
-  await app.register(adminApiLogsRoute);
-  await app.register(adminDashboardRoute);
-  await app.register(adminDangerZoneRoute);
-  await app.register(adminUsersRoute);
+  await app.register(adminStoriesRoute, { prefix: API_V1_PREFIX });
+  await app.register(adminStatusPresetsRoute, { prefix: API_V1_PREFIX });
+  await app.register(adminServiceLogsRoute, { prefix: API_V1_PREFIX });
+  await app.register(adminApiLogsRoute, { prefix: API_V1_PREFIX });
+  await app.register(adminDashboardRoute, { prefix: API_V1_PREFIX });
+  await app.register(adminDangerZoneRoute, { prefix: API_V1_PREFIX });
+  await app.register(adminUsersRoute, { prefix: API_V1_PREFIX });
 }

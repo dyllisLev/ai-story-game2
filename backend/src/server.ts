@@ -3,6 +3,8 @@ import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { loadConfig, type EnvConfig } from './config.js';
+import { API_V1_PREFIX, API_HEALTH_ENDPOINT } from './constants.js';
+import { getRedisClient } from './lib/redis.js';
 
 const config = loadConfig();
 
@@ -47,11 +49,22 @@ await app.register(cors, {
   origin: config.NODE_ENV === 'development' ? config.CORS_ORIGIN : false,
 });
 
-// Rate limiting
+// Rate limiting - Redis-backed with graceful fallback to memory
+const redisClient = getRedisClient(config);
+const rateLimitStorage = redisClient ? { redis: redisClient } : {};
+
+if (redisClient) {
+  app.log.info('Rate limiting: Using Redis storage (distributed)');
+} else {
+  app.log.warn('Rate limiting: Using memory storage (not distributed - configure REDIS_URL for production)');
+}
+
 await app.register(rateLimit, {
   max: 60,
   timeWindow: '1 minute',
-  allowList: (req) => req.url === '/api/health',
+  allowList: (req) => req.url === API_HEALTH_ENDPOINT,
+  ...rateLimitStorage,
+  skipOnError: true, // Don't block requests if Redis fails
 });
 
 // Supabase 플러그인
@@ -79,8 +92,8 @@ try {
   process.exit(1);
 }
 
-// Health check (no rate limit)
-app.get('/api/health', async () => {
+// Health check endpoint (no rate limit, unversioned for monitoring)
+app.get(API_HEALTH_ENDPOINT, async () => {
   let supabaseStatus = 'disconnected';
   try {
     const { error } = await app.supabaseAdmin.from('config').select('id').limit(1);
@@ -95,21 +108,21 @@ app.get('/api/health', async () => {
   };
 });
 
-// Routes
+// Routes - all versioned under /api/v1
 import configRoutes from './routes/config.js';
-await app.register(configRoutes);
+await app.register(configRoutes, { prefix: API_V1_PREFIX });
 
 import authRoutes from './routes/auth.js';
-await app.register(authRoutes);
+await app.register(authRoutes, { prefix: API_V1_PREFIX });
 
 import gameRoutes from './routes/game/index.js';
-await app.register(gameRoutes);
+await app.register(gameRoutes, { prefix: API_V1_PREFIX });
 
 import sessionsRoutes from './routes/sessions/index.js';
-await app.register(sessionsRoutes);
+await app.register(sessionsRoutes, { prefix: API_V1_PREFIX });
 
 import meRoutes from './routes/me.js';
-await app.register(meRoutes);
+await app.register(meRoutes, { prefix: API_V1_PREFIX });
 
 // Phase 2-B routes: stories CRUD, admin, presets
 import { registerRoutes as registerPhase2Routes } from './routes/index.js';

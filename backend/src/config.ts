@@ -13,6 +13,9 @@ export interface EnvConfig {
   SUPABASE_SERVICE_KEY: string;
   API_KEY_ENCRYPTION_SECRET: string;
   CORS_ORIGIN: string;
+  ADMIN_BASIC_AUTH_USERNAME: string;
+  ADMIN_BASIC_AUTH_PASSWORD: string;
+  REDIS_URL?: string; // Optional - if not provided, falls back to memory-based rate limiting
 }
 
 function requireEnv(key: string): string {
@@ -30,5 +33,8 @@ export function loadConfig(): EnvConfig {
     SUPABASE_SERVICE_KEY: requireEnv('SUPABASE_SERVICE_KEY'),
     API_KEY_ENCRYPTION_SECRET: requireEnv('API_KEY_ENCRYPTION_SECRET'),
     CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    ADMIN_BASIC_AUTH_USERNAME: process.env.ADMIN_BASIC_AUTH_USERNAME || 'admin',
+    ADMIN_BASIC_AUTH_PASSWORD: requireEnv('ADMIN_BASIC_AUTH_PASSWORD'),
+    REDIS_URL: process.env.REDIS_URL, // Optional - graceful fallback to memory if not provided
   };
 }
