@@ -67,6 +67,9 @@ importers:
       '@vitest/ui':
         specifier: ^4.1.2
         version: 4.1.2(vitest@4.1.2)
+      light-my-request:
+        specifier: ^6.6.0
+        version: 6.6.0
       pg:
         specifier: ^8.20.0
         version: 8.20.0
