@@ -30,11 +30,11 @@ test.describe('Editor 페이지 네비게이션', () => {
   test('모든 사이드바 섹션이 표시된다', async ({ page }) => {
     const expectedSections = [
       '기본 설정',
-      '규칙',
+      '시스템 규칙',
       '세계관',
       '스토리',
-      '캐릭터',
-      '상태창',
+      '등장인물',
+      '상태창 설정',
       '출력 설정',
       '공개 설정'
     ];
@@ -46,7 +46,7 @@ test.describe('Editor 페이지 네비게이션', () => {
   });
 
   test('사이드바 섹션 클릭 시 해당 섹션으로 스크롤', async ({ page }) => {
-    const sections = ['기본 설정', '세계관', '캐릭터', '상태창'];
+    const sections = ['기본 설정', '세계관', '등장인물', '상태창 설정'];
 
     for (const section of sections) {
       await editorPage.navigateToSection(section);
