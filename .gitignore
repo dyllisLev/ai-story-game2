@@ -4,6 +4,7 @@
 .env
 story-game-settings.json
 test
+!backend/test/setup.ts
 node_modules/
 package-lock.json
 .wrangler/
