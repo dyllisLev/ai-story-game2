@@ -9,8 +9,10 @@ export interface ServiceLog {
     user_agent: string;
 }
 export interface ServiceLogFilter {
+    status?: '2xx' | '4xx' | '5xx' | '';
     status_code?: number;
     path?: string;
+    time_range?: '1h' | '6h' | '24h' | '7d';
     from?: string;
     to?: string;
     page?: number;
@@ -45,6 +47,7 @@ export interface ApiLog {
 export interface ApiLogFilter {
     endpoint?: string;
     session_id?: string;
+    time_range?: '1h' | '6h' | '24h';
     from?: string;
     to?: string;
     errors_only?: boolean;
