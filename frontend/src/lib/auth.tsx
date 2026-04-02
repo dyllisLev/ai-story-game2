@@ -7,9 +7,10 @@ import {
   useMemo,
   type ReactNode,
 } from 'react';
-import { api } from './api';
+import { api, updateDevBypassCache } from './api';
 import type { AuthUser, AuthResponse } from '@story-game/shared';
 import { MOCK_ADMIN_USER } from './test-utils';
+import { STORAGE_KEYS, DEV_HEADER_VALUES } from './constants';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -33,7 +34,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Restore session on mount - cookies are sent automatically
+  // In DEV mode, check for dev bypass first to avoid unnecessary /me call
   useEffect(() => {
+    // DEV mode: check if dev bypass is enabled before calling /me
+    if (import.meta.env.DEV) {
+      try {
+        const hasNewKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
+        const hasOldKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP_OLD) === DEV_HEADER_VALUES.TRUE;
+
+        if (hasNewKey || hasOldKey) {
+          // Dev bypass is enabled, update cache and skip /me call
+          updateDevBypassCache();
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        // localStorage unavailable (e.g., private browsing) - proceed with normal flow
+        console.debug('localStorage unavailable, proceeding with /me call:', error);
+      }
+    }
+
+    // No dev bypass (or PROD mode): call /me to restore session
     api
       .get<AuthUser>('/me')
       .then((u) => setUser(u))
