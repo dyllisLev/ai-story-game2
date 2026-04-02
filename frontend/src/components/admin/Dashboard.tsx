@@ -56,7 +56,7 @@ const HourlyChart: FC<ChartProps> = ({ data }) => {
 /* ── Main component ── */
 
 export const Dashboard: FC = () => {
-  const { stats, systemStatus, isLoading, refetch } = useAdminDashboard();
+  const { stats, systemStatus, isLoading, error, refetch } = useAdminDashboard();
 
   if (isLoading) {
     return (
@@ -66,6 +66,32 @@ export const Dashboard: FC = () => {
         </div>
         <div style={{ color: 'var(--a-ink-muted)', fontFamily: 'var(--a-font-ui)', fontSize: '12px' }}>
           로딩 중...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+    return (
+      <div className="a-section">
+        <div className="a-section-header">
+          <div className="a-section-title">대시보드</div>
+        </div>
+        <div className="a-card" style={{ padding: '32px', textAlign: 'center' }}>
+          <div style={{ color: 'var(--a-ink-error)', fontFamily: 'var(--a-font-ui)', fontSize: '13px', marginBottom: '12px' }}>
+            ❌ 대시보드를 불러오는데 실패했습니다
+          </div>
+          <div style={{ color: 'var(--a-ink-muted)', fontFamily: 'var(--a-font-ui)', fontSize: '11px', marginBottom: '16px' }}>
+            {errorMessage}
+          </div>
+          <button
+            className="a-btn"
+            onClick={() => void refetch()}
+            type="button"
+          >
+            다시 시도
+          </button>
         </div>
       </div>
     );
