@@ -84,24 +84,19 @@ jobs:
   deploy:
     name: Deploy
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: production
       url: https://aistorygame.nuc.hmini.me
     steps:
       - name: Deploy to production server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.PRODUCTION_HOST }}
-          username: ${{ secrets.PRODUCTION_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          port: ${{ secrets.PRODUCTION_PORT || 22 }}
-          script: |
+        run: |
+          # SSH directly to production server (self-hosted runner has internal network access)
+          ssh -o StrictHostKeyChecking=no root@10.0.0.17 '
             cd /root/ai-story-game2
-
-            # Run deployment script (handles git pull, install, build, pm2 reload)
             echo "Starting deployment..."
             ./deploy.sh
+          '
 
       - name: Verify deployment
         run: |
