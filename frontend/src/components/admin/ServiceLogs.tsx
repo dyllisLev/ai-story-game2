@@ -28,10 +28,19 @@ function statusClass(code: number): string {
 
 export const ServiceLogs: FC = () => {
   const { user } = useAuth();
+
+  // Debug logging
+  console.log('[ServiceLogs] Render, user:', user);
+  console.log('[ServiceLogs] user !== null:', user !== null);
+
   const {
     logs, totalPages, isLoading, refetch,
     filters, updateFilters, clearLogs, isClearing,
+    error,
   } = useServiceLogs(user);
+
+  // Debug logging for hook state
+  console.log('[ServiceLogs] Hook state:', { isLoading, logsLength: logs.length, error, filters });
 
   return (
     <div className="a-section">

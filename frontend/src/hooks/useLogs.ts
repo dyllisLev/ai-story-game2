@@ -77,11 +77,24 @@ export function useServiceLogs(user: AuthUser | null) {
       if (filters.time_range)  params.set('time_range', filters.time_range);
       params.set('page',  String(filters.page));
       params.set('limit', String(filters.limit));
+      console.log('[useServiceLogs] Fetching with params:', params.toString());
+      console.log('[useServiceLogs] User:', user);
       return api.get<LogPage<ServiceLog>>(`/admin/service-logs?${params.toString()}`);
     },
     staleTime: 15_000,
-    // Only run query when user is authenticated (prevents race condition with dev bypass)
-    enabled: user !== null,
+    // Only run query when user is authenticated OR dev bypass is enabled
+    enabled: user !== null || import.meta.env.DEV,
+  });
+
+  // Debug logging
+  console.log('[useServiceLogs] Query state:', {
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    error: query.error,
+    data: query.data,
+    status: query.status,
+    user,
+    filters,
   });
 
   const deleteMutation = useMutation({
@@ -134,8 +147,8 @@ export function useApiLogs(user: AuthUser | null) {
       return api.get<LogPage<ApiLog>>(`/admin/api-logs?${params.toString()}`);
     },
     staleTime: 15_000,
-    // Only run query when user is authenticated (prevents race condition with dev bypass)
-    enabled: user !== null,
+    // Only run query when user is authenticated OR dev bypass is enabled
+    enabled: user !== null || import.meta.env.DEV,
   });
 
   const deleteMutation = useMutation({
