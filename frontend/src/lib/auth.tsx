@@ -7,10 +7,11 @@ import {
   useMemo,
   type ReactNode,
 } from 'react';
-import { api, updateDevBypassCache } from './api';
+import { api, updateDevBypassCache, subscribeToDevBypass } from './api';
 import type { AuthUser, AuthResponse } from '@story-game/shared';
 import { MOCK_ADMIN_USER } from './test-utils';
 import { STORAGE_KEYS, DEV_HEADER_VALUES } from './constants';
+import type { DevBypassState } from './dev-bypass';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -33,36 +34,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore session on mount - cookies are sent automatically
-  // In DEV mode, check for dev bypass first to avoid unnecessary /me call
-  useEffect(() => {
-    // DEV mode: check if dev bypass is enabled before calling /me
-    if (import.meta.env.DEV) {
-      try {
-        const hasNewKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
-        const hasOldKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP_OLD) === DEV_HEADER_VALUES.TRUE;
-
-        if (hasNewKey || hasOldKey) {
-          // Dev bypass is enabled, update cache and skip /me call
-          updateDevBypassCache();
-          setIsLoading(false);
-          return;
-        }
-      } catch (error) {
-        // localStorage unavailable (e.g., private browsing) - proceed with normal flow
-        console.debug('localStorage unavailable, proceeding with /me call:', error);
-      }
+  // Function to fetch user from /me endpoint
+  // Note: Define this early to avoid dependency issues with handleDevBypassChange
+  const fetchUser = useCallback(async () => {
+    try {
+      const u = await api.get<AuthUser>('/me');
+      setUser(u);
+    } catch {
+      // No valid session, user remains null
+    } finally {
+      setIsLoading(false);
     }
-
-    // No dev bypass (or PROD mode): call /me to restore session
-    api
-      .get<AuthUser>('/me')
-      .then((u) => setUser(u))
-      .catch(() => {
-        // No valid session, user remains null
-      })
-      .finally(() => setIsLoading(false));
   }, []);
+
+  // Function to handle dev bypass state changes
+  const handleDevBypassChange = useCallback(
+    (state: DevBypassState) => {
+      if (state.enabled) {
+        // Dev bypass enabled - set mock user and stop loading
+        setUser(MOCK_ADMIN_USER);
+        setIsLoading(false);
+      } else {
+        // Dev bypass disabled - fetch user from /me
+        setIsLoading(true);
+        fetchUser();
+      }
+    },
+    [fetchUser],
+  );
+
+  // Initialize authentication state
+  // DEV mode: Subscribe to dev bypass state (immediately called with current state)
+  // PROD mode: Fetch user from /me endpoint
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      // DEV mode: Subscribe to dev bypass state changes
+      // The subscription immediately calls handleDevBypassChange with current state
+      const unsubscribe = subscribeToDevBypass(handleDevBypassChange);
+      return () => unsubscribe();
+    } else {
+      // PROD mode: Fetch user from /me endpoint
+      fetchUser();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Note: fetchUser and handleDevBypassChange are stable (useCallback)
+  // and only change on mount, so this effect runs once
+
+  // PROD mode: No dev bypass subscription needed
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.post<AuthResponse>('/auth/login', { email, password });

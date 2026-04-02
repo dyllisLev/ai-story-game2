@@ -286,6 +286,7 @@
   background: linear-gradient(90deg, var(--accent), var(--purple));
   border-radius: 2px;
   transition: width 500ms ease;
+  min-width: 2px;
 }
 
 /* ─── MAIN CONTENT (center split 50/50) ─── */

@@ -32,13 +32,13 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
   onIconChange,
   onAiModelChange,
 }) => {
-  const { data: config } = useConfig();
+  const { data: config, isLoading: configLoading } = useConfig();
   const genres = config?.genreConfig.genres.map(g => g.name) ?? [];
   const icons = config?.gameplayConfig.story_icons ?? [];
   const aiModels = config?.gameplayConfig.available_models ?? [];
 
   return (
-    <section id="section-basic" aria-labelledby="basic-heading">
+    <section id="section-basic" aria-labelledby="basic-heading" data-config-loading={configLoading}>
       <div className="section-header">
         <h2 id="basic-heading" className="section-title">기본 설정</h2>
         <p className="section-desc">스토리의 기본 정보와 프리셋을 선택하세요.</p>
@@ -67,64 +67,70 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
       </div>
 
       {/* Genre chips */}
-      <div className="form-group">
-        <p className="form-label">
-          장르 태그
-          <span className="label-badge optional">선택</span>
-        </p>
-        <div className="genre-chips" role="group" aria-label="장르 선택">
-          {genres.map(g => (
-            <button
-              key={g}
-              className={`genre-chip${genre === g ? ' selected' : ''}`}
-              onClick={() => onGenreChange(genre === g ? '' : g)}
-              aria-pressed={genre === g}
-            >
-              {g}
-            </button>
-          ))}
+      {!configLoading && (
+        <div className="form-group">
+          <p className="form-label">
+            장르 태그
+            <span className="label-badge optional">선택</span>
+          </p>
+          <div className="genre-chips" role="group" aria-label="장르 선택">
+            {genres.map(g => (
+              <button
+                key={g}
+                className={`genre-chip${genre === g ? ' selected' : ''}`}
+                onClick={() => onGenreChange(genre === g ? '' : g)}
+                aria-pressed={genre === g}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Icon grid */}
-      <div className="form-group">
-        <p className="form-label">
-          스토리 아이콘
-          <span className="label-badge optional">선택</span>
-        </p>
-        <div className="icon-grid" role="group" aria-label="아이콘 선택">
-          {icons.map(ic => (
-            <button
-              key={ic}
-              className={`icon-btn${icon === ic ? ' selected' : ''}`}
-              onClick={() => onIconChange(ic)}
-              aria-pressed={icon === ic}
-              aria-label={`아이콘 ${ic}`}
-            >
-              {ic}
-            </button>
-          ))}
+      {!configLoading && (
+        <div className="form-group">
+          <p className="form-label">
+            스토리 아이콘
+            <span className="label-badge optional">선택</span>
+          </p>
+          <div className="icon-grid" role="group" aria-label="아이콘 선택">
+            {icons.map(ic => (
+              <button
+                key={ic}
+                className={`icon-btn${icon === ic ? ' selected' : ''}`}
+                onClick={() => onIconChange(ic)}
+                aria-pressed={icon === ic}
+                aria-label={`아이콘 ${ic}`}
+              >
+                {ic}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* AI model */}
-      <div className="form-group">
-        <label className="form-label" htmlFor="aiModelSelect">
-          AI 모델
-          <span className="label-badge optional">선택</span>
-        </label>
-        <select
-          id="aiModelSelect"
-          className="form-select"
-          value={aiModel}
-          onChange={e => onAiModelChange(e.target.value)}
-        >
-          {aiModels.map(m => (
-            <option key={m.id} value={m.id}>{m.label}</option>
-          ))}
-        </select>
-        <p className="form-hint">Flash는 빠른 응답, Pro는 더 정교한 서술에 적합합니다.</p>
-      </div>
+      {!configLoading && (
+        <div className="form-group">
+          <label className="form-label" htmlFor="aiModelSelect">
+            AI 모델
+            <span className="label-badge optional">선택</span>
+          </label>
+          <select
+            id="aiModelSelect"
+            className="form-select"
+            value={aiModel}
+            onChange={e => onAiModelChange(e.target.value)}
+          >
+            {aiModels.map(m => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
+          </select>
+          <p className="form-hint">Flash는 빠른 응답, Pro는 더 정교한 서술에 적합합니다.</p>
+        </div>
+      )}
 
       {/* Title */}
       <div className="form-group">

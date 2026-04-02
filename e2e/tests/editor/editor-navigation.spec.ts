@@ -105,7 +105,9 @@ test.describe('Editor 페이지 네비게이션', () => {
   });
 
   test('기본 설정 필드들이 표시된다', async ({ page }) => {
-    await expect(editorPage.presetSelect).toBeVisible({ timeout: 10000 });
+    // Wait for config to load - wait for genre buttons to appear
+    await page.waitForSelector('.genre-chip', { timeout: 10000 });
+    await expect(editorPage.presetSelect).toBeVisible();
     await expect(editorPage.genreGroup).toBeVisible();
     await expect(editorPage.iconGroup).toBeVisible();
     await expect(editorPage.aiModelSelect).toBeVisible();

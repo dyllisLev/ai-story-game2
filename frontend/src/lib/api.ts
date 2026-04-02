@@ -1,5 +1,9 @@
 // API client — fetch wrapper with auth token injection
-import { getDevBypassHeaders, updateDevBypassCache as updateDevBypassState } from './dev-bypass';
+import {
+  getDevBypassHeaders,
+  updateDevBypassCache as updateDevBypassState,
+  subscribeToDevBypass,
+} from './dev-bypass';
 import { STORAGE_KEYS, DEV_HEADER_VALUES } from './constants';
 
 const API_BASE = '/api/v1';
@@ -17,6 +21,9 @@ interface RequestOptions extends RequestInit {
 export function updateDevBypassCache(): void {
   updateDevBypassState();
 }
+
+// Re-export dev bypass subscription function for AuthProvider
+export { subscribeToDevBypass };
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   // Build headers object - ensure we create a new object each time
