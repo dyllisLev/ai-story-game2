@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { api, updateDevBypassCache, subscribeToDevBypass } from './api';
+import { isDevBypassEnabled } from './dev-bypass';
 import type { AuthUser, AuthResponse } from '@story-game/shared';
 import { MOCK_ADMIN_USER } from './test-utils';
 import { STORAGE_KEYS, DEV_HEADER_VALUES } from './constants';
@@ -39,9 +40,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUser = useCallback(async () => {
     try {
       const u = await api.get<AuthUser>('/me');
+      // Only set user if dev bypass is NOT enabled (race condition fix)
+      // If dev bypass was enabled while the fetch was in flight, ignore the result
+      if (import.meta.env.DEV && isDevBypassEnabled()) {
+        // Dev bypass was enabled while fetching, ignore this result
+        console.debug('[AuthProvider] Ignoring /me result - dev bypass is enabled');
+        return;
+      }
       setUser(u);
     } catch {
       // No valid session, user remains null
+      // Don't set user to null if dev bypass is enabled (race condition fix)
+      if (import.meta.env.DEV && isDevBypassEnabled()) {
+        console.debug('[AuthProvider] Ignoring /me error - dev bypass is enabled');
+        return;
+      }
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
