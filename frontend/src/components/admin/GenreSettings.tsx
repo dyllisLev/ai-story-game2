@@ -157,6 +157,12 @@ export const GenreSettings: FC<GenreSettingsProps> = ({ config, onChange }) => {
     onChange(next);
   };
 
+  // Guard clause: if genres array is empty or undefined, don't render anything
+  // This prevents the component from rendering until genres are actually loaded
+  if (!local.genres || local.genres.length === 0) {
+    return null;
+  }
+
   return (
     <div className="a-section">
       <div className="a-section-header">

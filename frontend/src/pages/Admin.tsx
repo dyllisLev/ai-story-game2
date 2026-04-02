@@ -135,11 +135,16 @@ const AdminContent: FC = () => {
               onChange={handleGameChange}
             />
           )}
-          {activeSection === 'genre'         && config && (
+          {activeSection === 'genre'         && config && config.genre_config?.genres && config.genre_config.genres.length > 0 && (
             <GenreSettings
               config={config.genre_config}
               onChange={handleGenreChange}
             />
+          )}
+          {activeSection === 'genre'         && (!config || !config.genre_config?.genres || config.genre_config.genres.length === 0) && (
+            <div className="a-section" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+              <span style={{ color: 'var(--a-ink-muted)' }}>로딩 중...</span>
+            </div>
           )}
           {activeSection === 'story-presets'  && <StoryPresets />}
           {activeSection === 'stories'         && <StoryManagement />}

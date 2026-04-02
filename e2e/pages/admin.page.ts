@@ -92,7 +92,22 @@ export class AdminPage {
 
   async navigateTo(section: string) {
     await this.navItem(section).click();
-    await this.page.waitForTimeout(200);
+    // Wait for section content to load - config fetch from API might take time
+    await this.page.waitForTimeout(1000);
+    // Wait for section title to be visible with longer timeout
+    await this.page.waitForSelector('.a-section-title', { timeout: 10000 });
+
+    // For Genre Settings section, additionally wait for genre cards AND inputs to load
+    if (section === '장르 설정') {
+      await this.page.waitForSelector('.a-card .a-card-header', { timeout: 5000 });
+      // Wait for at least one input to be present (indicates full render)
+      await this.page.waitForSelector('.a-card input[type="text"]', { timeout: 5000 });
+      // Additional wait to ensure all inputs are interactive
+      await this.page.waitForFunction(() => {
+        const inputs = document.querySelectorAll('.a-card input[type="text"]');
+        return inputs.length >= 3; // At least name, icon, and one color input
+      }, {}, { timeout: 5000 });
+    }
   }
 
   async getActiveNavItem() {

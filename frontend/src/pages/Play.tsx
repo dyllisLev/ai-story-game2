@@ -302,7 +302,7 @@ const Play: FC = () => {
           />
         )}
         {/* placeholder to maintain grid when left is closed */}
-        {!leftOpen && <div style={{ overflow: 'hidden' }} />}
+        {!leftOpen && <div className="panel-left panel-collapsed" style={{ overflow: 'hidden' }} />}
 
         {/* Center — Story + Input */}
         <main className="panel-center">
@@ -350,7 +350,7 @@ const Play: FC = () => {
             statusValues={engine.statusValues}
           />
         )}
-        {!rightOpen && <div style={{ overflow: 'hidden' }} />}
+        {!rightOpen && <div className="panel-right panel-collapsed" style={{ overflow: 'hidden' }} />}
       </div>
 
       {/* Character Modal */}
