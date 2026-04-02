@@ -212,9 +212,6 @@ await app.register(authRoutes, { prefix: API_V1_PREFIX });
 import gameRoutes from './routes/game/index.js';
 await app.register(gameRoutes, { prefix: API_V1_PREFIX });
 
-import sessionsRoutes from './routes/sessions/index.js';
-await app.register(sessionsRoutes, { prefix: API_V1_PREFIX });
-
 import meRoutes from './routes/me.js';
 await app.register(meRoutes, { prefix: API_V1_PREFIX });
 

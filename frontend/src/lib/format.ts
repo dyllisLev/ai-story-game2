@@ -42,4 +42,25 @@ export function generateId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+import type { StatusAttribute } from '@/hooks/useStoryEditor';
 
+/**
+ * Maps StatusPreset attributes from shared types to Editor StatusAttribute format.
+ * Converts shared type names ('gauge') to editor-compatible format ('bar').
+ */
+export function mapStatusPresetAttributes(
+  presetAttributes: Array<{ name: string; type: 'number' | 'text' | 'gauge'; max_value?: number | null }>
+): StatusAttribute[] {
+  const TYPE_MAPPING: Record<'number' | 'text' | 'gauge', StatusAttribute['type']> = {
+    number: 'number',
+    text: 'text',
+    gauge: 'bar',
+  } as const;
+
+  return presetAttributes.map(attr => ({
+    id: generateId(),
+    name: attr.name,
+    type: TYPE_MAPPING[attr.type],
+    max: attr.max_value != null ? String(attr.max_value) : '',
+  }));
+}

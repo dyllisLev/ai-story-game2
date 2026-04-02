@@ -99,15 +99,15 @@ async function applyMigration() {
   console.log('Inserting genre_config...');
   const genreConfig = {
     genres: [
-      { id: "moo", name: "무협", color: "#c49a3c", bgColor: "rgba(196,154,60,0.1)", borderColor: "rgba(196,154,60,0.35)", icon: "⚔️" },
-      { id: "fantasy", name: "판타지", color: "#7a9fc4", bgColor: "rgba(122,159,196,0.1)", borderColor: "rgba(122,159,196,0.35)", icon: "🧙" },
-      { id: "modern", name: "현대", color: "#8fba8a", bgColor: "rgba(143,186,138,0.1)", borderColor: "rgba(143,186,138,0.35)", icon: "🏙️" },
-      { id: "romance", name: "로맨스", color: "#c47fa5", bgColor: "rgba(196,127,165,0.1)", borderColor: "rgba(196,127,165,0.35)", icon: "💕" },
-      { id: "horror", name: "공포", color: "#f07070", bgColor: "rgba(180,60,60,0.15)", borderColor: "rgba(180,60,60,0.35)", icon: "💀" },
-      { id: "sf", name: "SF", color: "#7ae0d4", bgColor: "rgba(74,184,168,0.12)", borderColor: "rgba(74,184,168,0.35)", icon: "🚀" },
-      { id: "mystery", name: "미스터리", color: "#c0aee8", bgColor: "rgba(160,140,200,0.15)", borderColor: "rgba(160,140,200,0.35)", icon: "👻" },
-      { id: "history", name: "역사", color: "#e0c870", bgColor: "rgba(197,168,74,0.12)", borderColor: "rgba(197,168,74,0.35)", icon: "🏛️" },
-      { id: "psychology", name: "심리", color: "#f0a0b8", bgColor: "rgba(224,90,122,0.12)", borderColor: "rgba(224,90,122,0.35)", icon: "🌀" }
+      { id: "moo", name: "무협", color: "rgb(196, 154, 60)", bgColor: "rgba(196, 154, 60, 0.1)", borderColor: "rgba(196, 154, 60, 0.35)", icon: "⚔️" },
+      { id: "fantasy", name: "판타지", color: "rgb(122, 159, 196)", bgColor: "rgba(122, 159, 196, 0.1)", borderColor: "rgba(122, 159, 196, 0.35)", icon: "🧙" },
+      { id: "modern", name: "현대", color: "rgb(143, 186, 138)", bgColor: "rgba(143, 186, 138, 0.1)", borderColor: "rgba(143, 186, 138, 0.35)", icon: "🏙️" },
+      { id: "romance", name: "로맨스", color: "rgb(196, 127, 165)", bgColor: "rgba(196, 127, 165, 0.1)", borderColor: "rgba(196, 127, 165, 0.35)", icon: "💕" },
+      { id: "horror", name: "공포", color: "rgb(180, 60, 60)", bgColor: "rgba(180, 60, 60, 0.15)", borderColor: "rgba(180, 60, 60, 0.35)", icon: "💀" },
+      { id: "sf", name: "SF", color: "rgb(74, 184, 168)", bgColor: "rgba(74, 184, 168, 0.12)", borderColor: "rgba(74, 184, 168, 0.35)", icon: "🚀" },
+      { id: "mystery", name: "미스터리", color: "rgb(160, 140, 200)", bgColor: "rgba(160, 140, 200, 0.15)", borderColor: "rgba(160, 140, 200, 0.35)", icon: "👻" },
+      { id: "history", name: "역사", color: "rgb(197, 168, 74)", bgColor: "rgba(197, 168, 74, 0.12)", borderColor: "rgba(197, 168, 74, 0.35)", icon: "🏛️" },
+      { id: "psychology", name: "심리", color: "rgb(224, 90, 122)", bgColor: "rgba(224, 90, 122, 0.12)", borderColor: "rgba(224, 90, 122, 0.35)", icon: "🌀" }
     ]
   };
 

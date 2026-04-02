@@ -76,6 +76,6 @@ export default async function storiesMineRoute(app: FastifyInstance) {
       });
     }
 
-    return reply.send(buildPaginatedResponse<StoryListItem>(data ?? [], count, pageNum, limitNum));
+    return reply.send(buildPaginatedResponse<StoryListItem>(data as unknown as StoryListItem[] ?? [], count, pageNum, limitNum));
   });
 }

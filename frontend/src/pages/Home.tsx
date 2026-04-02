@@ -1,4 +1,5 @@
 import { type FC, useState, useCallback, useRef, useEffect } from 'react';
+import { Link } from 'react-router';
 import { Header } from '@/components/layout/Header';
 import { HeroSection } from '@/components/home/HeroSection';
 import { ContinueSection } from '@/components/home/ContinueSection';
@@ -218,15 +219,15 @@ const Home: FC = () => {
             style={{ display: 'flex', gap: 20, marginLeft: 'auto', flexWrap: 'wrap' }}
           >
             {[
-              { label: '관리자', href: '/admin' },
-              { label: '에디터', href: '/editor' },
-              { label: '도움말', href: '/help' },
-              { label: '이용약관', href: '/terms' },
-              { label: '개인정보처리방침', href: '/privacy' },
-            ].map(({ label, href }) => (
-              <a
+              { label: '관리자', to: '/admin' },
+              { label: '에디터', to: '/editor' },
+              { label: '도움말', to: '/help' },
+              { label: '이용약관', to: '/terms' },
+              { label: '개인정보처리방침', to: '/privacy' },
+            ].map(({ label, to }) => (
+              <Link
                 key={label}
-                href={href}
+                to={to}
                 style={{
                   fontSize: 12,
                   color: 'var(--text-muted)',
@@ -237,7 +238,7 @@ const Home: FC = () => {
                 onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
               >
                 {label}
-              </a>
+              </Link>
             ))}
           </nav>
         </div>

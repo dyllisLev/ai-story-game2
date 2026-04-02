@@ -6,6 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
+import { STORAGE_KEYS } from './constants';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ const ThemeContext = createContext<ThemeState | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState<boolean>(() => {
-    const stored = localStorage.getItem('theme');
+    const stored = localStorage.getItem(STORAGE_KEYS.THEME);
     if (stored) return stored === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
@@ -30,7 +31,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Sync `data-theme` attribute on <html>
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    localStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
   }, [isDark]);
 
   const toggle = useCallback(() => setIsDark((prev) => !prev), []);

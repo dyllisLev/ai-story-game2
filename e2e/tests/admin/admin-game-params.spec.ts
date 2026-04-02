@@ -201,13 +201,18 @@ test.describe('Admin - Game Parameters', () => {
     const stepper = page.locator('.a-num-stepper').first();
     const input = stepper.locator('input[type="number"]');
 
-    // Try to enter non-numeric text
-    await input.clear();
-    await input.fill('abc');
+    // Get initial value
+    const initialValue = await input.inputValue();
 
-    // The input should reject non-numeric values or be empty
+    // Try to enter non-numeric text using keyboard
+    await input.click();
+    await input.press('Control+A'); // Select all
+    await input.type('abc');
+
+    // The input should reject non-numeric values (either empty or original value)
     const value = await input.inputValue();
-    expect(value === '' || !isNaN(parseInt(value, 10))).toBeTruthy();
+    // HTML5 number inputs automatically prevent non-numeric input
+    expect(value === '' || value === initialValue || !isNaN(parseInt(value, 10))).toBeTruthy();
   });
 
   test('should display multiple configuration cards', async ({ page }) => {

@@ -8,6 +8,7 @@ import { useStoryEditor } from '../hooks/useStoryEditor';
 import { usePresets } from '../hooks/usePresets';
 import { usePromptPreview, type PromptPreviewConfig } from '../hooks/usePromptPreview';
 import { useAdminConfig } from '../hooks/useAdminConfig';
+import { mapStatusPresetAttributes } from '@/lib/format';
 
 import '@/styles/editor.css';
 import { useToast } from '@/components/ui/Toast';
@@ -154,6 +155,7 @@ const EditorPage: FC = () => {
     if (!presetId) return;
     const preset = presets.find(p => p.id === presetId);
     if (!preset) return;
+
     applyPreset({
       systemRules: preset.system_rules || form.systemRules,
       worldSetting: preset.world_setting || form.worldSetting,
@@ -162,8 +164,17 @@ const EditorPage: FC = () => {
       characterSetting: preset.character_setting || form.characterSetting,
       genre: preset.genre || form.genre,
       icon: preset.icon || form.icon,
+      useLatex: preset.use_latex !== undefined ? preset.use_latex : form.useLatex,
     });
-  }, [presets, form, setField, applyPreset]);
+
+    if (preset.status_preset_id) {
+      const statusPreset = statusPresets.find(sp => sp.id === preset.status_preset_id);
+      if (statusPreset && statusPreset.attributes?.length > 0) {
+        const mappedAttrs = mapStatusPresetAttributes(statusPreset.attributes);
+        setField('statusAttributes', mappedAttrs);
+      }
+    }
+  }, [presets, statusPresets, setField, applyPreset]);
 
   // Load story
   const handleLoad = useCallback(() => {

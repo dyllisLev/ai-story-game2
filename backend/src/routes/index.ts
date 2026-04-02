@@ -12,6 +12,9 @@ import storiesStatsRoute  from './stories/stats.js';
 import storiesMineRoute   from './stories/mine.js';
 import presetsRoute       from './stories/presets.js';
 
+// Sessions
+import sessionsRoutes      from './sessions/index.js';
+
 // Admin
 import adminStoriesRoute       from './admin/stories.js';
 import adminStatusPresetsRoute from './admin/status-presets.js';
@@ -31,6 +34,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(storiesDetailRoute, { prefix: API_V1_PREFIX });
   await app.register(storiesCrudRoute, { prefix: API_V1_PREFIX });
   await app.register(presetsRoute, { prefix: API_V1_PREFIX });
+
+  // --- Sessions ---
+  await app.register(sessionsRoutes, { prefix: API_V1_PREFIX });
 
   // --- Admin (all protected by requireAdmin inside each route) ---
   await app.register(adminStoriesRoute, { prefix: API_V1_PREFIX });

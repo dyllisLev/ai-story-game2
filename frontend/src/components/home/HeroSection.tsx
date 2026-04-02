@@ -153,11 +153,11 @@ export const HeroSection: FC = () => {
           flexWrap: 'wrap',
         }}
       >
-        <a
-          href="#storiesSection"
+        <Link
+          to="/play"
           style={ctaPrimaryStyle}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#d4b85a';
+            e.currentTarget.style.background = 'var(--accent-hover, #d4b85a)';
             e.currentTarget.style.boxShadow = '0 0 28px var(--accent-glow)';
             e.currentTarget.style.transform = 'translateY(-2px)';
           }}
@@ -169,7 +169,7 @@ export const HeroSection: FC = () => {
         >
           <PlayIcon />
           스토리 플레이하기
-        </a>
+        </Link>
         <Link
           to="/editor"
           style={ctaSecondaryStyle}

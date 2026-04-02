@@ -6,6 +6,14 @@ export interface AuthUser {
   role: 'pending' | 'user' | 'admin';
 }
 
+// DEV-only: Mock admin user for E2E testing
+export const MOCK_ADMIN_USER: AuthUser = {
+  id: 'dev-admin-user',
+  email: 'dev-admin@example.com',
+  nickname: 'Dev Admin',
+  role: 'admin',
+} as const;
+
 // Phase 2-A: UserProfile — 프로필 페이지 및 소유자 표시용
 export interface UserProfile {
   id: string;
