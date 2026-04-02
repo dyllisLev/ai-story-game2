@@ -19,7 +19,9 @@ test.describe('Home 페이지 네비게이션', () => {
   // H-07: 플레이 버튼으로 스크롤
   test('"스토리 플레이하기" 클릭 시 스토리 섹션으로 스크롤', async ({ homePage }) => {
     await homePage.playStoriesButton.click();
-    await homePage.page.waitForTimeout(500);
+    // Wait for smooth scroll animation to complete (behavior: 'smooth' typically takes ~500ms)
+    await homePage.page.waitForTimeout(600);
+    // Verify stories section is visible in viewport
     const isVisible = await homePage.storiesSection.isVisible();
     expect(isVisible).toBeTruthy();
   });

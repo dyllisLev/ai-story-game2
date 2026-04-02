@@ -14,7 +14,7 @@ export class HomePage {
   // Hero
   readonly heroSection: Locator;
   readonly playStoriesButton: Locator;
-  readonly createStoryLink: Locator;
+  readonly createStoryButton: Locator;
   readonly statItems: Locator;
 
   // FilterBar
@@ -56,8 +56,8 @@ export class HomePage {
 
     // Hero
     this.heroSection = page.locator('section').filter({ hasText: '당신만의 이야기를' });
-    this.playStoriesButton = page.getByRole('link', { name: /스토리 플레이하기/ });
-    this.createStoryLink = page.getByRole('link', { name: /새 스토리 만들기/ });
+    this.playStoriesButton = page.getByRole('button', { name: /스토리 플레이하기/ });
+    this.createStoryButton = page.getByRole('link', { name: /새 스토리 만들기/ });
     this.statItems = page.getByLabel('서비스 통계');
 
     // FilterBar
