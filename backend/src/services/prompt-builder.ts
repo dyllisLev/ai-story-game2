@@ -16,9 +16,11 @@ interface StoryData {
   user_note?: string;
   system_rules?: string;
   use_latex?: boolean;
+  genre?: string; // NEW: Genre field
   preset?: {
     useStatusWindow?: boolean;
     statusAttributes?: StatusAttribute[];
+    genre?: string; // NEW: Genre from preset
   };
 }
 
@@ -37,8 +39,17 @@ export function buildPrompt(story: StoryData, preset: PresetData, promptConfig: 
   const ch = (story.characters || '').trim();
   const un = (story.user_note || '').trim();
   const sr = (story.system_rules || '').trim();
+  const genre = story.preset?.genre || story.genre; // NEW: Get genre
 
   let prompt = promptConfig.system_preamble;
+
+  // NEW: Add genre-specific instructions if available
+  if (genre && promptConfig.genre_prompts?.[genre]) {
+    const genreConfig = promptConfig.genre_prompts[genre];
+    if (genreConfig.enabled && genreConfig.system_preamble_suffix) {
+      prompt += genreConfig.system_preamble_suffix;
+    }
+  }
 
   if (preset.narrativeLength) {
     const nl = String(preset.narrativeLength);
@@ -90,7 +101,7 @@ ${attrLines.join('\n')}
   return prompt;
 }
 
-export function buildMemoryPrompt(memory: SessionMemory | null): string {
+export function buildMemoryPrompt(memory: SessionMemory | null, genre?: string, promptConfig?: PromptConfig): string {
   if (!memory) return '';
 
   const sections: string[] = [];
@@ -114,5 +125,15 @@ export function buildMemoryPrompt(memory: SessionMemory | null): string {
     sections.push(`## 현재 목표\n${memory.goals}`);
   }
 
-  return sections.length > 0 ? `\n\n[메모리]\n${sections.join('\n\n')}` : '';
+  let result = sections.length > 0 ? `\n\n[메모리]\n${sections.join('\n\n')}` : '';
+
+  // NEW: Add genre-specific memory instructions if available
+  if (genre && promptConfig?.genre_prompts?.[genre]) {
+    const genreConfig = promptConfig.genre_prompts[genre];
+    if (genreConfig.enabled && genreConfig.memory_system_instruction_suffix) {
+      result += genreConfig.memory_system_instruction_suffix;
+    }
+  }
+
+  return result;
 }

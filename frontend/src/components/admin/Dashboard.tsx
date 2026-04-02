@@ -130,7 +130,7 @@ export const Dashboard: FC = () => {
           <div className="a-stat-delta">↑ 오늘 {formatNumber(stats?.sessions.active_today ?? 0)}개</div>
         </div>
         <div className="a-stat-card">
-          <div className="a-stat-label">오늘 API 호출</div>
+          <div className="a-stat-label">오늘 Gemini API 호출</div>
           <div className="a-stat-value">{formatNumber(stats?.system.total_requests_today ?? 0)}</div>
         </div>
         <div className="a-stat-card">
@@ -185,7 +185,7 @@ export const Dashboard: FC = () => {
 
         <div className="a-card">
           <div className="a-card-header">
-            <span className="a-card-title">오늘 API 호출 추이</span>
+            <span className="a-card-title">오늘 Gemini API 호출 추이</span>
             <span style={{ marginLeft: 'auto', fontFamily: 'var(--a-font-ui)', fontSize: '9px', color: 'var(--a-ink-faint)' }}>
               시간별
             </span>

@@ -23,22 +23,28 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
       now.getFullYear(), now.getMonth(), now.getDate()
     ).toISOString();
 
+    // Only count Gemini API calls (game/chat, game/test-prompt)
+    const geminiEndpoints = ['/api/game/chat', '/api/game/test-prompt'];
+
     const [{ count: total_calls_today }, { data: tokensData }, { count: error_count_today }] =
       await Promise.all([
         app.supabaseAdmin
           .from('api_logs')
           .select('*', { count: 'exact', head: true })
-          .gte('created_at', todayStart),
+          .gte('created_at', todayStart)
+          .in('endpoint', geminiEndpoints),
         app.supabaseAdmin
           .from('api_logs')
           .select('response_usage')
           .gte('created_at', todayStart)
-          .not('response_usage', 'is', null),
+          .not('response_usage', 'is', null)
+          .in('endpoint', geminiEndpoints),
         app.supabaseAdmin
           .from('api_logs')
           .select('*', { count: 'exact', head: true })
           .gte('created_at', todayStart)
-          .not('response_error', 'is', null),
+          .not('response_error', 'is', null)
+          .in('endpoint', geminiEndpoints),
       ]);
 
     const totalTokens = ((tokensData as { response_usage: { input: number; output: number } }[]) ?? [])

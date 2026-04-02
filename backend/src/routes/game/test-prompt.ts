@@ -16,6 +16,7 @@ interface TestPromptRequest {
     user_note: string;
     system_rules: string;
     use_latex: boolean;
+    genre?: string; // NEW: Genre field
   };
   preset: {
     characterName?: string;
@@ -45,9 +46,10 @@ export default async function (app: FastifyInstance) {
     const config = await app.getAppConfig();
 
     // Build system prompt
+    const genre = body.editorData.genre;
     let systemPrompt = buildPrompt(body.editorData, body.preset, config.promptConfig);
     if (body.memory) {
-      systemPrompt += buildMemoryPrompt(body.memory);
+      systemPrompt += buildMemoryPrompt(body.memory, genre, config.promptConfig);
     }
 
     const startMessage = config.promptConfig.game_start_message;
