@@ -193,26 +193,6 @@ const Admin: FC = () => {
   // Track if admin verification has been performed to prevent infinite loop
   const hasVerifiedRef = useRef<boolean>(false);
 
-  // DEV-only: Auto-restore skip state if localStorage flag is set
-  useEffect(() => {
-    if (import.meta.env.DEV && !isLoading && !user) {
-      try {
-        // Check both new and old localStorage keys for backward compatibility
-        const hasNewKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
-        const hasOldKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP_OLD) === DEV_HEADER_VALUES.TRUE;
-
-        if (hasNewKey || hasOldKey) {
-          // Update the API client's dev bypass cache
-          updateDevBypassCache();
-          setMockAdminUser();
-        }
-      } catch (error) {
-        // localStorage may be disabled in some environments (e.g., private browsing)
-        console.debug('localStorage unavailable, dev skip state not persisted:', error);
-      }
-    }
-  }, [isLoading, user, setMockAdminUser]);
-
   // Server-side admin verification on mount
   useEffect(() => {
     if (!user) return;
