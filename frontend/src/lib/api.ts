@@ -27,7 +27,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     // localStorage unavailable - skip dev bypass
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: options.method,
+    body: options.body,
+    headers,
+  });
 
   if (!res.ok) {
     const body = await res

@@ -10,13 +10,13 @@ import type {
   ApiLogStats,
   PaginatedResponse,
 } from '@story-game/shared';
-import { requireAdminWithBasicAuth } from '../../plugins/auth.js';
+import { requireAdmin, requireAdminWithBasicAuth } from '../../plugins/auth.js';
 import { buildPaginatedResponse } from '../../lib/pagination.js';
 
 export default async function adminApiLogsRoute(app: FastifyInstance) {
   // GET /api/admin/api-logs/stats — must come before /:id route
   app.get('/admin/api-logs/stats', async (request, reply) => {
-    requireAdminWithBasicAuth(request);
+    requireAdmin(request);
 
     const now = new Date();
     const todayStart = new Date(
@@ -76,7 +76,7 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    requireAdminWithBasicAuth(request);
+    requireAdmin(request);
 
     const f = request.query as ApiLogFilter;
     const pageNum = Number(f.page ?? 1);
@@ -121,7 +121,7 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
 
   // GET /api/admin/api-logs/:id — full detail (includes prompts, messages, response)
   app.get('/admin/api-logs/:id', async (request, reply) => {
-    requireAdminWithBasicAuth(request);
+    requireAdmin(request);
     const { id } = request.params as { id: string };
 
     const { data, error } = await app.supabaseAdmin
