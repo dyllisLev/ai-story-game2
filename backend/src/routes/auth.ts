@@ -309,7 +309,12 @@ export default async function authRoutes(app: FastifyInstance) {
   app.post(
     '/auth/logout',
     async (_request, reply) => {
-      await app.supabase.auth.signOut();
+      const { error } = await app.supabase.auth.signOut();
+      if (error) {
+        return reply.status(500).send({
+          error: { code: 'INTERNAL_ERROR', message: toKorean(error.message) },
+        });
+      }
       clearAuthCookies(reply);
       return reply.status(204).send();
     }

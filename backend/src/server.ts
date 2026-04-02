@@ -32,6 +32,16 @@ app.decorate('config', config);
 
 // 에러 핸들러
 app.setErrorHandler((error: FastifyError, request, reply) => {
+  // Fastify validation error → our format
+  if (error.code === 'FST_ERR_VALIDATION') {
+    return reply.status(400).send({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: '입력값이 올바르지 않습니다',
+      },
+    });
+  }
+
   if (error.statusCode) {
     return reply.status(error.statusCode).send({
       error: {

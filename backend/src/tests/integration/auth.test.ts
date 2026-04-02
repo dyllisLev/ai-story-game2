@@ -1,6 +1,7 @@
 // backend/src/tests/integration/auth.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
 import authRoutes from '../../routes/auth.js';
 
 describe('Auth Routes - Integration Tests', () => {
@@ -9,12 +10,46 @@ describe('Auth Routes - Integration Tests', () => {
   beforeEach(async () => {
     app = Fastify({ logger: false });
 
+    // Register cookie plugin (required for auth routes)
+    await app.register(cookie, { secret: 'test-secret' });
+
+    // Add error handler for validation errors
+    app.setErrorHandler((error, request, reply) => {
+      if (error.code === 'FST_ERR_VALIDATION') {
+        return reply.status(400).send({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '입력값이 올바르지 않습니다',
+          },
+        });
+      }
+      return reply.status(error.statusCode || 500).send({
+        error: {
+          code: (error as any).code || 'INTERNAL_ERROR',
+          message: error.message,
+        },
+      });
+    });
+
     // Mock Supabase client
+    const mockSingle = vi.fn().mockResolvedValue({
+      data: { nickname: 'test-user', role: 'user' },
+      error: null,
+    });
+    const mockEq = vi.fn().mockReturnValue({ single: mockSingle });
+    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+    const mockInsert = vi.fn().mockResolvedValue({ error: null });
+    const mockFrom = vi.fn().mockReturnValue({
+      insert: mockInsert,
+      select: mockSelect,
+    });
+
     app.decorate('supabase', {
       auth: {
         signUp: vi.fn(),
         signInWithPassword: vi.fn(),
         signOut: vi.fn(),
+        refreshSession: vi.fn(),
       },
     });
 
@@ -24,8 +59,11 @@ describe('Auth Routes - Integration Tests', () => {
           deleteUser: vi.fn(),
         },
       },
-      from: vi.fn(),
+      from: mockFrom,
     });
+
+    // Decorate config (needed for production cookie setting)
+    app.decorate('config', { NODE_ENV: 'development' });
 
     // Register routes
     await app.register(authRoutes);
@@ -94,7 +132,13 @@ describe('Auth Routes - Integration Tests', () => {
     it('should accept valid signup request', async () => {
       const mockSignUp = vi.mocked(app.supabase.auth.signUp);
       mockSignUp.mockResolvedValue({
-        data: { user: { id: 'test-user-id' }, session: null },
+        data: {
+          user: { id: 'test-user-id', email: 'test@example.com' },
+          session: {
+            access_token: 'test-access-token',
+            refresh_token: 'test-refresh-token',
+          },
+        },
         error: null,
       });
 
@@ -187,8 +231,9 @@ describe('Auth Routes - Integration Tests', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.user).toBeDefined();
-      expect(body.session).toBeDefined();
-      expect(body.session.access_token).toBe('mock-token');
+      expect(body.user.id).toBe('test-user-id');
+      // Tokens are set as httpOnly cookies, not in response body
+      expect(response.headers['set-cookie']).toBeDefined();
     });
 
     it('should handle invalid credentials', async () => {
@@ -229,7 +274,6 @@ describe('Auth Routes - Integration Tests', () => {
 
     it('should accept valid refresh token', async () => {
       const mockRefresh = vi.mocked(app.supabase.auth.refreshSession);
-      (app.supabase.auth as any).refreshSession = mockRefresh;
       mockRefresh.mockResolvedValue({
         data: {
           session: { access_token: 'new-token', refresh_token: 'new-refresh' },
@@ -241,19 +285,19 @@ describe('Auth Routes - Integration Tests', () => {
         method: 'POST',
         url: '/auth/refresh',
         payload: {
-          refresh_token: 'valid-refresh-token',
+          refreshToken: 'valid-refresh-token',
         },
       });
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.session).toBeDefined();
-      expect(body.session.access_token).toBe('new-token');
+      expect(body).toEqual({});
+      // Tokens are set as httpOnly cookies, not in response body
+      expect(response.headers['set-cookie']).toBeDefined();
     });
 
     it('should handle invalid refresh token', async () => {
       const mockRefresh = vi.mocked(app.supabase.auth.refreshSession);
-      (app.supabase.auth as any).refreshSession = mockRefresh;
       mockRefresh.mockResolvedValue({
         data: { session: null },
         error: { message: 'Invalid refresh token' },
@@ -263,7 +307,7 @@ describe('Auth Routes - Integration Tests', () => {
         method: 'POST',
         url: '/auth/refresh',
         payload: {
-          refresh_token: 'invalid-token',
+          refreshToken: 'invalid-token',
         },
       });
 
