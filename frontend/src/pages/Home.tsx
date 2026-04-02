@@ -234,8 +234,6 @@ const Home: FC = () => {
                   textDecoration: 'none',
                   transition: 'color var(--transition)',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
               >
                 {label}
               </Link>
