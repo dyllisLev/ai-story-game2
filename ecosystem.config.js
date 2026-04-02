@@ -5,7 +5,7 @@ module.exports = {
       script: './backend/src/server.ts',
       interpreter: 'npx',
       interpreter_args: 'tsx',
-      cwd: '/home/paperclip/workspace/ai-story-game2',
+      cwd: '/root/ai-story-game2',
       instances: 1,
       autorestart: true,
       watch: false,
