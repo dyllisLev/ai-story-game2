@@ -4,7 +4,7 @@
 -- ============================================================
 
 -- Step 1: Extend gameplay_config with new fields
-UPDATE story_game.config
+UPDATE ai_story_game.config
 SET value = value || '{
   "available_models": [
     {"id": "gemini-2.0-flash", "label": "Gemini 2.0 Flash", "context_window": 128000, "is_default": true},
@@ -58,7 +58,7 @@ updated_at = now()
 WHERE id = 'gameplay_config';
 
 -- Step 2: Insert genre_config (unified genre styling)
-INSERT INTO story_game.config (id, value) VALUES ('genre_config', '{
+INSERT INTO ai_story_game.config (id, value) VALUES ('genre_config', '{
   "genres": [
     {
       "id": "moo",

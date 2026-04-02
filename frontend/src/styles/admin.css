@@ -1071,6 +1071,24 @@
   background: rgba(192,57,43,0.12);
 }
 
+.a-btn-dev {
+  background: #6366f1;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-family: var(--a-font-ui);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.a-btn-dev:hover {
+  opacity: 0.9;
+}
+
 .a-btn-new-preset {
   display: inline-flex;
   align-items: center;

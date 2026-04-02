@@ -16,6 +16,7 @@ import { StoryContent } from '@/components/play/StoryContent';
 import { InputArea } from '@/components/play/InputArea';
 import { InfoPanel } from '@/components/play/InfoPanel';
 import { CharacterModal } from '@/components/play/CharacterModal';
+import { MobileBottomNav } from '@/components/play/MobileBottomNav';
 
 import type { SessionMemory } from '@story-game/shared';
 import type { SettingsData, StatusAttribute, InputMode } from '@/types/play';
@@ -64,6 +65,10 @@ const Play: FC = () => {
   // --- Panel visibility ---
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
+
+  // --- Mobile navigation ---
+  const [mobileTab, setMobileTab] = useState<'session' | 'info' | 'notes'>('session');
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
   const layoutClass = [
     'play-layout',
@@ -251,6 +256,16 @@ const Play: FC = () => {
     engine.updateSettingsData({ characterName: name, characterSetting: setting });
   };
 
+  // --- Mobile navigation ---
+  const handleMobileTabChange = (tab: 'session' | 'info' | 'notes') => {
+    setMobileTab(tab);
+    setMobilePanelOpen(true);
+  };
+
+  const handleCloseMobilePanel = () => {
+    setMobilePanelOpen(false);
+  };
+
   return (
     <div
       className="play-root"
@@ -345,6 +360,75 @@ const Play: FC = () => {
         settingsData={engine.settingsData}
         onSave={handleSaveChar}
       />
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav
+        activeTab={mobileTab}
+        onTabChange={handleMobileTabChange}
+      />
+
+      {/* Mobile Panel Overlay */}
+      {mobilePanelOpen && (
+        <div className="mobile-panel-overlay">
+          {mobileTab === 'session' && (
+            <SessionPanel
+              sessions={sessionList}
+              currentSessionId={engine.currentSessionId}
+              onSelectSession={handleLoadSession}
+              onNewSession={handleNewSession}
+              onLoadById={handleLoadSession}
+              onClose={handleCloseMobilePanel}
+            />
+          )}
+          {mobileTab === 'info' && (
+            <InfoPanel
+              memory={memory}
+              settingsData={engine.settingsData}
+              onUpdateSettings={handleUpdateSettings}
+              onUpdateMemory={handleUpdateMemory}
+              narrativeLength={engine.narrativeLength}
+              onNarrativeLengthChange={engine.setNarrativeLength}
+              useLatex={engine.useLatex}
+              onUseLatexChange={engine.setUseLatex}
+              useCache={engine.useCache}
+              onUseCacheChange={engine.setUseCache}
+              saveStatus={engine.saveStatus}
+              onSaveNow={engine.saveNow}
+              hasSession={!!engine.currentSessionId}
+              onOpenCharModal={() => setCharModalOpen(true)}
+              statusAttributes={statusAttributes}
+              statusValues={engine.statusValues}
+            />
+          )}
+          {mobileTab === 'notes' && (
+            <InfoPanel
+              memory={memory}
+              settingsData={engine.settingsData}
+              onUpdateSettings={handleUpdateSettings}
+              onUpdateMemory={handleUpdateMemory}
+              narrativeLength={engine.narrativeLength}
+              onNarrativeLengthChange={engine.setNarrativeLength}
+              useLatex={engine.useLatex}
+              onUseLatexChange={engine.setUseLatex}
+              useCache={engine.useCache}
+              onUseCacheChange={engine.setUseCache}
+              saveStatus={engine.saveStatus}
+              onSaveNow={engine.saveNow}
+              hasSession={!!engine.currentSessionId}
+              onOpenCharModal={() => setCharModalOpen(true)}
+              statusAttributes={statusAttributes}
+              statusValues={engine.statusValues}
+            />
+          )}
+          <button
+            className="mobile-close-button"
+            onClick={handleCloseMobilePanel}
+            aria-label="닫기"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 };

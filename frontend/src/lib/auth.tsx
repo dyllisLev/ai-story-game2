@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { api } from './api';
 import type { AuthUser, AuthResponse } from '@story-game/shared';
+import { MOCK_ADMIN_USER } from './test-utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, nickname?: string) => Promise<void>;
   logout: () => Promise<void>;
+  setMockAdminUser: () => void; // DEV-only for E2E testing
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -56,9 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  // DEV-only: Set mock admin user for E2E testing
+  const setMockAdminUser = useCallback(() => {
+    if (import.meta.env.DEV) {
+      setUser(MOCK_ADMIN_USER);
+    }
+  }, []);
+
   const contextValue = useMemo(
-    () => ({ user, isLoading, login, signup, logout }),
-    [user, isLoading, login, signup, logout],
+    () => ({ user, isLoading, login, signup, logout, setMockAdminUser }),
+    [user, isLoading, login, signup, logout, setMockAdminUser],
   );
 
   return (

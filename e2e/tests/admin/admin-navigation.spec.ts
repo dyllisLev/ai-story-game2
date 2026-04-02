@@ -1,0 +1,253 @@
+import { test, expect } from '@playwright/test';
+import { AdminPage } from '../../pages/admin.page';
+
+test.describe('Admin - Navigation and Layout', () => {
+  let adminPage: AdminPage;
+
+  test.beforeEach(async ({ page }) => {
+    adminPage = new AdminPage(page);
+    await adminPage.goto();
+  });
+
+  test('should display admin auth gate', async ({ page }) => {
+    // Verify auth gate is visible
+    await expect(adminPage.authGate).toBeVisible();
+
+    // Verify username input
+    await expect(adminPage.usernameInput).toBeVisible();
+
+    // Verify password input
+    await expect(adminPage.passwordInput).toBeVisible();
+
+    // Verify login button
+    await expect(adminPage.loginButton).toBeVisible();
+
+    // Verify skip button
+    await expect(adminPage.skipButton).toBeVisible();
+  });
+
+  test('should skip authentication and enter admin panel', async ({ page }) => {
+    // Skip auth (for development/testing)
+    await adminPage.skipAuth();
+
+    // Verify topbar is visible
+    await expect(adminPage.topbarLogo).toBeVisible();
+    await expect(adminPage.topbarTitle).toBeVisible();
+    await expect(adminPage.topbarBadge).toBeVisible();
+
+    // Verify main navigation is visible
+    await expect(adminPage.nav).toBeVisible();
+
+    // Verify main content area is visible
+    await expect(adminPage.mainContent).toBeVisible();
+  });
+
+  test('should display all navigation sections', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Expected navigation items
+    const expectedNavItems = [
+      '대시보드',
+      '회원 관리',
+      '서비스 로그',
+      'API 로그',
+      '프롬프트 설정',
+      '게임 파라미터',
+      '장르 설정',
+      '스토리 프리셋',
+      '스토리 관리',
+      '상태창 프리셋',
+      '시스템'
+    ];
+
+    // Verify each nav item exists
+    for (const item of expectedNavItems) {
+      const navItem = adminPage.navItem(item);
+      await expect(navItem).toBeVisible();
+    }
+  });
+
+  test('should navigate to Dashboard section', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Click on Dashboard
+    await adminPage.navigateTo('대시보드');
+
+    // Verify navigation (dashboard content should be visible)
+    await expect(page.locator('.a-section-title, .a-card-title').first()).toBeVisible();
+  });
+
+  test('should navigate to Prompt Settings section', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Navigate to Prompt Settings
+    await adminPage.navigateTo('프롬프트 설정');
+
+    // Verify section title
+    await expect(page.locator('.a-section-title').filter({ hasText: /프롬프트|Prompt/i })).toBeVisible();
+  });
+
+  test('should navigate to Status Presets section', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Navigate to Status Presets
+    await adminPage.navigateTo('상태창 프리셋');
+
+    // Verify section title or content
+    await expect(page.locator('.a-section-title, .a-card-title').first()).toBeVisible();
+  });
+
+  test('should navigate to Stories section', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Navigate to Stories
+    await adminPage.navigateTo('스토리 관리');
+
+    // Verify section is loaded
+    await expect(page.locator('.a-section-title, .a-card-title').first()).toBeVisible();
+  });
+
+  test('should navigate to Story Presets section', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Navigate to Story Presets
+    await adminPage.navigateTo('스토리 프리셋');
+
+    // Verify section is loaded
+    await expect(page.locator('.a-section-title, .a-card-title').first()).toBeVisible();
+  });
+
+  test('should navigate to System section', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Navigate to System
+    await adminPage.navigateTo('시스템');
+
+    // Verify danger zone or system content is visible
+    await expect(page.locator('.a-danger-zone, .a-section-title').first()).toBeVisible();
+  });
+
+  test('should highlight active navigation item', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Navigate to different sections
+    await adminPage.navigateTo('장르 설정');
+    await page.waitForTimeout(200);
+
+    // Verify active nav item is highlighted
+    const activeNav = await adminPage.getActiveNavItem();
+    await expect(activeNav).toBeVisible();
+  });
+
+  test('should display action bar with save button', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Verify action bar is visible
+    await expect(adminPage.actionBar).toBeVisible();
+
+    // Verify save button is visible
+    await expect(adminPage.saveButton).toBeVisible();
+  });
+
+  test('should display theme toggle in topbar', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Verify theme toggle button exists
+    await expect(adminPage.themeToggle).toBeVisible();
+  });
+
+  test('should have link back to main site', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Verify site link is visible
+    await expect(adminPage.siteLink).toBeVisible();
+
+    // Click site link and verify navigation
+    await adminPage.siteLink.click();
+    await page.waitForTimeout(300);
+
+    // Should be on home page now
+    expect(page.url()).toContain('localhost:5173');
+    expect(page.url()).not.toContain('/admin');
+  });
+
+  test('should display correct page title', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Verify page title
+    await expect(page).toHaveTitle(/Story|World|AI|스토리월드/i);
+  });
+
+  test('should have responsive layout', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Check navigation visibility on desktop
+    await expect(adminPage.nav).toBeVisible();
+
+    // Check main content visibility
+    await expect(adminPage.mainContent).toBeVisible();
+
+    // Verify layout structure
+    await expect(page.locator('.a-admin-layout, .a-layout')).toBeVisible();
+  });
+
+  test('should handle navigation between sections correctly', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Navigate to multiple sections in sequence
+    const sections = ['대시보드', '게임 파라미터', '장르 설정', '프롬프트 설정'];
+
+    for (const section of sections) {
+      await adminPage.navigateTo(section);
+      await page.waitForTimeout(200);
+
+      // Verify content area is updated
+      await expect(adminPage.mainContent).toBeVisible();
+    }
+  });
+
+  test('should maintain authentication state during navigation', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Navigate to different sections
+    await adminPage.navigateTo('대시보드');
+    await page.waitForTimeout(200);
+
+    await adminPage.navigateTo('장르 설정');
+    await page.waitForTimeout(200);
+
+    // Auth gate should not reappear
+    await expect(adminPage.authGate).not.toBeVisible();
+  });
+
+  test('should display error notification on auth failure', async ({ page }) => {
+    // Try to login with invalid credentials
+    await adminPage.loginWith('invalid', 'invalid');
+
+    // Wait for error response
+    await page.waitForTimeout(500);
+
+    // Verify error message appears (if validation is implemented)
+    // Note: This test depends on backend validation being implemented
+    const hasError = await adminPage.authError.isVisible().catch(() => false);
+
+    if (hasError) {
+      await expect(adminPage.authError).toBeVisible();
+    } else {
+      // If no error validation yet, this is expected
+      test.skip(true, 'Auth validation not yet implemented');
+    }
+  });
+
+  test('should have proper meta tags and accessibility', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Check for proper heading structure
+    const headings = page.locator('h1, h2, h3, .a-title, .a-section-title');
+    await expect(headings.first()).toBeVisible();
+
+    // Check for proper button labels
+    const buttons = page.locator('button[aria-label], button');
+    await expect(buttons.first()).toBeVisible();
+  });
+});

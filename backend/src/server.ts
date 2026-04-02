@@ -147,6 +147,14 @@ await app.register(supabasePlugin);
 import configCachePlugin from './plugins/config-cache.js';
 await app.register(configCachePlugin);
 
+// Correlation ID 플러그인
+import correlationPlugin from './plugins/correlation.js';
+await app.register(correlationPlugin);
+
+// Metrics collection 플러그인
+import metricsPlugin from './plugins/metrics.js';
+await app.register(metricsPlugin);
+
 // Sentry 에러 트래킹 플러그인
 import sentryPlugin from './plugins/sentry.js';
 await app.register(sentryPlugin);

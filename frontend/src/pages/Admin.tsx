@@ -19,6 +19,21 @@ import { SystemSection } from '../components/admin/SystemSection';
 import { UserManagement } from '../components/admin/UserManagement';
 import { useAdminConfig, type AdminConfig, type PromptConfig, type GameplayConfig, type GenreConfig } from '../hooks/useAdminConfig';
 
+/* ── DEV-only Skip Button Component ── */
+const DevSkipButton: FC<{ onClick: () => void }> = ({ onClick }) => {
+  if (!import.meta.env.DEV) return null;
+
+  return (
+    <button
+      type="button"
+      className="a-btn a-btn-dev"
+      onClick={onClick}
+    >
+      건너뛰기 (Dev)
+    </button>
+  );
+};
+
 /* ── Theme toggle ── */
 type AdminTheme = 'dark' | 'light';
 
@@ -156,21 +171,42 @@ const AdminContent: FC = () => {
 
 /* ── Page entry ── */
 const Admin: FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, setMockAdminUser } = useAuth();
   const [serverVerified, setServerVerified] = useState<boolean | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  // DEV-only: Skip authentication for E2E testing
+  const handleDevSkip = useCallback(() => {
+    setMockAdminUser();
+  }, [setMockAdminUser]);
+
+  // Track if admin verification has been performed to prevent infinite loop
+  const hasVerifiedRef = useRef<boolean>(false);
 
   // Server-side admin verification on mount
   useEffect(() => {
     if (!user) return;
 
+    // Skip if already verified for this user session
+    if (hasVerifiedRef.current) return;
+
     const verifyAdmin = async () => {
+      // DEV-only: Skip server verification for mock admin user
+      if (import.meta.env.DEV && user.id === 'dev-admin-user') {
+        setServerVerified(true);
+        setVerifyError(null);
+        hasVerifiedRef.current = true;
+        return;
+      }
+
+      // Real user: verify with server
       try {
         const response = await api.get<VerifyAdminResponse>('/admin/verify');
         setServerVerified(response.isAdmin);
         if (!response.isAdmin) {
           setVerifyError('서버에서 관리자 권한이 확인되지 않았습니다');
         }
+        hasVerifiedRef.current = true;
       } catch (err) {
         console.error('Admin verification failed:', err);
         setVerifyError('관리자 권한 확인에 실패했습니다');
@@ -179,7 +215,7 @@ const Admin: FC = () => {
     };
 
     verifyAdmin();
-  }, [user]);
+  }, [user?.id]);
 
   if (isLoading) {
     return (
@@ -189,8 +225,21 @@ const Admin: FC = () => {
     );
   }
 
-  // 비로그인 → 로그인 페이지로
+  // 비로그인 → 로그인 페이지로 (with DEV skip button)
   if (!user) {
+    if (import.meta.env.DEV) {
+      return (
+        <div className="admin-root" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+            로그인이 필요합니다
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <a href="/login" className="a-btn">로그인</a>
+            <DevSkipButton onClick={handleDevSkip} />
+          </div>
+        </div>
+      );
+    }
     return <Navigate to="/login" replace />;
   }
 
@@ -210,7 +259,10 @@ const Admin: FC = () => {
         <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>
           {verifyError || '관리자 권한이 필요합니다'}
         </span>
-        <a href="/" className="a-btn">홈으로</a>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <a href="/" className="a-btn">홈으로</a>
+          <DevSkipButton onClick={handleDevSkip} />
+        </div>
       </div>
     );
   }

@@ -1556,3 +1556,130 @@
   white-space: nowrap;
 }
 .play-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* =============================================================================
+   MOBILE BOTTOM NAVIGATION (640px and below)
+   ============================================================================= */
+
+@media (max-width: 640px) {
+  /* Hide desktop panels on mobile */
+  .play-layout {
+    grid-template-columns: 0px 1fr 0px !important;
+  }
+
+  /* Mobile bottom navigation */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: var(--panel-bg);
+    border-top: 1px solid var(--border-default);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 1000;
+    padding: 0 var(--space-2);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    flex: 1;
+    height: 100%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all var(--dur-base) var(--ease);
+    color: var(--text-secondary);
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .nav-tab:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .nav-tab.active {
+    color: var(--accent);
+  }
+
+  .nav-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .nav-label {
+    font-size: var(--font-xs);
+    font-weight: 500;
+  }
+
+  /* Adjust main content to account for bottom nav */
+  .panel-center {
+    padding-bottom: 56px;
+  }
+
+  /* Toast should be above bottom nav */
+  .play-toast {
+    bottom: 64px !important;
+  }
+
+  /* Mobile panel overlay */
+  .mobile-panel-overlay {
+    position: fixed;
+    top: 48px; /* Below top bar */
+    left: 0;
+    right: 0;
+    bottom: 56px; /* Above bottom nav */
+    background: var(--panel-bg);
+    z-index: 999;
+    overflow-y: auto;
+    animation: slideIn var(--dur-base) var(--ease);
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Mobile close button */
+  .mobile-close-button {
+    position: fixed;
+    top: 56px;
+    right: var(--space-2);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-overlay);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--dur-base) var(--ease);
+  }
+
+  .mobile-close-button:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
+  }
+
+  .mobile-close-button:active {
+    transform: scale(0.95);
+  }
+}

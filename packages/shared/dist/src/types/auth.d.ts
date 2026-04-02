@@ -22,7 +22,11 @@ export interface AuthLoginInput {
 }
 export interface AuthResponse {
     user: AuthUser;
-    accessToken: string;
-    refreshToken: string;
+}
+export interface VerifyAdminResponse {
+    isAdmin: boolean;
+    userId: string;
+    email: string;
+    role: 'pending' | 'user' | 'admin';
 }
 //# sourceMappingURL=auth.d.ts.map

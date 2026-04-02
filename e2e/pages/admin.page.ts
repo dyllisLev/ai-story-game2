@@ -43,7 +43,7 @@ export class AdminPage {
     this.usernameInput = page.locator('input[autocomplete="username"]');
     this.passwordInput = page.locator('.a-auth-gate input[type="password"]');
     this.loginButton = page.locator('.a-auth-gate button').filter({ hasText: '로그인' });
-    this.skipButton = page.locator('button, a').filter({ hasText: '건너뛰기' });
+    this.skipButton = page.locator('button, a').filter({ hasText: '건너뛰기 (Dev)' });
     this.authError = page.locator('.a-auth-error');
 
     // TopBar
@@ -130,5 +130,56 @@ export class AdminPage {
 
   confirmDialogConfirm() {
     return this.confirmDialog().locator('button.danger, button').filter({ hasText: /초기화|삭제/ });
+  }
+
+  // Genre Settings helpers
+  genreCards() {
+    return this.mainContent.locator('.a-card').filter({ has: this.page.locator('.a-card-header') });
+  }
+
+  genreCard(index: number) {
+    return this.genreCards().nth(index);
+  }
+
+  // Game Params helpers
+  numSteppers() {
+    return this.mainContent.locator('.a-num-stepper');
+  }
+
+  numStepper(index: number) {
+    return this.numSteppers().nth(index);
+  }
+
+  // Tooltip helpers
+  tooltips() {
+    return this.mainContent.locator('.a-tooltip-icon');
+  }
+
+  // Section helpers
+  sectionTitle(title: string) {
+    return this.mainContent.locator('.a-section-title').filter({ hasText: title });
+  }
+
+  sectionCards() {
+    return this.mainContent.locator('.a-card');
+  }
+
+  // Form helpers
+  formGroups() {
+    return this.mainContent.locator('.a-form-group');
+  }
+
+  formRows() {
+    return this.mainContent.locator('.a-form-row');
+  }
+
+  // Input helpers by label
+  inputByLabel(label: string) {
+    return this.mainContent.locator('.a-form-label').filter({ hasText: label }).locator('..').locator('input');
+  }
+
+  // Get all navigation items
+  allNavItems() {
+    return this.nav.locator('.a-nav-item, button');
   }
 }
