@@ -68,13 +68,13 @@ export class PlayPage {
     // TopBar
     this.apiKeyInput = page.getByLabel('Gemini API 키 입력');
     this.modelSelect = page.getByLabel('AI 모델 선택');
-    this.leftPanelToggle = page.locator('.btn-icon').filter({ hasText: '☰' });
-    this.charModalButton = page.locator('.btn-icon').filter({ hasText: '📒' });
-    this.rightPanelToggle = page.locator('.btn-icon').filter({ hasText: '⊞' });
-    this.themeToggle = page.locator('.btn-icon').filter({ hasText: /🌙|☀️/ });
+    this.leftPanelToggle = page.getByLabel('왼쪽 패널 토글');
+    this.charModalButton = page.getByLabel('등장인물 보기');
+    this.rightPanelToggle = page.getByLabel('오른쪽 패널 토글');
+    this.themeToggle = page.getByLabel('테마 전환');
 
     // Session Panel
-    this.sessionPanel = page.locator('.session-panel');
+    this.sessionPanel = page.locator('.panel-left');
     this.newSessionButton = page.getByLabel('새 세션 시작');
     this.closeSidebarButton = page.locator('.btn-icon').filter({ hasText: '◀' });
     this.sessionItems = page.locator('.session-item');
@@ -104,11 +104,11 @@ export class PlayPage {
     this.charSaveButton = this.charModal.locator('.session-load-btn').filter({ hasText: '저장' });
 
     // Info Panel
-    this.infoPanel = page.locator('.info-panel');
-    this.infoTab = page.locator('[role="tab"]').filter({ hasText: '정보' });
-    this.memoryTab = page.locator('[role="tab"]').filter({ hasText: '기억' });
-    this.notesTab = page.locator('[role="tab"]').filter({ hasText: '노트' });
-    this.outputTab = page.locator('[role="tab"]').filter({ hasText: '출력' });
+    this.infoPanel = page.locator('.panel-right');
+    this.infoTab = page.locator('.panel-right [role="tab"][data-tab="info"]');
+    this.memoryTab = page.locator('.panel-right [role="tab"][data-tab="memory"]');
+    this.notesTab = page.locator('.panel-right [role="tab"][data-tab="notes"]');
+    this.outputTab = page.locator('.panel-right [role="tab"][data-tab="output"]');
 
     // Output Tab
     this.narrativeMinusButton = page.getByLabel('서사 길이 줄이기');

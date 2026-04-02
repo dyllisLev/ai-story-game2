@@ -153,12 +153,9 @@ export const HeroSection: FC = () => {
           flexWrap: 'wrap',
         }}
       >
-        <button
-          type="button"
+        <Link
+          to="/play"
           style={ctaPrimaryStyle}
-          onClick={() => {
-            document.getElementById('storiesSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'var(--accent-hover, #d4b85a)';
             e.currentTarget.style.boxShadow = '0 0 28px var(--accent-glow)';
@@ -172,7 +169,7 @@ export const HeroSection: FC = () => {
         >
           <PlayIcon />
           스토리 플레이하기
-        </button>
+        </Link>
         <Link
           to="/editor"
           style={ctaSecondaryStyle}

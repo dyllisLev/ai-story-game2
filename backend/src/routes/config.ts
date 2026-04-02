@@ -15,6 +15,8 @@ export default async function configRoutes(app: FastifyInstance) {
           input_modes: config.gameplayConfig.input_modes,
           default_suggestions: config.gameplayConfig.default_suggestions,
           status_attribute_types: config.gameplayConfig.status_attribute_types,
+          story_icons: config.gameplayConfig.story_icons,
+          character_icons: config.gameplayConfig.character_icons,
         },
       };
     } catch (err) {

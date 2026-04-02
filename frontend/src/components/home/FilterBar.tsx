@@ -52,7 +52,7 @@ export const FilterBar: FC<FilterBarProps> = ({
           return (
             <button
               key={genre}
-              aria-pressed={isActive}
+              aria-pressed={isActive ? 'true' : 'false'}
               onClick={() => onFilterChange({ genre: value || undefined, page: 1 })}
               style={{
                 height: 32,
@@ -197,7 +197,7 @@ export const FilterBar: FC<FilterBarProps> = ({
         >
           <button
             aria-label="그리드 보기"
-            aria-pressed={viewMode === 'grid'}
+            aria-pressed={viewMode === 'grid' ? 'true' : 'false'}
             onClick={() => onViewModeChange('grid')}
             style={{
               width: 32,
@@ -221,7 +221,7 @@ export const FilterBar: FC<FilterBarProps> = ({
           </button>
           <button
             aria-label="리스트 보기"
-            aria-pressed={viewMode === 'list'}
+            aria-pressed={viewMode === 'list' ? 'true' : 'false'}
             onClick={() => onViewModeChange('list')}
             style={{
               width: 32,

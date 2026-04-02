@@ -110,7 +110,7 @@ interface EditorSidebarProps {
 
 export const EditorSidebar: FC<EditorSidebarProps> = ({ activeSection, completeness, onNavigate }) => {
   return (
-    <aside className="sidebar" aria-label="섹션 네비게이션">
+    <aside className="editor-sidebar sidebar" aria-label="섹션 네비게이션">
       <div className="sidebar-scroll">
         <p className="sidebar-group-label">스토리 구성</p>
 
