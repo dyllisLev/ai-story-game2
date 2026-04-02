@@ -2,9 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'aistorygame-backend',
-      script: './backend/src/server.ts',
-      interpreter: 'npx',
-      interpreter_args: 'tsx',
+      script: './backend/dist/server.js',
+      interpreter: 'node',
       cwd: '/root/ai-story-game2',
       instances: 1,
       autorestart: true,

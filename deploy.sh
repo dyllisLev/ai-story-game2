@@ -59,6 +59,11 @@ rollback() {
   if [[ -d "$BACKUP_DIR/frontend-$backup_id" ]]; then
     rm -rf "$PROJECT_DIR/frontend/dist"
     cp -r "$BACKUP_DIR/frontend-$backup_id" "$PROJECT_DIR/frontend/dist"
+
+    # /var/www/aistorygame도 롤백
+    sudo rm -rf /var/www/aistorygame/*
+    sudo cp -r "$BACKUP_DIR/frontend-$backup_id"/* /var/www/aistorygame/
+
     log "프론트엔드 롤백 완료"
   fi
 
@@ -96,6 +101,36 @@ build() {
   npx tsc
 
   log "빌드 완료!"
+}
+
+# 프론트엔드 정적 파일 배포
+deploy_frontend_static() {
+  log "프론트엔드 정적 파일 배포 중..."
+
+  local FRONTEND_SOURCE="$PROJECT_DIR/frontend/dist"
+  local FRONTEND_TARGET="/var/www/aistorygame"
+
+  # 타겟 디렉토리 생성
+  if [[ ! -d "$FRONTEND_TARGET" ]]; then
+    log "타겟 디렉토리 생성 중: $FRONTEND_TARGET"
+    sudo mkdir -p "$FRONTEND_TARGET"
+  fi
+
+  # 정적 파일 복사
+  if [[ -d "$FRONTEND_SOURCE" ]]; then
+    log "프론트엔드 파일 복사 중..."
+    sudo cp -r "$FRONTEND_SOURCE"/* "$FRONTEND_TARGET/"
+    log "프론트엔드 파일 복사 완료: $FRONTEND_TARGET"
+  else
+    err "프론트엔드 빌드 디렉토리를 찾을 수 없습니다: $FRONTEND_SOURCE"
+    return 1
+  fi
+
+  # 권한 설정 (nginx가 읽을 수 있도록)
+  sudo chown -R root:root "$FRONTEND_TARGET"
+  sudo chmod -R 755 "$FRONTEND_TARGET"
+
+  log "프론트엔드 정적 파일 배포 완료!"
 }
 
 # nginx 설정 배포
@@ -140,6 +175,9 @@ deploy_nginx_config() {
 # 배포
 deploy() {
   log "프로덕션 배포 중..."
+
+  # 프론트엔드 정적 파일 배포
+  deploy_frontend_static
 
   # nginx 설정 배포
   deploy_nginx_config

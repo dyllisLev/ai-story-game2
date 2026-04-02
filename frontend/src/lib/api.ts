@@ -13,15 +13,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     ...(options.headers ?? {}),
   };
 
-  if (import.meta.env.DEV) {
-    try {
-      const shouldSkip = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
-      if (shouldSkip) {
-        headers[DEV_HEADERS.ADMIN_SKIP] = DEV_HEADER_VALUES.SKIP;
-      }
-    } catch {
-      // localStorage unavailable - skip dev bypass
+  // DEV mode: Add skip header for admin bypass (always check localStorage in development)
+  try {
+    const shouldSkip = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
+    if (shouldSkip) {
+      headers[DEV_HEADERS.ADMIN_SKIP] = DEV_HEADER_VALUES.SKIP;
     }
+  } catch {
+    // localStorage unavailable - skip dev bypass
   }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
