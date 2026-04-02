@@ -1,0 +1,92 @@
+import { requireAdmin, requireAdminWithBasicAuth } from '../../plugins/auth.js';
+import { CacheTags } from '../../services/cache.js';
+export default async function adminStatusPresetsRoute(app) {
+    // GET /api/admin/status-presets
+    app.get('/admin/status-presets', async (request, reply) => {
+        requireAdmin(request);
+        const { data, error } = await app.supabaseAdmin
+            .from('status_presets')
+            .select('*')
+            .order('genre', { ascending: true });
+        if (error) {
+            app.log.error(error, 'adminStatusPresetsRoute GET: query failed');
+            return reply.status(500).send({
+                error: { code: 'INTERNAL_ERROR', message: '상태 프리셋을 불러오는데 실패했습니다' },
+            });
+        }
+        return reply.send(data ?? []);
+    });
+    // POST /api/admin/status-presets
+    app.post('/admin/status-presets', async (request, reply) => {
+        requireAdminWithBasicAuth(request);
+        const body = request.body;
+        if (!body.title) {
+            return reply.status(400).send({
+                error: { code: 'VALIDATION_ERROR', message: '제목을 입력해주세요' },
+            });
+        }
+        const { data, error } = await app.supabaseAdmin
+            .from('status_presets')
+            .insert({
+            title: body.title,
+            genre: body.genre ?? '',
+            attributes: body.attributes ?? [],
+        })
+            .select('*')
+            .single();
+        if (error) {
+            app.log.error(error, 'adminStatusPresetsRoute POST: insert failed');
+            return reply.status(500).send({
+                error: { code: 'INTERNAL_ERROR', message: '상태 프리셋 생성에 실패했습니다' },
+            });
+        }
+        // Invalidate cache
+        await app.cache.invalidateByTag(CacheTags.STATUS_PRESETS);
+        return reply.status(201).send(data);
+    });
+    // PUT /api/admin/status-presets/:id
+    app.put('/admin/status-presets/:id', async (request, reply) => {
+        requireAdminWithBasicAuth(request);
+        const { id } = request.params;
+        const body = request.body;
+        const { data, error } = await app.supabaseAdmin
+            .from('status_presets')
+            .update({ ...body, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select('*')
+            .single();
+        if (error) {
+            if (error.code === 'PGRST116') {
+                return reply.status(404).send({
+                    error: { code: 'NOT_FOUND', message: '상태 프리셋을 찾을 수 없습니다' },
+                });
+            }
+            app.log.error(error, 'adminStatusPresetsRoute PUT: update failed');
+            return reply.status(500).send({
+                error: { code: 'INTERNAL_ERROR', message: '상태 프리셋 업데이트에 실패했습니다' },
+            });
+        }
+        // Invalidate cache
+        await app.cache.invalidateByTag(CacheTags.STATUS_PRESETS);
+        return reply.send(data);
+    });
+    // DELETE /api/admin/status-presets/:id
+    app.delete('/admin/status-presets/:id', async (request, reply) => {
+        requireAdminWithBasicAuth(request);
+        const { id } = request.params;
+        const { error } = await app.supabaseAdmin
+            .from('status_presets')
+            .delete()
+            .eq('id', id);
+        if (error) {
+            app.log.error(error, 'adminStatusPresetsRoute DELETE: delete failed');
+            return reply.status(500).send({
+                error: { code: 'INTERNAL_ERROR', message: '상태 프리셋 삭제에 실패했습니다' },
+            });
+        }
+        // Invalidate cache
+        await app.cache.invalidateByTag(CacheTags.STATUS_PRESETS);
+        return reply.status(204).send();
+    });
+}
+//# sourceMappingURL=status-presets.js.map

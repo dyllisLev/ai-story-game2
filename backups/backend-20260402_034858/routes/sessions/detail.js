@@ -1,0 +1,17 @@
+import { verifySessionAccess } from '../../plugins/auth.js';
+export default async function (app) {
+    app.get('/sessions/:id', async (request, reply) => {
+        const { id } = request.params;
+        await verifySessionAccess(app, request, id);
+        const { data, error } = await app.supabaseAdmin
+            .from('sessions')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error || !data) {
+            return reply.status(404).send({ error: { code: 'NOT_FOUND', message: '세션을 찾을 수 없습니다' } });
+        }
+        return data;
+    });
+}
+//# sourceMappingURL=detail.js.map

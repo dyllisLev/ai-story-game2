@@ -92,10 +92,12 @@ export default async function adminServiceLogsRoute(app: FastifyInstance) {
       querystring: {
         type: 'object',
         properties: {
-          status_code: { type: 'integer' },
+          status:      { type: 'string' },  // '2xx', '4xx', '5xx', ''
+          status_code: { type: 'integer' }, // legacy: specific status code
           path:        { type: 'string' },
-          from:        { type: 'string' },
-          to:          { type: 'string' },
+          time_range:  { type: 'string' },  // '1h', '6h', '24h', '7d'
+          from:        { type: 'string' },  // ISO 8601 timestamp
+          to:          { type: 'string' },  // ISO 8601 timestamp
           page:        { type: 'integer', minimum: 1, default: 1 },
           limit:       { type: 'integer', minimum: 1, maximum: 200, default: 50 },
         },
@@ -104,10 +106,69 @@ export default async function adminServiceLogsRoute(app: FastifyInstance) {
   }, async (request, reply) => {
     requireAdmin(request);
 
-    const f = request.query as ServiceLogFilter;
+    const f = request.query as ServiceLogFilter & { status?: string; time_range?: string };
     const pageNum = Number(f.page ?? 1);
     const limitNum = Math.min(Number(f.limit ?? 50), 200);
     const offset = (pageNum - 1) * limitNum;
+
+    // Handle time_range parameter (convert to from/to dates)
+    let from: string | undefined = f.from;
+    let to: string | undefined = f.to;
+
+    if (f.time_range && !from) {
+      const now = new Date();
+      let timeRangeMs: number;
+
+      switch (f.time_range) {
+        case '1h':
+          timeRangeMs = 1 * 60 * 60 * 1000;
+          break;
+        case '6h':
+          timeRangeMs = 6 * 60 * 60 * 1000;
+          break;
+        case '24h':
+          timeRangeMs = 24 * 60 * 60 * 1000;
+          break;
+        case '7d':
+          timeRangeMs = 7 * 24 * 60 * 60 * 1000;
+          break;
+        default:
+          timeRangeMs = 24 * 60 * 60 * 1000; // default to 24h
+      }
+
+      from = new Date(now.getTime() - timeRangeMs).toISOString();
+    }
+
+    // Handle status parameter (convert 2xx/4xx/5xx to status_code ranges)
+    let useStatusCodeFilter = false;
+    let minStatus = 0;
+    let maxStatus = 999;
+
+    if (f.status_code) {
+      // Legacy: direct status code filter
+      useStatusCodeFilter = true;
+      minStatus = Number(f.status_code);
+      maxStatus = Number(f.status_code);
+    } else if (f.status) {
+      // New: 2xx/4xx/5xx filter
+      useStatusCodeFilter = true;
+      switch (f.status) {
+        case '2xx':
+          minStatus = 200;
+          maxStatus = 299;
+          break;
+        case '4xx':
+          minStatus = 400;
+          maxStatus = 499;
+          break;
+        case '5xx':
+          minStatus = 500;
+          maxStatus = 599;
+          break;
+        default:
+          useStatusCodeFilter = false; // '' means all status codes
+      }
+    }
 
     let query = app.supabaseAdmin
       .from('service_logs')
@@ -115,17 +176,19 @@ export default async function adminServiceLogsRoute(app: FastifyInstance) {
       .order('timestamp', { ascending: false })
       .range(offset, offset + limitNum - 1);
 
-    if (f.status_code) {
-      query = query.eq('status_code', Number(f.status_code));
+    // Apply status code filter using gte/lte for ranges
+    if (useStatusCodeFilter) {
+      query = query.gte('status_code', minStatus).lte('status_code', maxStatus);
     }
+
     if (f.path) {
       query = query.ilike('path', `%${f.path}%`);
     }
-    if (f.from) {
-      query = query.gte('timestamp', f.from);
+    if (from) {
+      query = query.gte('timestamp', from);
     }
-    if (f.to) {
-      query = query.lte('timestamp', f.to);
+    if (to) {
+      query = query.lte('timestamp', to);
     }
 
     const { data, count, error } = await query;

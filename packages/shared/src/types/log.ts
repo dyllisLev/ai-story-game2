@@ -17,9 +17,11 @@ export interface ServiceLog {
 }
 
 export interface ServiceLogFilter {
-  status_code?: number;
+  status?: '2xx' | '4xx' | '5xx' | '';  // 상태코드 범위 필터
+  status_code?: number;                 // 특정 상태코드 필터 (legacy)
   path?: string;
-  from?: string;   // ISO 8601 타임스탬프
+  time_range?: '1h' | '6h' | '24h' | '7d';  // 시간 범위 필터
+  from?: string;   // ISO 8601 타임스탬프 (time_range 대신 직접 지정)
   to?: string;
   page?: number;
   limit?: number;
@@ -54,6 +56,7 @@ export interface ApiLog {
 export interface ApiLogFilter {
   endpoint?: string;
   session_id?: string;
+  time_range?: '1h' | '6h' | '24h';  // 시간 범위 필터
   from?: string;
   to?: string;
   errors_only?: boolean;

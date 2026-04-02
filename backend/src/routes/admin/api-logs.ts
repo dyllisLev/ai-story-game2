@@ -67,6 +67,7 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
         properties: {
           endpoint:    { type: 'string' },
           session_id:  { type: 'string' },
+          time_range:  { type: 'string' },  // '1h', '6h', '24h'
           from:        { type: 'string' },
           to:          { type: 'string' },
           errors_only: { type: 'boolean' },
@@ -78,10 +79,35 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
   }, async (request, reply) => {
     requireAdmin(request);
 
-    const f = request.query as ApiLogFilter;
+    const f = request.query as ApiLogFilter & { time_range?: string };
     const pageNum = Number(f.page ?? 1);
     const limitNum = Math.min(Number(f.limit ?? 50), 200);
     const offset = (pageNum - 1) * limitNum;
+
+    // Handle time_range parameter (convert to from/to dates)
+    let from: string | undefined = f.from;
+    let to: string | undefined = f.to;
+
+    if (f.time_range && !from) {
+      const now = new Date();
+      let timeRangeMs: number;
+
+      switch (f.time_range) {
+        case '1h':
+          timeRangeMs = 1 * 60 * 60 * 1000;
+          break;
+        case '6h':
+          timeRangeMs = 6 * 60 * 60 * 1000;
+          break;
+        case '24h':
+          timeRangeMs = 24 * 60 * 60 * 1000;
+          break;
+        default:
+          timeRangeMs = 24 * 60 * 60 * 1000; // default to 24h
+      }
+
+      from = new Date(now.getTime() - timeRangeMs).toISOString();
+    }
 
     let query = app.supabaseAdmin
       .from('api_logs')
@@ -98,10 +124,10 @@ export default async function adminApiLogsRoute(app: FastifyInstance) {
     if (f.session_id) {
       query = query.eq('session_id', f.session_id);
     }
-    if (f.from) {
-      query = query.gte('created_at', f.from);
+    if (from) {
+      query = query.gte('created_at', from);
     }
-    if (f.to) {
+    if (to) {
       query = query.lte('created_at', f.to);
     }
     if (f.errors_only === true) {
