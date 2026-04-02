@@ -1,5 +1,5 @@
 import { type FC, type FormEvent, useState } from 'react';
-import { Link, Navigate } from 'react-router';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import type { AuthUser } from '@story-game/shared';

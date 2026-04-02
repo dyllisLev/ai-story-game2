@@ -124,6 +124,30 @@ test.describe('Admin - Navigation and Layout', () => {
     await expect(page.locator('.a-danger-zone, .a-section-title').first()).toBeVisible();
   });
 
+  test('should navigate to Service Logs section (AI-174 fix verification)', async ({ page }) => {
+    await adminPage.skipAuth();
+
+    // Navigate to Service Logs (서비스 로그)
+    await adminPage.navigateTo('서비스 로그');
+
+    // Wait for content to load
+    await page.waitForTimeout(500);
+
+    // Verify section title or content is visible
+    // Should NOT see infinite loading or 401 error
+    await expect(page.locator('.a-section-title, .a-card-title, .a-main').first()).toBeVisible();
+
+    // Verify we're not stuck in loading state
+    const loadingIndicator = page.locator('.a-loading, .loading, [role="progressbar"]');
+    const isLoading = await loadingIndicator.count();
+    expect(isLoading).toBe(0);
+
+    // Verify no error messages
+    const errorMessage = page.locator('.a-error, .error, text=오류, text=Error, text=401');
+    const hasError = await errorMessage.count();
+    expect(hasError).toBe(0);
+  });
+
   test('should highlight active navigation item', async ({ page }) => {
     await adminPage.skipAuth();
 

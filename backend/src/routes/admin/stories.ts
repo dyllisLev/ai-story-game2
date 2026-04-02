@@ -3,7 +3,7 @@
 // PUT /api/admin/stories/:id/featured     — toggle featured flag
 import type { FastifyInstance } from 'fastify';
 import type { AdminStoryFilterParams, PaginatedResponse, Story } from '@story-game/shared';
-import { requireAdminWithBasicAuth } from '../../plugins/auth.js';
+import { requireAdmin, requireAdminWithBasicAuth } from '../../plugins/auth.js';
 import { STORY_FIELDS } from '../stories/constants.js';
 import { buildPaginatedResponse } from '../../lib/pagination.js';
 
@@ -25,7 +25,7 @@ export default async function adminStoriesRoute(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    requireAdminWithBasicAuth(request);
+    requireAdmin(request);
 
     const q = request.query as AdminStoryFilterParams;
     const {

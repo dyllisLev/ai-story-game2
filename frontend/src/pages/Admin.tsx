@@ -1,9 +1,9 @@
 import { type FC, useState, useCallback, useRef, useEffect } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate } from 'react-router-dom';
 import '../styles/admin.css';
 
 import { useAuth } from '@/lib/auth';
-import { api } from '@/lib/api';
+import { api, updateDevBypassCache } from '@/lib/api';
 import { STORAGE_KEYS, DEV_HEADER_VALUES } from '@/lib/constants';
 import type { VerifyAdminResponse } from '@story-game/shared';
 import { AdminNav, type AdminSection } from '../components/admin/AdminNav';
@@ -178,11 +178,15 @@ const Admin: FC = () => {
 
   const handleDevSkip = useCallback(() => {
     try {
+      // Set both new and old localStorage keys for backward compatibility
       localStorage.setItem(STORAGE_KEYS.DEV_ADMIN_SKIP, DEV_HEADER_VALUES.SKIP);
+      localStorage.setItem(STORAGE_KEYS.DEV_ADMIN_SKIP_OLD, DEV_HEADER_VALUES.TRUE);
     } catch (error) {
       // localStorage may be disabled in some environments (e.g., private browsing)
       console.debug('localStorage unavailable, dev skip state not persisted:', error);
     }
+    // Update the API client's dev bypass cache
+    updateDevBypassCache();
     setMockAdminUser();
   }, [setMockAdminUser]);
 
@@ -193,7 +197,13 @@ const Admin: FC = () => {
   useEffect(() => {
     if (import.meta.env.DEV && !isLoading && !user) {
       try {
-        if (localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP) {
+        // Check both new and old localStorage keys for backward compatibility
+        const hasNewKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
+        const hasOldKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP_OLD) === DEV_HEADER_VALUES.TRUE;
+
+        if (hasNewKey || hasOldKey) {
+          // Update the API client's dev bypass cache
+          updateDevBypassCache();
           setMockAdminUser();
         }
       } catch (error) {

@@ -2,7 +2,7 @@
 // Play Page — 3-column grid layout
 // ============================================================
 import { type FC, useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router';
+import { useParams } from 'react-router-dom';
 import '@/styles/play.css';
 
 import { useGameEngine } from '@/hooks/useGameEngine';

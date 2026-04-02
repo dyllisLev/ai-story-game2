@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { useFeaturedStories } from '@/hooks/useStories';
 import type { StoryListItem } from '@story-game/shared';
 import { useConfig } from '@/hooks/useConfig';

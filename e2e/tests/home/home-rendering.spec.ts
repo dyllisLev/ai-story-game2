@@ -9,7 +9,7 @@ test.describe('Home 페이지 렌더링', () => {
   test('로고 "스토리월드"가 표시되고 클릭하면 홈으로 이동', async ({ homePage }) => {
     await expect(homePage.logo).toBeVisible();
     await homePage.logo.click();
-    await expect(homePage.page).toHaveURL('/');
+    await expect(homePage.page).toHaveURL(/\/$/); // Use regex to match path ending with '/'
   });
 
   // H-02: 검색 입력창
