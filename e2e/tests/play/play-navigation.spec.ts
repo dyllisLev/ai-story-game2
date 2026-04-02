@@ -15,10 +15,10 @@ test.describe('Play 페이지 네비게이션', () => {
   });
 
   test('세션 패널 토글 버튼이 작동한다', async ({ page }) => {
-    const leftToggle = page.locator('.btn-icon').filter({ hasText: '☰' });
+    const leftToggle = page.getByLabel('왼쪽 패널 토글');
     await expect(leftToggle).toBeVisible({ timeout: 10000 });
 
-    const sessionPanel = page.locator('.session-panel');
+    const sessionPanel = page.locator('.panel-left');
 
     // 패널 초기 상태 확인
     const initiallyVisible = await sessionPanel.isVisible({ timeout: 5000 }).catch(() => false);
@@ -33,10 +33,10 @@ test.describe('Play 페이지 네비게이션', () => {
   });
 
   test('정보 패널 토글 버튼이 작동한다', async ({ page }) => {
-    const rightToggle = page.locator('.btn-icon').filter({ hasText: '⊞' });
+    const rightToggle = page.getByLabel('오른쪽 패널 토글');
     await expect(rightToggle).toBeVisible({ timeout: 10000 });
 
-    const infoPanel = page.locator('.info-panel');
+    const infoPanel = page.locator('.panel-right');
 
     // 패널 초기 상태 확인
     const initiallyVisible = await infoPanel.isVisible({ timeout: 5000 }).catch(() => false);
@@ -89,10 +89,20 @@ test.describe('Play 페이지 네비게이션', () => {
   });
 
   test('새 세션 시작 버튼이 작동한다', async ({ page }) => {
-    const leftToggle = page.locator('.btn-icon').filter({ hasText: '☰' });
-    await leftToggle.click();
-    await page.waitForTimeout(500);
+    const sessionPanel = page.locator('.panel-left');
 
+    // Check initial state - panel should be visible by default
+    const initiallyVisible = await sessionPanel.isVisible().catch(() => false);
+
+    const leftToggle = page.getByLabel('왼쪽 패널 토글');
+
+    // If panel is closed, open it first
+    if (!initiallyVisible) {
+      await leftToggle.click();
+      await page.waitForTimeout(300);
+    }
+
+    // Now the "새 세션 시작" button should be visible
     const newSessionButton = page.getByLabel('새 세션 시작');
     await expect(newSessionButton).toBeVisible({ timeout: 5000 });
   });
