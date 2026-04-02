@@ -31,7 +31,7 @@ jobs:
         run: cd packages/shared && npx tsc
 
       - name: Run tests
-        run: pnpm test
+        run: pnpm --filter backend test:run
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
