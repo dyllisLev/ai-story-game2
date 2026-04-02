@@ -100,24 +100,9 @@ jobs:
           script: |
             cd /root/ai-story-game2
 
-            # Git pull
-            echo "Pulling latest changes..."
-            git pull origin main
-
-            # Install dependencies
-            echo "Installing dependencies..."
-            pnpm install --frozen-lockfile
-
-            # Build
-            echo "Building..."
-            cd packages/shared && npx tsc
-            cd ../frontend && pnpm run build
-            cd ../backend && npx tsc
-
-            # Deploy
-            echo "Deploying..."
-            cd /root/ai-story-game2
-            ./deploy.sh deploy
+            # Run deployment script (handles git pull, install, build, pm2 reload)
+            echo "Starting deployment..."
+            ./deploy.sh
 
       - name: Verify deployment
         run: |
