@@ -10,6 +10,8 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60,
       retry: 1,
+      refetchOnWindowFocus: false, // Prevent excessive API calls when switching tabs/windows
+      refetchOnMount: false, // Prevent refetch when component remounts with fresh data
     },
   },
 });

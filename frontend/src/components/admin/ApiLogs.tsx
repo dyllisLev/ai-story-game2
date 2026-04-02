@@ -30,7 +30,36 @@ export const ApiLogs: FC = () => {
     filters, updateFilters,
     expandedId, toggleExpanded,
     clearLogs, isClearing,
+    error,
   } = useApiLogs(user);
+
+  // Display error state
+  if (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+    return (
+      <div className="a-section">
+        <div className="a-section-header">
+          <div className="a-section-title">API 로그</div>
+          <div className="a-section-subtitle">Gemini API 호출 로그 · 요청/응답 전문 포함</div>
+        </div>
+        <div className="a-card" style={{ padding: '32px', textAlign: 'center' }}>
+          <div style={{ color: 'var(--a-ink-error)', fontFamily: 'var(--a-font-ui)', fontSize: '13px', marginBottom: '12px' }}>
+            ❌ 로그를 불러오는데 실패했습니다
+          </div>
+          <div style={{ color: 'var(--a-ink-muted)', fontFamily: 'var(--a-font-ui)', fontSize: '11px', marginBottom: '16px' }}>
+            {errorMessage}
+          </div>
+          <button
+            className="a-btn"
+            onClick={() => void refetch()}
+            type="button"
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="a-section">

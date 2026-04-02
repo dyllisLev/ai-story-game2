@@ -42,6 +42,34 @@ export const ServiceLogs: FC = () => {
   // Debug logging for hook state
   console.log('[ServiceLogs] Hook state:', { isLoading, logsLength: logs.length, error, filters });
 
+  // Display error state
+  if (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+    return (
+      <div className="a-section">
+        <div className="a-section-header">
+          <div className="a-section-title">서비스 로그</div>
+          <div className="a-section-subtitle">HTTP 요청 로그 · 실시간 업데이트</div>
+        </div>
+        <div className="a-card" style={{ padding: '32px', textAlign: 'center' }}>
+          <div style={{ color: 'var(--a-ink-error)', fontFamily: 'var(--a-font-ui)', fontSize: '13px', marginBottom: '12px' }}>
+            ❌ 로그를 불러오는데 실패했습니다
+          </div>
+          <div style={{ color: 'var(--a-ink-muted)', fontFamily: 'var(--a-font-ui)', fontSize: '11px', marginBottom: '16px' }}>
+            {errorMessage}
+          </div>
+          <button
+            className="a-btn"
+            onClick={() => void refetch()}
+            type="button"
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="a-section">
       <div className="a-section-header">
