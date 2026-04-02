@@ -143,7 +143,11 @@ test.describe('Admin - Navigation and Layout', () => {
     expect(isLoading).toBe(0);
 
     // Verify no error messages
-    const errorMessage = page.locator('.a-error, .error, text=오류, text=Error, text=401');
+    const errorMessage = page.locator('.a-error')
+      .or(page.locator('.error'))
+      .or(page.locator('text=오류'))
+      .or(page.locator('text=Error'))
+      .or(page.locator('text=401'));
     const hasError = await errorMessage.count();
     expect(hasError).toBe(0);
   });
