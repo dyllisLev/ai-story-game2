@@ -1,4 +1,5 @@
 // API client — fetch wrapper with auth token injection
+import { STORAGE_KEYS, DEV_HEADERS, DEV_HEADER_VALUES } from './constants';
 
 const API_BASE = '/api/v1';
 
@@ -11,6 +12,17 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     ...(options.body != null ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers ?? {}),
   };
+
+  if (import.meta.env.DEV) {
+    try {
+      const shouldSkip = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
+      if (shouldSkip) {
+        headers[DEV_HEADERS.ADMIN_SKIP] = DEV_HEADER_VALUES.SKIP;
+      }
+    } catch {
+      // localStorage unavailable - skip dev bypass
+    }
+  }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 

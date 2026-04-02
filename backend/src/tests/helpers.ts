@@ -1,8 +1,5 @@
 // backend/src/tests/helpers.ts
 import Fastify, { type FastifyInstance } from 'fastify';
-import buildApp from '../../server.js';
-import { loadConfig } from '../../config.js';
-import type { EnvConfig } from '../../config.js';
 
 /**
  * Test app builder - creates Fastify app with test configuration
@@ -10,23 +7,24 @@ import type { EnvConfig } from '../../config.js';
  * This allows integration testing without starting a server,
  * using light-my-request to inject requests.
  */
-export async function buildTestApp(overrides: Partial<EnvConfig> = {}): Promise<FastifyInstance> {
-  const testConfig = {
-    ...loadConfig(),
-    ...overrides,
-    NODE_ENV: 'test' as const,
-  };
-
+export async function buildTestApp(overrides: Partial<Record<string, any>> = {}): Promise<FastifyInstance> {
   // Build Fastify app with test config
   const app = Fastify({
     logger: false, // Disable logging in tests
   });
 
   // Decorate with test config
-  app.decorate('config', testConfig);
-
-  // Register routes (similar to server.ts but without plugins that require external services)
-  // We'll need to mock supabase, redis, etc.
+  app.decorate('config', {
+    NODE_ENV: 'development',
+    PORT: 3000,
+    SUPABASE_URL: 'test-url',
+    SUPABASE_ANON_KEY: 'test-key',
+    SUPABASE_SERVICE_KEY: 'test-service-key',
+    SENTRY_DSN: '',
+    SENTRY_ENVIRONMENT: 'test',
+    API_KEY_ENCRYPTION_SECRET: 'test-secret',
+    ...overrides,
+  } as any);
 
   return app;
 }

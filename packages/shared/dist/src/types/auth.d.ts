@@ -4,6 +4,7 @@ export interface AuthUser {
     nickname: string | null;
     role: 'pending' | 'user' | 'admin';
 }
+export declare const MOCK_ADMIN_USER: AuthUser;
 export interface UserProfile {
     id: string;
     nickname: string | null;

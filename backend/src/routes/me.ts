@@ -15,6 +15,20 @@ export default async function meRoutes(app: FastifyInstance) {
   app.get('/me', async (request, reply) => {
     const user = requireLogin(request);
 
+    // DEV mode: mock admin user bypass database query
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
+    if (isDev && user.id === 'dev-admin-user') {
+      return reply.send({
+        id: user.id,
+        email: user.email,
+        nickname: 'Dev Admin',
+        avatar_url: null,
+        has_api_key: false,
+        role: 'admin',
+        created_at: new Date().toISOString(),
+      });
+    }
+
     try {
       const profile = await cachedQuery(
         app.cache,

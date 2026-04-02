@@ -1,24 +1,49 @@
 // backend/src/tests/integration/sessions.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import Fastify from 'fastify';
-import sessionsRoutes from '../../routes/sessions/crud.js';
+import Fastify, { type FastifyInstance } from 'fastify';
+import sessionsRoutes from '../../routes/sessions/index.js';
 
 describe('Sessions Routes - Integration Tests', () => {
-  let app: Fastify.FastifyInstance;
+  let app: FastifyInstance;
 
   beforeEach(async () => {
     app = Fastify({ logger: false });
 
+    // Add error handler for auth errors
+    app.setErrorHandler((error: any, request, reply) => {
+      if (error.code === 'FST_ERR_VALIDATION') {
+        return reply.status(400).send({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '입력값이 올바르지 않습니다',
+          },
+        });
+      }
+      return reply.status(error.statusCode || 500).send({
+        error: {
+          code: error.code || 'INTERNAL_ERROR',
+          message: error.message,
+        },
+      });
+    });
+
     // Mock Supabase admin client
     app.decorate('supabaseAdmin', {
       from: vi.fn(),
-    });
+    } as any);
 
     // Mock auth plugin
     app.decorateRequest('user', null);
 
-    // Register routes
-    await app.register(sessionsRoutes);
+    // Add hook to copy test user to request.user
+    app.addHook('onRequest', async (request) => {
+      if ((app as any).user) {
+        request.user = (app as any).user;
+      }
+    });
+
+    // Register routes with API v1 prefix
+    await app.register(sessionsRoutes, { prefix: '/api/v1' });
   });
 
   describe('GET /sessions (list)', () => {
@@ -35,7 +60,8 @@ describe('Sessions Routes - Integration Tests', () => {
       mockFrom.mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({
           data: mockSessions,
           error: null,
         }),
@@ -43,7 +69,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/sessions',
+        url: '/api/v1/sessions',
       });
 
       expect(response.statusCode).toBe(200);
@@ -68,7 +94,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/sessions',
+        url: '/api/v1/sessions',
       });
 
       expect(response.statusCode).toBe(200);
@@ -102,7 +128,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/sessions/123',
+        url: '/api/v1/sessions/123',
       });
 
       expect(response.statusCode).toBe(200);
@@ -127,7 +153,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/sessions/999',
+        url: '/api/v1/sessions/999',
       });
 
       expect(response.statusCode).toBe(404);
@@ -152,7 +178,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/sessions/123',
+        url: '/api/v1/sessions/123',
       });
 
       expect(response.statusCode).toBe(403);
@@ -166,7 +192,7 @@ describe('Sessions Routes - Integration Tests', () => {
     it('should reject unauthenticated request', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: '/sessions',
+        url: '/api/v1/sessions',
         payload: {
           storyId: 'story-123',
         },
@@ -181,7 +207,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/sessions',
+        url: '/api/v1/sessions',
         payload: {},
       });
 
@@ -226,7 +252,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/sessions',
+        url: '/api/v1/sessions',
         payload: {
           storyId: 'story-123',
         },
@@ -253,7 +279,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/sessions',
+        url: '/api/v1/sessions',
         payload: {
           storyId: 'non-existent-story',
         },
@@ -269,7 +295,7 @@ describe('Sessions Routes - Integration Tests', () => {
     it('should reject unauthenticated request', async () => {
       const response = await app.inject({
         method: 'PUT',
-        url: '/sessions/123',
+        url: '/api/v1/sessions/123',
         payload: {
           title: 'Updated Session',
         },
@@ -294,7 +320,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'PUT',
-        url: '/sessions/123',
+        url: '/api/v1/sessions/123',
         payload: {
           title: 'Updated Session',
         },
@@ -338,7 +364,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'PUT',
-        url: '/sessions/123',
+        url: '/api/v1/sessions/123',
         payload: {
           title: 'Updated Session',
         },
@@ -354,7 +380,7 @@ describe('Sessions Routes - Integration Tests', () => {
     it('should reject unauthenticated request', async () => {
       const response = await app.inject({
         method: 'DELETE',
-        url: '/sessions/123',
+        url: '/api/v1/sessions/123',
       });
 
       expect(response.statusCode).toBe(401);
@@ -376,7 +402,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/sessions/123',
+        url: '/api/v1/sessions/123',
       });
 
       expect(response.statusCode).toBe(403);
@@ -408,7 +434,7 @@ describe('Sessions Routes - Integration Tests', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: '/sessions/123',
+        url: '/api/v1/sessions/123',
       });
 
       expect(response.statusCode).toBe(204);

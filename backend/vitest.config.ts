@@ -2,6 +2,9 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
+    // Explicitly set root to backend directory
+    root: './',
+
     // Use globals for cleaner test syntax
     globals: true,
 
@@ -59,7 +62,7 @@ export default defineConfig({
 
     // Verbose output for better debugging
     verbose: true,
-    bail: 1, // Stop on first failure in CI
+    bail: false, // Run all tests even if some fail
   },
   resolve: {
     // Allow importing from workspace packages

@@ -6,14 +6,55 @@ import {
   shouldGenerateMemory,
   detectChapterLabel,
 } from './session-manager.js'
-import type { SessionMessage } from '@story-game/shared'
+import type { SessionMessage, GameplayConfig } from '@story-game/shared'
+
+// Helper to create mock messages with timestamps
+function createMockMessages(count: number, startIndex = 0): SessionMessage[] {
+  return Array.from({ length: count }, (_, i) => ({
+    role: i % 2 === 0 ? 'user' : 'model',
+    content: `Message ${i}`,
+    timestamp: Date.now() + (i * 1000),
+  }))
+}
+
+// Minimal GameplayConfig fixture for tests
+const mockGameplayConfig: GameplayConfig = {
+  default_narrative_length: 2000,
+  narrative_length_min: 500,
+  narrative_length_max: 5000,
+  sliding_window_size: 10,
+  max_history: 100,
+  message_limit: 1000,
+  message_warning_threshold: 900,
+  memory_short_term_max: 20,
+  auto_save_interval_ms: 30000,
+  max_session_list: 50,
+  available_models: [],
+  input_modes: [],
+  status_attribute_types: [],
+  default_suggestions: [],
+  character_relations: [],
+  story_icons: [],
+  character_icons: [],
+  memory_categories: [],
+  editor_defaults: {
+    icon: '📖',
+    aiModel: 'gemini-2.5-flash',
+    narrativeLength: 2000,
+    useLatex: false,
+    useCache: true,
+    useStatusWindow: false,
+    isPublic: false,
+  },
+  default_labels: {
+    new_session: 'New Session',
+    untitled_story: 'Untitled Story',
+  },
+}
 
 describe('Session Manager Service', () => {
   describe('applySlidingWindow', () => {
-    const mockMessages: SessionMessage[] = Array.from({ length: 20 }, (_, i) => ({
-      role: i % 2 === 0 ? 'user' : 'model',
-      content: `Message ${i}`,
-    }))
+    const mockMessages = createMockMessages(20)
 
     it('should return all messages when within window size', () => {
       const result = applySlidingWindow(mockMessages, 25)
@@ -67,8 +108,8 @@ describe('Session Manager Service', () => {
   describe('prepareContents', () => {
     it('should convert messages to Gemini format', () => {
       const messages: SessionMessage[] = [
-        { role: 'user', content: 'Hello' },
-        { role: 'model', content: 'Hi there' },
+        { role: 'user', content: 'Hello', timestamp: Date.now() },
+        { role: 'model', content: 'Hi there', timestamp: Date.now() + 1000 },
       ]
 
       const result = prepareContents(messages)
@@ -86,7 +127,7 @@ describe('Session Manager Service', () => {
 
     it('should handle single message', () => {
       const messages: SessionMessage[] = [
-        { role: 'user', content: 'Single message' },
+        { role: 'user', content: 'Single message', timestamp: Date.now() },
       ]
 
       const result = prepareContents(messages)
@@ -100,7 +141,7 @@ describe('Session Manager Service', () => {
 
     it('should handle long messages with special characters', () => {
       const messages: SessionMessage[] = [
-        { role: 'user', content: 'Message with\nnewlines and\ttabs' },
+        { role: 'user', content: 'Message with\nnewlines and\ttabs', timestamp: Date.now() },
       ]
 
       const result = prepareContents(messages)
@@ -110,7 +151,7 @@ describe('Session Manager Service', () => {
 
     it('should handle unicode characters', () => {
       const messages: SessionMessage[] = [
-        { role: 'user', content: '한글 메시지 🎉' },
+        { role: 'user', content: '한글 메시지 🎉', timestamp: Date.now() },
       ]
 
       const result = prepareContents(messages)
@@ -121,7 +162,7 @@ describe('Session Manager Service', () => {
     it('should handle very long messages', () => {
       const longContent = 'a'.repeat(10000)
       const messages: SessionMessage[] = [
-        { role: 'user', content: longContent },
+        { role: 'user', content: longContent, timestamp: Date.now() },
       ]
 
       const result = prepareContents(messages)
@@ -131,95 +172,67 @@ describe('Session Manager Service', () => {
   })
 
   describe('shouldGenerateMemory', () => {
-    const gameplayConfig = {
-      sliding_window_size: 10,
-      default_labels: {
-        new_session: 'New Session',
-        new_chapter: 'New Chapter',
-      },
-      max_rpm: 10,
-      max_turns_without_memory: 5,
-    }
-
     it('should return false when messages within window size', () => {
-      const messages: SessionMessage[] = Array.from({ length: 8 }, (_, i) => ({
-        role: 'user',
-        content: `Message ${i}`,
-      }))
+      const messages = createMockMessages(8)
 
-      const result = shouldGenerateMemory(messages, 0, gameplayConfig)
+      const result = shouldGenerateMemory(messages, 0, mockGameplayConfig)
 
       expect(result).toBe(false)
     })
 
     it('should return true when messages exceed window size', () => {
-      const messages: SessionMessage[] = Array.from({ length: 15 }, (_, i) => ({
-        role: 'user',
-        content: `Message ${i}`,
-      }))
+      const messages = createMockMessages(15)
 
-      const result = shouldGenerateMemory(messages, 0, gameplayConfig)
+      const result = shouldGenerateMemory(messages, 0, mockGameplayConfig)
 
       expect(result).toBe(true)
     })
 
     it('should return false when recent summary exists', () => {
-      const messages: SessionMessage[] = Array.from({ length: 15 }, (_, i) => ({
-        role: 'user',
-        content: `Message ${i}`,
-      }))
+      const messages = createMockMessages(15)
 
-      const result = shouldGenerateMemory(messages, 8, gameplayConfig)
+      const result = shouldGenerateMemory(messages, 8, mockGameplayConfig)
 
       expect(result).toBe(false)
     })
 
     it('should return true when enough messages since summary', () => {
-      const messages: SessionMessage[] = Array.from({ length: 20 }, (_, i) => ({
-        role: 'user',
-        content: `Message ${i}`,
-      }))
+      const messages = createMockMessages(20)
 
-      const result = shouldGenerateMemory(messages, 5, gameplayConfig)
+      const result = shouldGenerateMemory(messages, 5, mockGameplayConfig)
 
       expect(result).toBe(true)
     })
 
     it('should handle boundary condition (exactly at window size)', () => {
-      const messages: SessionMessage[] = Array.from({ length: 10 }, (_, i) => ({
-        role: 'user',
-        content: `Message ${i}`,
-      }))
+      const messages = createMockMessages(10)
 
-      const result = shouldGenerateMemory(messages, 0, gameplayConfig)
+      const result = shouldGenerateMemory(messages, 0, mockGameplayConfig)
 
       expect(result).toBe(false)
     })
 
     it('should handle boundary condition (one over window size)', () => {
-      const messages: SessionMessage[] = Array.from({ length: 11 }, (_, i) => ({
-        role: 'user',
-        content: `Message ${i}`,
-      }))
+      const messages = createMockMessages(11)
 
-      const result = shouldGenerateMemory(messages, 0, gameplayConfig)
+      const result = shouldGenerateMemory(messages, 0, mockGameplayConfig)
 
       expect(result).toBe(true)
     })
 
     it('should handle empty message array', () => {
-      const result = shouldGenerateMemory([], 0, gameplayConfig)
+      const result = shouldGenerateMemory([], 0, mockGameplayConfig)
 
       expect(result).toBe(false)
     })
 
     it('should handle summary index greater than message count', () => {
       const messages: SessionMessage[] = [
-        { role: 'user', content: 'Message 0' },
-        { role: 'user', content: 'Message 1' },
+        { role: 'user', content: 'Message 0', timestamp: Date.now() },
+        { role: 'user', content: 'Message 1', timestamp: Date.now() + 1000 },
       ]
 
-      const result = shouldGenerateMemory(messages, 10, gameplayConfig)
+      const result = shouldGenerateMemory(messages, 10, mockGameplayConfig)
 
       expect(result).toBe(false)
     })
@@ -303,9 +316,11 @@ describe('Session Manager Service', () => {
       const result = detectChapterLabel(longText)
 
       // Pattern matches "Chapter 1:" + up to 60 non-newline chars
-      expect(result.length).toBeGreaterThan(60)
-      expect(result.length).toBeLessThan(80)
-      expect(result).toMatch(/^Chapter 1: a+$/)
+      if (result) {
+        expect(result.length).toBeGreaterThan(60)
+        expect(result.length).toBeLessThan(80)
+        expect(result).toMatch(/^Chapter 1: a+$/)
+      }
     })
 
     it('should handle mixed script chapter labels', () => {

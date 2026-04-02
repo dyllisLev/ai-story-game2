@@ -2,8 +2,10 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { AuthUser } from '@story-game/shared';
+import { MOCK_ADMIN_USER } from '@story-game/shared';
 import * as Sentry from '@sentry/node';
 import { extractBearerToken, extractCookieToken, COOKIE_NAMES } from '../lib/auth-helpers.js';
+import { DEV_HEADERS, DEV_HEADER_VALUES } from '../constants.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -16,6 +18,21 @@ export default fp(async (app: FastifyInstance) => {
 
   // Parse JWT for all requests but don't fail - allows public routes to work
   app.addHook('preHandler', async (request) => {
+    // DEV mode: allow mock admin for E2E testing
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
+    const devAdminHeader = request.headers[DEV_HEADERS.ADMIN_SKIP];
+
+    // Debug logging for all admin routes
+    if (request.url.includes('config') || request.url.includes('admin')) {
+      console.log('[preHandler] URL:', request.url, 'isDev:', isDev, 'devHeader:', devAdminHeader, 'NODE_ENV:', process.env.NODE_ENV);
+    }
+
+    if (isDev && devAdminHeader === DEV_HEADER_VALUES.SKIP) {
+      console.log('[preHandler] DEV BYPASS: Setting MOCK_ADMIN_USER');
+      request.user = MOCK_ADMIN_USER;
+      return;
+    }
+
     let token: string | undefined;
 
     // Try Authorization header first (for backward compatibility)

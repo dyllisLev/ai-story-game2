@@ -5,3 +5,18 @@
 // - GENRES: config.genreConfig.genres.map(g => g.name)
 // - GENRES_WITH_ALL: ['전체', ...config.genreConfig.genres.map(g => g.name)]
 // - DEFAULT_SUGGESTIONS: config.gameplayConfig.default_suggestions
+
+// localStorage/sessionStorage keys
+export const STORAGE_KEYS = {
+  THEME: 'ai-story-game-theme',
+  DEV_ADMIN_SKIP: 'ai-story-game-dev-admin-skip',
+} as const;
+
+// DEV mode headers
+export const DEV_HEADERS = {
+  ADMIN_SKIP: 'x-dev-admin',
+} as const;
+
+export const DEV_HEADER_VALUES = {
+  SKIP: 'skip',
+} as const;

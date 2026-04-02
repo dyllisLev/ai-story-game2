@@ -236,6 +236,42 @@ export const GameParams: FC<GameParamsProps> = ({ config, onChange }) => {
         </div>
       </div>
 
+      {/* Input Modes */}
+      <div className="a-card">
+        <div className="a-card-header">
+          <span className="a-card-title">입력 모드</span>
+        </div>
+        <div className="a-card-body">
+          <div className="a-form-group">
+            <div className="a-form-label-row">
+              <label className="a-form-label">사용 가능한 입력 모드</label>
+              <Tooltip text="플레이어가 행동 입력 시 선택할 수 있는 모드들입니다." />
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {local.input_modes.map(mode => (
+                <div
+                  key={mode.id}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <span>{mode.emoji}</span>
+                  <span>{mode.label}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                    ({mode.prefix})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Editor Defaults */}
       <div className="a-card">
         <div className="a-card-header">

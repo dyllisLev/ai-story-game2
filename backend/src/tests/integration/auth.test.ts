@@ -1,11 +1,11 @@
 // backend/src/tests/integration/auth.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import authRoutes from '../../routes/auth.js';
 
 describe('Auth Routes - Integration Tests', () => {
-  let app: Fastify.FastifyInstance;
+  let app: FastifyInstance;
 
   beforeEach(async () => {
     app = Fastify({ logger: false });
@@ -14,7 +14,7 @@ describe('Auth Routes - Integration Tests', () => {
     await app.register(cookie, { secret: 'test-secret' });
 
     // Add error handler for validation errors
-    app.setErrorHandler((error, request, reply) => {
+    app.setErrorHandler((error: any, request, reply) => {
       if (error.code === 'FST_ERR_VALIDATION') {
         return reply.status(400).send({
           error: {
@@ -25,7 +25,7 @@ describe('Auth Routes - Integration Tests', () => {
       }
       return reply.status(error.statusCode || 500).send({
         error: {
-          code: (error as any).code || 'INTERNAL_ERROR',
+          code: error.code || 'INTERNAL_ERROR',
           message: error.message,
         },
       });
@@ -44,26 +44,41 @@ describe('Auth Routes - Integration Tests', () => {
       select: mockSelect,
     });
 
-    app.decorate('supabase', {
+    // Create minimal Supabase client mock
+    const mockSupabaseClient = {
       auth: {
         signUp: vi.fn(),
         signInWithPassword: vi.fn(),
         signOut: vi.fn(),
         refreshSession: vi.fn(),
       },
-    });
+      from: mockFrom,
+    } as any;
 
-    app.decorate('supabaseAdmin', {
+    // Create minimal Supabase admin client mock
+    const mockSupabaseAdmin = {
       auth: {
         admin: {
           deleteUser: vi.fn(),
         },
       },
       from: mockFrom,
-    });
+    } as any;
+
+    app.decorate('supabase', mockSupabaseClient);
+    app.decorate('supabaseAdmin', mockSupabaseAdmin);
 
     // Decorate config (needed for production cookie setting)
-    app.decorate('config', { NODE_ENV: 'development' });
+    app.decorate('config', {
+      NODE_ENV: 'development',
+      PORT: 3000,
+      SUPABASE_URL: 'test-url',
+      SUPABASE_ANON_KEY: 'test-key',
+      SUPABASE_SERVICE_KEY: 'test-service-key',
+      SENTRY_DSN: '',
+      SENTRY_ENVIRONMENT: 'test',
+      API_KEY_ENCRYPTION_SECRET: 'test-secret',
+    } as any);
 
     // Register routes
     await app.register(authRoutes);
@@ -130,13 +145,23 @@ describe('Auth Routes - Integration Tests', () => {
     });
 
     it('should accept valid signup request', async () => {
-      const mockSignUp = vi.mocked(app.supabase.auth.signUp);
+      const mockSignUp = (app as any).supabase.auth.signUp;
       mockSignUp.mockResolvedValue({
         data: {
-          user: { id: 'test-user-id', email: 'test@example.com' },
+          user: {
+            id: 'test-user-id',
+            email: 'test@example.com',
+            app_metadata: {},
+            user_metadata: {},
+            aud: 'authenticated',
+            created_at: new Date().toISOString(),
+          },
           session: {
             access_token: 'test-access-token',
             refresh_token: 'test-refresh-token',
+            expires_in: 3600,
+            token_type: 'bearer',
+            user: null,
           },
         },
         error: null,
@@ -158,10 +183,16 @@ describe('Auth Routes - Integration Tests', () => {
     });
 
     it('should handle Supabase signup error', async () => {
-      const mockSignUp = vi.mocked(app.supabase.auth.signUp);
+      const mockSignUp = (app as any).supabase.auth.signUp;
       mockSignUp.mockResolvedValue({
         data: { user: null, session: null },
-        error: { message: 'User already exists' },
+        error: {
+          message: 'User already exists',
+          code: 'user_exists',
+          status: 400,
+          __isAuthError: true,
+          name: 'AuthError',
+        },
       });
 
       const response = await app.inject({
@@ -210,11 +241,24 @@ describe('Auth Routes - Integration Tests', () => {
     });
 
     it('should accept valid login request', async () => {
-      const mockSignIn = vi.mocked(app.supabase.auth.signInWithPassword);
+      const mockSignIn = (app as any).supabase.auth.signInWithPassword;
       mockSignIn.mockResolvedValue({
         data: {
-          user: { id: 'test-user-id', email: 'test@example.com' },
-          session: { access_token: 'mock-token', refresh_token: 'mock-refresh' },
+          user: {
+            id: 'test-user-id',
+            email: 'test@example.com',
+            app_metadata: {},
+            user_metadata: {},
+            aud: 'authenticated',
+            created_at: new Date().toISOString(),
+          },
+          session: {
+            access_token: 'mock-token',
+            refresh_token: 'mock-refresh',
+            expires_in: 3600,
+            token_type: 'bearer',
+            user: null,
+          },
         },
         error: null,
       });
@@ -237,10 +281,16 @@ describe('Auth Routes - Integration Tests', () => {
     });
 
     it('should handle invalid credentials', async () => {
-      const mockSignIn = vi.mocked(app.supabase.auth.signInWithPassword);
+      const mockSignIn = (app as any).supabase.auth.signInWithPassword;
       mockSignIn.mockResolvedValue({
         data: { user: null, session: null },
-        error: { message: 'Invalid login credentials' },
+        error: {
+          message: 'Invalid login credentials',
+          code: 'invalid_credentials',
+          status: 401,
+          __isAuthError: true,
+          name: 'AuthError',
+        },
       });
 
       const response = await app.inject({
@@ -273,10 +323,16 @@ describe('Auth Routes - Integration Tests', () => {
     });
 
     it('should accept valid refresh token', async () => {
-      const mockRefresh = vi.mocked(app.supabase.auth.refreshSession);
+      const mockRefresh = (app as any).supabase.auth.refreshSession;
       mockRefresh.mockResolvedValue({
         data: {
-          session: { access_token: 'new-token', refresh_token: 'new-refresh' },
+          session: {
+            access_token: 'new-token',
+            refresh_token: 'new-refresh',
+            expires_in: 3600,
+            token_type: 'bearer',
+            user: null,
+          },
         },
         error: null,
       });
@@ -297,10 +353,16 @@ describe('Auth Routes - Integration Tests', () => {
     });
 
     it('should handle invalid refresh token', async () => {
-      const mockRefresh = vi.mocked(app.supabase.auth.refreshSession);
+      const mockRefresh = (app as any).supabase.auth.refreshSession;
       mockRefresh.mockResolvedValue({
         data: { session: null },
-        error: { message: 'Invalid refresh token' },
+        error: {
+          message: 'Invalid refresh token',
+          code: 'invalid_token',
+          status: 401,
+          __isAuthError: true,
+          name: 'AuthError',
+        },
       });
 
       const response = await app.inject({
@@ -319,7 +381,7 @@ describe('Auth Routes - Integration Tests', () => {
 
   describe('POST /auth/logout', () => {
     it('should accept logout request', async () => {
-      const mockSignOut = vi.mocked(app.supabase.auth.signOut);
+      const mockSignOut = (app as any).supabase.auth.signOut;
       mockSignOut.mockResolvedValue({ error: null });
 
       const response = await app.inject({
@@ -334,9 +396,15 @@ describe('Auth Routes - Integration Tests', () => {
     });
 
     it('should handle logout error', async () => {
-      const mockSignOut = vi.mocked(app.supabase.auth.signOut);
+      const mockSignOut = (app as any).supabase.auth.signOut;
       mockSignOut.mockResolvedValue({
-        error: { message: 'Logout failed' },
+        error: {
+          message: 'Logout failed',
+          code: 'logout_failed',
+          status: 500,
+          __isAuthError: true,
+          name: 'AuthError',
+        },
       });
 
       const response = await app.inject({

@@ -2,8 +2,17 @@
 import fp from 'fastify-plugin';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { extractBearerToken } from '../lib/auth-helpers.js';
+
+/**
+ * Extended reply type with Sentry span
+ */
+declare module 'fastify' {
+  interface FastifyReply {
+    sentrySpan?: Sentry.Span;
+  }
+}
 
 /**
  * Sentry error tracking and performance monitoring plugin
@@ -24,23 +33,19 @@ export default fp(async function sentryPlugin(app: FastifyInstance) {
     return;
   }
 
-  // Initialize Sentry
+  // Initialize Sentry with v10 API
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: SENTRY_ENVIRONMENT || NODE_ENV || 'development',
     integrations: [
-      // HTTP request tracing
-      new Sentry.Integrations.Http({ tracing: true }),
-      // Express-like middleware for Fastify
-      new Sentry.Integrations.OnUnhandledRejection({ mode: 'warn' }),
+      // HTTP request tracing integration
+      Sentry.httpIntegration(),
       // Node.js profiling
       nodeProfilingIntegration(),
     ],
     // Performance monitoring
     tracesSampleRate: NODE_ENV === 'production' ? 0.1 : 1.0, // 10% in prod, 100% in dev
     profilesSampleRate: NODE_ENV === 'production' ? 0.1 : 1.0,
-    // Capture unhandled errors
-    captureUnhandledRejections: true,
     // beforeSend filter for sensitive data
     beforeSend(event, hint) {
       // Remove sensitive headers
@@ -60,18 +65,20 @@ export default fp(async function sentryPlugin(app: FastifyInstance) {
     },
   });
 
-  // Decorate reply with Sentry tracing
-  app.decorateReply('sentryTransaction', null);
-
-  // Add request hook to start transactions
-  app.addHook('onRequest', async (request, reply) => {
-    // Create transaction for performance monitoring
-    const transaction = Sentry.startTransaction({
+  // Add request hook to start spans
+  app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+    // Create span for performance monitoring using v10 API
+    const span = Sentry.startSpan({
       name: `${request.method} ${request.url}`,
       op: 'http.server',
+    }, () => {
+      // Span is automatically active in this callback
     });
 
-    reply.sentryTransaction = transaction;
+    // Store span on reply for finishing later
+    if (span !== undefined) {
+      reply.sentrySpan = span;
+    }
 
     // Add user context if authenticated
     const token = extractBearerToken(request.headers.authorization);
@@ -81,16 +88,16 @@ export default fp(async function sentryPlugin(app: FastifyInstance) {
     }
   });
 
-  // Add response hook to finish transactions
-  app.addHook('onResponse', async (request, reply) => {
-    if (reply.sentryTransaction) {
-      reply.sentryTransaction.finish();
-      reply.sentryTransaction = null;
+  // Add response hook to finish spans
+  app.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (reply.sentrySpan) {
+      reply.sentrySpan.end();
+      reply.sentrySpan = undefined;
     }
   });
 
   // Add error hook to capture errors
-  app.addHook('onError', async (request, reply, error) => {
+  app.addHook('onError', async (request: FastifyRequest, reply: FastifyReply, error: Error) => {
     // Capture exception with context
     Sentry.withScope((scope) => {
       // Add request data

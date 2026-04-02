@@ -38,10 +38,10 @@ test.describe('Admin - Genre Settings', () => {
     await adminPage.navigateTo('장르 설정');
 
     // Check first genre card has all required fields
-    const firstCard = page.locator('.a-card').filter({ has: page.locator('.a-card-header') }).first();
+    const firstCard = page.locator('.a-card').filter({ hasText: /ID:/ }).first();
 
     // Genre ID should be visible
-    await expect(firstCard.locator(/ID:\s\w+/)).toBeVisible();
+    await expect(firstCard.locator('text=/ID:/')).toBeVisible();
 
     // Genre name input should be visible and enabled
     const nameInput = firstCard.locator('input[type="text"]').first();
@@ -144,17 +144,17 @@ test.describe('Admin - Genre Settings', () => {
   test('should display color preview boxes', async ({ page }) => {
     await adminPage.navigateTo('장르 설정');
 
-    const firstCard = page.locator('.a-card').filter({ has: page.locator('.a-card-header') }).first();
+    const firstCard = page.locator('.a-card').filter({ hasText: /ID:/ }).first();
 
     // Check for color preview divs (inline style with backgroundColor)
     const colorPreviews = firstCard.locator('div[style*="background-color"]');
     await expect(colorPreviews.first()).toBeVisible();
 
-    // Verify preview has border and borderRadius
+    // Verify preview has border and border-radius
     const preview = colorPreviews.first();
     const style = await preview.getAttribute('style');
     expect(style).toContain('border');
-    expect(style).toContain('borderRadius');
+    expect(style).toContain('border-radius');
   });
 
   test('should save genre configuration changes', async ({ page }) => {
@@ -193,7 +193,7 @@ test.describe('Admin - Genre Settings', () => {
   test('should have tooltips for color inputs', async ({ page }) => {
     await adminPage.navigateTo('장르 설정');
 
-    const firstCard = page.locator('.a-card').filter({ has: page.locator('.a-card-header') }).first();
+    const firstCard = page.locator('.a-card').filter({ hasText: /ID:/ }).first();
 
     // Check for tooltip icons (ⓘ)
     const tooltips = firstCard.locator('.a-tooltip-icon');

@@ -5,7 +5,7 @@ import { type FC, useRef } from 'react';
 import type { StatusAttribute } from '../../hooks/useStoryEditor';
 import type { StatusPreset } from '@story-game/shared';
 import { useConfig } from '@/hooks/useConfig';
-import { generateId } from '@/lib/format';
+import { mapStatusPresetAttributes } from '@/lib/format';
 
 interface StatusSettingsProps {
   enabled: boolean;
@@ -55,12 +55,7 @@ export const StatusSettings: FC<StatusSettingsProps> = ({
   };
 
   const handleStatusPreset = (preset: StatusPreset) => {
-    const attrs: StatusAttribute[] = preset.attributes.map(a => ({
-      id: generateId(),
-      name: a.name,
-      type: a.type === 'gauge' ? 'bar' : a.type === 'number' ? 'number' : 'text',
-      max: a.max_value != null ? String(a.max_value) : '',
-    }));
+    const attrs = mapStatusPresetAttributes(preset.attributes);
     onApplyPreset(attrs);
   };
 

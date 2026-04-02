@@ -11,9 +11,10 @@ export default async function configRoutes(app: FastifyInstance) {
       return {
         genreConfig: config.genreConfig,
         gameplayConfig: {
-          availableModels: config.gameplayConfig.availableModels,
+          available_models: config.gameplayConfig.available_models,
           input_modes: config.gameplayConfig.input_modes,
           default_suggestions: config.gameplayConfig.default_suggestions,
+          status_attribute_types: config.gameplayConfig.status_attribute_types,
         },
       };
     } catch (err) {

@@ -4,6 +4,7 @@ import '../styles/admin.css';
 
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { STORAGE_KEYS, DEV_HEADER_VALUES } from '@/lib/constants';
 import type { VerifyAdminResponse } from '@story-game/shared';
 import { AdminNav, type AdminSection } from '../components/admin/AdminNav';
 import { Dashboard } from '../components/admin/Dashboard';
@@ -175,13 +176,32 @@ const Admin: FC = () => {
   const [serverVerified, setServerVerified] = useState<boolean | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
-  // DEV-only: Skip authentication for E2E testing
   const handleDevSkip = useCallback(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.DEV_ADMIN_SKIP, DEV_HEADER_VALUES.SKIP);
+    } catch (error) {
+      // localStorage may be disabled in some environments (e.g., private browsing)
+      console.debug('localStorage unavailable, dev skip state not persisted:', error);
+    }
     setMockAdminUser();
   }, [setMockAdminUser]);
 
   // Track if admin verification has been performed to prevent infinite loop
   const hasVerifiedRef = useRef<boolean>(false);
+
+  // DEV-only: Auto-restore skip state if localStorage flag is set
+  useEffect(() => {
+    if (import.meta.env.DEV && !isLoading && !user) {
+      try {
+        if (localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP) {
+          setMockAdminUser();
+        }
+      } catch (error) {
+        // localStorage may be disabled in some environments (e.g., private browsing)
+        console.debug('localStorage unavailable, dev skip state not persisted:', error);
+      }
+    }
+  }, [isLoading, user, setMockAdminUser]);
 
   // Server-side admin verification on mount
   useEffect(() => {

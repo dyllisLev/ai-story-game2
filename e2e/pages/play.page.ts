@@ -127,7 +127,8 @@ export class PlayPage {
   async goto(storyId?: string) {
     const path = storyId ? `/play/${storyId}` : '/play';
     await this.page.goto(e2eConfig.baseURL + path);
-    await this.page.waitForLoadState('networkidle');
+    // Use domcontentloaded instead of networkidle to avoid timeout
+    await this.page.waitForLoadState('domcontentloaded', { timeout: 10000 });
   }
 
   async toggleLeftPanel() {
