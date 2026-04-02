@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { EditorPage } from '../../pages/editor.page';
 import { e2eConfig } from '../../config';
+import { EDITOR_SECTIONS, PRIMARY_SECTIONS } from '../../fixtures/editor-sections';
 
 test.describe('Editor 페이지 네비게이션', () => {
   let editorPage: EditorPage;
@@ -28,27 +29,14 @@ test.describe('Editor 페이지 네비게이션', () => {
   });
 
   test('모든 사이드바 섹션이 표시된다', async ({ page }) => {
-    const expectedSections = [
-      '기본 설정',
-      '시스템 규칙',
-      '세계관',
-      '스토리',
-      '등장인물',
-      '상태창 설정',
-      '출력 설정',
-      '공개 설정'
-    ];
-
-    for (const section of expectedSections) {
+    for (const section of EDITOR_SECTIONS) {
       const sidebarItem = editorPage.sidebarItem(section);
       await expect(sidebarItem).toBeVisible({ timeout: 5000 });
     }
   });
 
   test('사이드바 섹션 클릭 시 해당 섹션으로 스크롤', async ({ page }) => {
-    const sections = ['기본 설정', '세계관', '등장인물', '상태창 설정'];
-
-    for (const section of sections) {
+    for (const section of PRIMARY_SECTIONS) {
       await editorPage.navigateToSection(section);
       await page.waitForTimeout(300);
       // 섹션이 활성화되거나 스크롤되는지 확인
