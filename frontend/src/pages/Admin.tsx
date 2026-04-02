@@ -178,7 +178,9 @@ const Admin: FC = () => {
 
   const handleDevSkip = useCallback(() => {
     try {
+      // Set both new and old localStorage keys for backward compatibility
       localStorage.setItem(STORAGE_KEYS.DEV_ADMIN_SKIP, DEV_HEADER_VALUES.SKIP);
+      localStorage.setItem('devAdminBypass', 'true');
     } catch (error) {
       // localStorage may be disabled in some environments (e.g., private browsing)
       console.debug('localStorage unavailable, dev skip state not persisted:', error);
@@ -193,7 +195,11 @@ const Admin: FC = () => {
   useEffect(() => {
     if (import.meta.env.DEV && !isLoading && !user) {
       try {
-        if (localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP) {
+        // Check both new and old localStorage keys for backward compatibility
+        const hasNewKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
+        const hasOldKey = localStorage.getItem('devAdminBypass') === 'true';
+
+        if (hasNewKey || hasOldKey) {
           setMockAdminUser();
         }
       } catch (error) {

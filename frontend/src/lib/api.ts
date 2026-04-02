@@ -15,7 +15,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   // DEV mode: Add skip header for admin bypass (always check localStorage in development)
   try {
-    const shouldSkip = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
+    // Check both new and old localStorage keys for backward compatibility
+    const hasNewKey = localStorage.getItem(STORAGE_KEYS.DEV_ADMIN_SKIP) === DEV_HEADER_VALUES.SKIP;
+    const hasOldKey = localStorage.getItem('devAdminBypass') === 'true';
+    const shouldSkip = hasNewKey || hasOldKey;
+
     if (shouldSkip) {
       headers[DEV_HEADERS.ADMIN_SKIP] = DEV_HEADER_VALUES.SKIP;
     }
