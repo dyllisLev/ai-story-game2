@@ -60,8 +60,9 @@ export default async function (app: FastifyInstance) {
     }
 
     // 프롬프트 조립
+    const genre = storyResult.data.preset?.genre || storyResult.data.genre;
     let systemPrompt = buildPrompt(storyResult.data, session.preset || {}, config.promptConfig);
-    systemPrompt += buildMemoryPrompt(memory);
+    systemPrompt += buildMemoryPrompt(memory, genre, config.promptConfig);
 
     const windowSize = config.gameplayConfig.sliding_window_size;
     const allMessages: SessionMessage[] = [

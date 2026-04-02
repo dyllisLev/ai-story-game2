@@ -4,6 +4,20 @@ export interface SafetySetting {
   threshold: string;
 }
 
+export interface GenrePromptConfig {
+  system_preamble_suffix: string;
+  memory_system_instruction_suffix?: string;
+  enabled: boolean;
+  version: number;
+  last_updated: string;
+}
+
+export type GenreType = '판타지' | '현대' | '무협' | '로맨스' | '공포' | 'SF' | '미스터리' | '역사' | '심리';
+
+export interface GenrePrompts {
+  [genre: string]: GenrePromptConfig;
+}
+
 export interface PromptConfig {
   system_preamble: string;
   latex_rules: string;
@@ -13,6 +27,7 @@ export interface PromptConfig {
   safety_settings: SafetySetting[];
   game_start_message: string;
   cache_ttl: string;
+  genre_prompts?: GenrePrompts;
 }
 
 // Available AI models
