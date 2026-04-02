@@ -1,4 +1,5 @@
 import { type FC } from 'react';
+import { useAuth } from '@/lib/auth';
 import { useServiceLogs } from '../../hooks/useLogs';
 import { Pagination } from '../ui/Pagination';
 import { formatTime } from '../../lib/format';
@@ -26,10 +27,11 @@ function statusClass(code: number): string {
 /* ── Main component ── */
 
 export const ServiceLogs: FC = () => {
+  const { user } = useAuth();
   const {
     logs, totalPages, isLoading, refetch,
     filters, updateFilters, clearLogs, isClearing,
-  } = useServiceLogs();
+  } = useServiceLogs(user);
 
   return (
     <div className="a-section">

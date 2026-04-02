@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import type { AuthUser } from '@story-game/shared';
 
 /* ── Types ── */
 
@@ -57,7 +58,7 @@ export interface LogPage<T> {
 
 /* ── Service Logs Hook ── */
 
-export function useServiceLogs() {
+export function useServiceLogs(user: AuthUser | null) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<ServiceLogFilters>({
     status: '',
@@ -79,6 +80,8 @@ export function useServiceLogs() {
       return api.get<LogPage<ServiceLog>>(`/admin/service-logs?${params.toString()}`);
     },
     staleTime: 15_000,
+    // Only run query when user is authenticated (prevents race condition with dev bypass)
+    enabled: user !== null,
   });
 
   const deleteMutation = useMutation({
@@ -106,7 +109,7 @@ export function useServiceLogs() {
 
 /* ── API Logs Hook ── */
 
-export function useApiLogs() {
+export function useApiLogs(user: AuthUser | null) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<ApiLogFilters>({
     endpoint: '',
@@ -131,6 +134,8 @@ export function useApiLogs() {
       return api.get<LogPage<ApiLog>>(`/admin/api-logs?${params.toString()}`);
     },
     staleTime: 15_000,
+    // Only run query when user is authenticated (prevents race condition with dev bypass)
+    enabled: user !== null,
   });
 
   const deleteMutation = useMutation({

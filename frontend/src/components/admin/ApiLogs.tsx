@@ -1,4 +1,5 @@
 import { type FC, type CSSProperties, type JSX } from 'react';
+import { useAuth } from '@/lib/auth';
 import { useApiLogs } from '../../hooks/useLogs';
 import { ApiLogDetail } from './ApiLogDetail';
 import { Pagination } from '../ui/Pagination';
@@ -23,12 +24,13 @@ function endpointBadgeStyle(endpoint: string): CSSProperties {
 /* ── Main component ── */
 
 export const ApiLogs: FC = () => {
+  const { user } = useAuth();
   const {
     logs, totalPages, isLoading, refetch,
     filters, updateFilters,
     expandedId, toggleExpanded,
     clearLogs, isClearing,
-  } = useApiLogs();
+  } = useApiLogs(user);
 
   return (
     <div className="a-section">
