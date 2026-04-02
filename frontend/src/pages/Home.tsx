@@ -1,5 +1,5 @@
 import { type FC, useState, useCallback, useRef, useEffect } from 'react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { HeroSection } from '@/components/home/HeroSection';
 import { ContinueSection } from '@/components/home/ContinueSection';

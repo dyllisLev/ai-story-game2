@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import { useSessions } from '@/hooks/useSessions';
 import type { SessionListItem } from '@story-game/shared';
 

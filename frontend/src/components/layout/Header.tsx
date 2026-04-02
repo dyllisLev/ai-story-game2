@@ -1,5 +1,5 @@
 import { type FC, useRef, useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 

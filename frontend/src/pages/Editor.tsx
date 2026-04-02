@@ -2,7 +2,7 @@
 // 3-panel layout: sidebar + form + preview (prompt live / preview panel)
 
 import { type FC, type RefObject, useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate } from 'react-router-dom';
 
 import { useStoryEditor } from '../hooks/useStoryEditor';
 import { usePresets } from '../hooks/usePresets';

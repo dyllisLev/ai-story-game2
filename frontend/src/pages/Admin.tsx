@@ -1,5 +1,5 @@
 import { type FC, useState, useCallback, useRef, useEffect } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate } from 'react-router-dom';
 import '../styles/admin.css';
 
 import { useAuth } from '@/lib/auth';

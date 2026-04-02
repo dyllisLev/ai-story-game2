@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router';
+import { Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import { ThemeProvider } from './lib/theme';
 import { ToastProvider } from './components/ui/Toast';

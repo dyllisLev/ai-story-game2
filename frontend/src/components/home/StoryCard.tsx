@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import type { StoryListItem } from '@story-game/shared';
 import { useConfig } from '@/hooks/useConfig';
 import { tagStyle } from '@/lib/genre';
