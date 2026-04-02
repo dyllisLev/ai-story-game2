@@ -16,6 +16,8 @@ interface TopBarProps {
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   username?: string;
+  showApiKeyInput?: boolean;
+  isLoadingApiKey?: boolean;
 }
 
 export const TopBar: FC<TopBarProps> = ({
@@ -33,6 +35,8 @@ export const TopBar: FC<TopBarProps> = ({
   theme,
   onToggleTheme,
   username,
+  showApiKeyInput = true,
+  isLoadingApiKey = false,
 }) => {
   const [models, setModels] = useState<GeminiModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
@@ -84,18 +88,20 @@ export const TopBar: FC<TopBarProps> = ({
 
       <div className="topbar-actions">
         {/* API Key */}
-        <div className="api-key-wrap" title="Gemini API 키">
-          <span className="api-key-icon">🔑</span>
-          <input
-            className="api-key-input"
-            type="password"
-            placeholder="Gemini API Key"
-            maxLength={80}
-            value={apiKey}
-            onChange={(e) => handleApiKeyInput(e.target.value)}
-            aria-label="Gemini API 키 입력"
-          />
-        </div>
+        {showApiKeyInput && (
+          <div className="api-key-wrap" title="Gemini API 키">
+            <span className="api-key-icon">🔑</span>
+            <input
+              className="api-key-input"
+              type="password"
+              placeholder="Gemini API Key"
+              maxLength={80}
+              value={apiKey}
+              onChange={(e) => handleApiKeyInput(e.target.value)}
+              aria-label="Gemini API 키 입력"
+            />
+          </div>
+        )}
 
         {/* Model select */}
         <select

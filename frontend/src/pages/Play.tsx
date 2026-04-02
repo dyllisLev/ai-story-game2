@@ -9,6 +9,7 @@ import { useGameEngine } from '@/hooks/useGameEngine';
 import { useSession } from '@/hooks/useSession';
 import { useMemory } from '@/hooks/useMemory';
 import { useConfig } from '@/hooks/useConfig';
+import { useUserApiKey } from '@/hooks/useUserApiKey';
 
 import { TopBar } from '@/components/play/TopBar';
 import { SessionPanel } from '@/components/play/SessionPanel';
@@ -53,6 +54,7 @@ const Play: FC = () => {
 
   // --- Auth ---
   const { user } = useAuth();
+  const { hasApiKey, isLoading: isLoadingApiKey } = useUserApiKey();
 
   // --- Theme ---
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
@@ -288,6 +290,8 @@ const Play: FC = () => {
           theme={theme}
           onToggleTheme={toggleTheme}
           username={user?.nickname ?? user?.email}
+          showApiKeyInput={!user || !hasApiKey}
+          isLoadingApiKey={isLoadingApiKey}
         />
 
         {/* Left Panel */}
