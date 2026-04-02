@@ -26,10 +26,14 @@ test.describe('Admin - Genre Settings', () => {
     const genreCards = page.locator('.a-card').filter({ has: page.locator('.a-card-header') });
     await expect(genreCards.first()).toBeVisible();
 
-    // Check for expected genres
-    const expectedGenres = ['판타지', '모던', '로맨스', '미스터리', 'SF', '호러'];
-    for (const genre of expectedGenres) {
-      const genreCard = page.locator('.a-card').filter({ hasText: genre });
+    // Count total genre cards - should be 9
+    const cardCount = await genreCards.count();
+    expect(cardCount).toBe(9);
+
+    // Check for specific genre IDs (which are displayed in each card)
+    const expectedGenreIds = ['moo', 'fantasy', 'modern', 'romance', 'horror', 'sf', 'mystery', 'history', 'psychology'];
+    for (const genreId of expectedGenreIds) {
+      const genreCard = page.locator('.a-card').filter({ hasText: `ID: ${genreId}` });
       await expect(genreCard.first()).toBeVisible({ timeout: 5000 });
     }
   });
