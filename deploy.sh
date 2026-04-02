@@ -184,8 +184,8 @@ deploy() {
 
   # PM2로 백엔드 재시작
   log "백엔드 재시작 중 (PM2)..."
-  if pm2 describe aistorygame-backend > /dev/null 2>&1; then
-    pm2 restart aistorygame-backend
+  if pm2 describe story-game-backend > /dev/null 2>&1; then
+    pm2 restart story-game-backend
   else
     pm2 start backend/ecosystem.config.cjs
   fi
