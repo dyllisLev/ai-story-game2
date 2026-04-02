@@ -98,7 +98,7 @@ jobs:
           port: ${{ secrets.PRODUCTION_PORT || 22 }}
           script_stop: true
           script: |
-            cd /home/paperclip/workspace/ai-story-game2
+            cd /root/ai-story-game2
 
             # Git pull
             echo "Pulling latest changes..."
@@ -116,7 +116,7 @@ jobs:
 
             # Deploy
             echo "Deploying..."
-            cd /home/paperclip/workspace/ai-story-game2
+            cd /root/ai-story-game2
             ./deploy.sh deploy
 
       - name: Verify deployment
