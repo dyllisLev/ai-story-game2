@@ -38,6 +38,9 @@ export default async function adminDashboardRoute(app: FastifyInstance) {
       now.getTime() - 24 * 60 * 60 * 1000
     ).toISOString();
 
+    // Only count Gemini API calls (game/chat, game/test-prompt)
+    const geminiEndpoints = ['/api/game/chat', '/api/game/test-prompt'];
+
     // Run all queries in parallel — avg duration delegated to DB via RPC
     const [
       { count: totalStories },
@@ -86,11 +89,12 @@ export default async function adminDashboardRoute(app: FastifyInstance) {
       // avg duration delegated to DB — avoids fetching all rows
       app.supabaseAdmin
         .rpc('get_avg_service_log_duration', { since: twentyFourHoursAgo }),
-      // Gemini API calls only (from api_logs table)
+      // Gemini API calls only (from api_logs table, filtered by endpoint)
       app.supabaseAdmin
         .from('api_logs')
         .select('*', { count: 'exact', head: true })
-        .gte('created_at', todayStart),
+        .gte('created_at', todayStart)
+        .in('endpoint', geminiEndpoints),
       app.supabaseAdmin
         .from('api_logs')
         .select('id, session_id, endpoint, request_model, response_usage, response_error, duration_ms, created_at')
@@ -100,7 +104,8 @@ export default async function adminDashboardRoute(app: FastifyInstance) {
       app.supabaseAdmin
         .from('api_logs')
         .select('created_at')
-        .gte('created_at', twentyFourHoursAgo),
+        .gte('created_at', twentyFourHoursAgo)
+        .in('endpoint', geminiEndpoints),
     ]);
 
     const error_rate_24h =
