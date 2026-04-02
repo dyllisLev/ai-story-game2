@@ -187,7 +187,7 @@ deploy() {
   if pm2 describe aistorygame-backend > /dev/null 2>&1; then
     pm2 restart aistorygame-backend
   else
-    pm2 start ecosystem.config.js
+    pm2 start backend/ecosystem.config.cjs
   fi
 
   # nginx 재로드
