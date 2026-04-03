@@ -209,7 +209,7 @@ export const TestPlayModal: FC<TestPlayModalProps> = ({
       </div>
 
       <div className="test-play-banner">
-        ⚠️ 테스트 모드 — 세션이 저장되지 않습니다
+        ⚠️ 테스트 모드 — 스토리가 자동 저장되었으며, 테스트 세션은 저장되지 않습니다
       </div>
 
       <CharacterModal
