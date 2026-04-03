@@ -160,6 +160,12 @@ export default async function meRoutes(app: FastifyInstance) {
       });
     }
 
+    // DEV mode: dev bypass user - just return success (no database update)
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
+    if (isDev && user.id === 'dev-admin-user') {
+      return reply.send({ has_api_key: true });
+    }
+
     let encrypted: string;
     try {
       encrypted = encrypt(apiKey, encryptionKey);
@@ -188,6 +194,12 @@ export default async function meRoutes(app: FastifyInstance) {
   // DELETE /me/apikey — remove API key
   app.delete('/me/apikey', async (request, reply) => {
     const user = requireLogin(request);
+
+    // DEV mode: dev bypass user - just return success (no database update)
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
+    if (isDev && user.id === 'dev-admin-user') {
+      return reply.status(204).send();
+    }
 
     const { error } = await app.supabaseAdmin
       .from('user_profiles')

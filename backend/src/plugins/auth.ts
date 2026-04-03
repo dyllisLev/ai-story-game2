@@ -170,6 +170,20 @@ export async function verifySessionAccess(
   request: FastifyRequest,
   sessionId: string
 ): Promise<void> {
+  // DEV mode: dev bypass - skip session token verification
+  const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
+  if (isDev && request.headers['x-dev-admin-skip'] === 'skip') {
+    // In dev bypass mode, just verify the session exists
+    const { data } = await app.supabaseAdmin
+      .from('sessions')
+      .select('id')
+      .eq('id', sessionId)
+      .single();
+
+    if (!data) throw { statusCode: 404, code: 'NOT_FOUND', message: '세션을 찾을 수 없습니다' };
+    return;
+  }
+
   // 로그인 사용자: owner_uid로 검증
   if (request.user) {
     const { data } = await app.supabaseAdmin

@@ -6,7 +6,7 @@ import type {
   StoryListItem,
 } from '@story-game/shared';
 import { buildPaginatedResponse } from '../../lib/pagination.js';
-import { STORIES_SAFE_VIEW_FIELDS_STR } from '../../lib/story-constants.js';
+import { STORIES_SAFE_VIEW_FIELDS_STR, STORY_LIST_ITEM_FIELDS_STR } from '../../lib/story-constants.js';
 import { sanitizeLikePattern } from '../../lib/sanitization.js';
 
 export default async function storiesListRoute(app: FastifyInstance) {
@@ -39,10 +39,17 @@ export default async function storiesListRoute(app: FastifyInstance) {
     const limitNum = Math.min(Number(limit), 100);
     const offset = (pageNum - 1) * limitNum;
 
-    // Use stories_safe view: RLS pre-filtered + has_password computed field
+    // DEV mode: Check if using dev bypass
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
+    const useDevBypass = isDev && request.headers['x-dev-admin-skip'] === 'skip';
+
+    // Use stories table directly in dev bypass mode, stories_safe view otherwise
+    // Note: stories table doesn't support computed fields like has_password, so we exclude it
+    const table = useDevBypass ? 'stories' : 'stories_safe';
+    const fields = useDevBypass ? STORY_LIST_ITEM_FIELDS_STR : STORIES_SAFE_VIEW_FIELDS_STR;
     let q = app.supabaseAdmin
-      .from('stories_safe')
-      .select(STORIES_SAFE_VIEW_FIELDS_STR, { count: 'exact' });
+      .from(table)
+      .select(fields, { count: 'exact' });
 
     if (genre) {
       q = q.contains('tags', [genre]);
