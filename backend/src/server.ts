@@ -236,13 +236,9 @@ await app.register(gameRoutes, { prefix: API_V1_PREFIX });
 import meRoutes from './routes/me.js';
 await app.register(meRoutes, { prefix: API_V1_PREFIX });
 
-// Phase 2-B routes: stories CRUD, admin, presets
+// Phase 2-B routes: stories CRUD, admin, presets (includes feedback)
 import { registerRoutes as registerPhase2Routes } from './routes/index.js';
 await registerPhase2Routes(app);
-
-// Feedback routes
-import feedbackRoutes from './routes/feedback.js';
-await app.register(feedbackRoutes, { prefix: API_V1_PREFIX });
 
 // Start server
 try {

@@ -1,20 +1,20 @@
 -- ============================================================
--- Fix: Add missing 'preset' column to story_game.stories table
+-- Fix: Add missing 'preset' column to ai_story_game.stories table
 -- Bug: Frontend sends preset field but column doesn't exist, causing 400 errors
 -- Related: AI-252 (Admin UI 9-genre testing - "게임 시작" button fails)
 -- ============================================================
 
 -- Add preset JSONB column to stories table
-ALTER TABLE story_game.stories
+ALTER TABLE ai_story_game.stories
   ADD COLUMN IF NOT EXISTS preset JSONB DEFAULT '{}'::jsonb;
 
 -- Add comment
-COMMENT ON COLUMN story_game.stories.preset IS 'Status window and output settings (useStatusWindow, statusAttributes, narrativeLength, useCache)';
+COMMENT ON COLUMN ai_story_game.stories.preset IS 'Status window and output settings (useStatusWindow, statusAttributes, narrativeLength, useCache)';
 
 -- Recreate stories_safe VIEW to include preset column
-DROP VIEW IF EXISTS story_game.stories_safe;
+DROP VIEW IF EXISTS ai_story_game.stories_safe;
 
-CREATE VIEW story_game.stories_safe
+CREATE VIEW ai_story_game.stories_safe
   WITH (security_invoker = false)
 AS SELECT
   id,
@@ -42,7 +42,7 @@ AS SELECT
   owner_uid,
   created_at,
   updated_at
-FROM story_game.stories
+FROM ai_story_game.stories
 WHERE is_public = true;
 
-GRANT SELECT ON story_game.stories_safe TO anon, authenticated;
+GRANT SELECT ON ai_story_game.stories_safe TO anon, authenticated;

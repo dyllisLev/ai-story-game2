@@ -16,7 +16,7 @@
 -- ============================================================
 
 -- 판타지 (Fantasy)
-INSERT INTO story_game.status_presets (id, title, genre, attributes)
+INSERT INTO ai_story_game.status_presets (id, title, genre, attributes)
 VALUES (
   'f1-status-base',
   '판타지 기본',
@@ -37,7 +37,7 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- 현대 (Modern)
-INSERT INTO story_game.status_presets (id, title, genre, attributes)
+INSERT INTO ai_story_game.status_presets (id, title, genre, attributes)
 VALUES (
   'm1-status-base',
   '현대 기본',
@@ -56,7 +56,7 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- 로맨스 (Romance)
-INSERT INTO story_game.status_presets (id, title, genre, attributes)
+INSERT INTO ai_story_game.status_presets (id, title, genre, attributes)
 VALUES (
   'r1-status-base',
   '로맨스 기본',
@@ -79,14 +79,14 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================
 
 -- 1. 이세계 소환
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'f1-isekai-summon',
   '이세계 소환: 마왕을 물리치는 자',
   '판타지',
   '🌀',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'f1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'f1-status-base'),
   '현대 일본의 평범한 대학생이 마법과 몬스터가 존재하는 이세계로 소환된다. 여왕에게서 "마왕을 물리치고 세계를 구하라"는 사명을 받고, 모험가로서 성장하며 동료들을 모은다.
 
 이세계의 세계관:
@@ -128,14 +128,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 2. 다크 판타지: 몬스터 마을의 영웅
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'f2-dark-fantasy-monster-village',
   '다크 판타지: 몬스터 마을의 영웅',
   '판타지',
   '🐺',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'f1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'f1-status-base'),
   '인간과 몬스터가 적대적인 세계에서, 평화를 사랑하는 몬스터들이 마을을 이루고 살아간다. 인간 사회로부터의 박해와 보호를 위해, 한 영웅이 일어난다.
 
 세계관:
@@ -178,14 +178,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 3. 왕국 건설: 방랑한 기사의 여정
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'f3-kitchen-building',
   '왕국 건설: 방랑한 기사의 여정',
   '판타지',
   '🏰',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'f1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'f1-status-base'),
   '제국이 멸망한 혼란기에, 방랑한 기사가 황무지를 받아 왕국을 건설하는 이야기. 정치, 경영, 전쟁을 통해 영지를 발전시키고 백성들을 보호한다.
 
 세계관:
@@ -227,14 +227,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 4. 학원 판타지: 마법 아카데미
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'f4-academy-fantasy',
   '학원 판타지: 마법 아카데미',
   '판타지',
   '🎓',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'f1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'f1-status-base'),
   '엘리트 마법 아카데미에 입학한 주인공이 라이벌과 경쟁하며 마법을 배우고, 비밀결사의 음모를 파헤치는 이야기.
 
 세계관:
@@ -277,14 +277,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 5. 크리처 레이징: 드래곤 튜터
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'f5-creature-raising-dragon',
   '크리처 레이징: 드래곤 튜터',
   '판타지',
   '🐉',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'f1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'f1-status-base'),
   '드래곤 알을 부화시켜 키우는 드래곤 튜터(육성가)의 이야기. 드래곤과의 유대를 쌓고, 드래곤을 위협하는 세력으로부터 보호한다.
 
 세계관:
@@ -331,14 +331,14 @@ VALUES (
 -- ============================================================
 
 -- 6. 오피스 로맨스
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'm1-office-romance',
   '오피스 로맨스: 회사 내 비밀 연애',
   '현대',
   '💼',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'm1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'm1-status-base'),
   '대기업 "하늘그룹"을 배경으로 한 오피스 로맨스. 직장 상사나 동료와 비밀스러운 연애를 하며, 업무와 연애의 균형을 맞춘다.
 
 세계관:
@@ -378,14 +378,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 7. 캠퍼스 라이프
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'm2-campus-life',
   '캠퍼스 라이프: 대학교 생활',
   '현대',
   '🎓',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'm1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'm1-status-base'),
   '대학교 캠퍼스에서 친구들과 동아리 활동, 첫사랑, 진로 고민을 하며 성장하는 이야기.
 
 세계관:
@@ -425,14 +425,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 8. 스타트업 창업
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'm3-startup-founding',
   '스타트업 창업: 친구들과의 여정',
   '현대',
   '🚀',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'm1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'm1-status-base'),
   '대학 동기 3명이 스타트업을 창업하여 투자 유치, 경쟁사 대응, 성공과 실패의 기로에서 성장하는 이야기.
 
 세계관:
@@ -472,14 +472,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 9. 의료 드라마
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'm4-medical-drama',
   '의료 드라마: 종합병원 인턴',
   '현대',
   '🏥',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'm1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'm1-status-base'),
   '종합병원 인턴 및 레지던트로서 환자들과의 에피소드를 겪으며, 동료 의사들과의 갈등과 성장을 그린 의료 드라마.
 
 세계관:
@@ -521,14 +521,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 10. 아이돌 연습생
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'm5-k-idol-trainee',
   '아이돌 연습생: 데뷔를 향하여',
   '현대',
   '⭐',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'm1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'm1-status-base'),
   '엔터테인먼트 연습생이 데뷔를 향해 경쟁과 우정을 경험하며 성장하는 이야기.
 
 세계관:
@@ -572,14 +572,14 @@ VALUES (
 -- ============================================================
 
 -- 11. 첫사랑: 고등학교 일기
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'r1-first-love',
   '첫사랑: 고등학교 일기',
   '로맨스',
   '💕',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'r1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'r1-status-base'),
   '고등학교 배경의 첫사랑 이야기. 소심한 주인공과 인기 학생이 서서히 가까워지며 미묘한 마음의 변화를 겪는다.
 
 세계관:
@@ -621,14 +621,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 12. 직장 상사와의 비밀 연애
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'r2-secret-office-romance',
   '직장 상사와의 비밀 연애',
   '로맨스',
   '🔥',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'r1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'r1-status-base'),
   '회사 내에서 상사와 비밀스러운 연애를 하며, 직장 내 파벌과 스캔들을 겪고 공개적인 관계로 발전시키는 이야기.
 
 세계관:
@@ -670,14 +670,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 13. 시간여행자의 사랑
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'r3-time-travel-romance',
   '시간여행자의 사랑',
   '로맨스',
   '⏳',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'r1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'r1-status-base'),
   '과거와 현재를 오가는 시간여행자 남주와 여주가 시간의 역설과 운명을 겪으며 사랑과 희생을 배우는 이야기.
 
 세계관:
@@ -719,14 +719,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 14. 계약 결혼
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'r4-contract-marriage',
   '계약 결혼: 가짜에서 진짜로',
   '로맨스',
   '💍',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'r1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'r1-status-base'),
   '목적을 위한 계약 결혼을 한 부부가 계약 기간 동안 진심을 알게 되고 가짜 연애에서 진짜 사랑으로 발전하는 이야기.
 
 세계관:
@@ -770,14 +770,14 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- 15. 재회: 옛 연인을 찾아서
-INSERT INTO story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
+INSERT INTO ai_story_game.presets (id, title, genre, icon, is_default, status_preset_id, world_setting, story, characters, system_rules)
 VALUES (
   'r5-reunion-romance',
   '재회: 옛 연인을 찾아서',
   '로맨스',
   '🌸',
   false,
-  (SELECT id FROM story_game.status_presets WHERE id = 'r1-status-base'),
+  (SELECT id FROM ai_story_game.status_presets WHERE id = 'r1-status-base'),
   '과거에 헤어졌던 연인이 재회하면서 과거의 상처를 치유하고 새로운 시작의 가능성을 모색하는 이야기.
 
 세계관:
