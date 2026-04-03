@@ -3,7 +3,8 @@
 /**
  * Format an ISO timestamp string as HH:MM:SS (Korean locale, 24-hour).
  */
-export function formatTime(iso: string): string {
+export function formatTime(iso: string | undefined): string {
+  if (!iso) return '-';
   return new Date(iso).toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',

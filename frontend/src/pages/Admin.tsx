@@ -10,6 +10,7 @@ import { AdminNav, type AdminSection } from '../components/admin/AdminNav';
 import { Dashboard } from '../components/admin/Dashboard';
 import { ServiceLogs } from '../components/admin/ServiceLogs';
 import { ApiLogs } from '../components/admin/ApiLogs';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { PromptSettings } from '../components/admin/PromptSettings';
 import { GameParams } from '../components/admin/GameParams';
 import { GenreSettings } from '../components/admin/GenreSettings';
@@ -121,8 +122,16 @@ const AdminContent: FC = () => {
         <main className="a-main">
           {activeSection === 'dashboard'     && <Dashboard />}
           {activeSection === 'users'         && <UserManagement />}
-          {activeSection === 'service-logs'  && <ServiceLogs />}
-          {activeSection === 'api-logs'      && <ApiLogs />}
+          {activeSection === 'service-logs'  && (
+            <ErrorBoundary>
+              <ServiceLogs />
+            </ErrorBoundary>
+          )}
+          {activeSection === 'api-logs'      && (
+            <ErrorBoundary>
+              <ApiLogs />
+            </ErrorBoundary>
+          )}
           {activeSection === 'prompt'        && config && (
             <PromptSettings
               config={config.prompt_config}
