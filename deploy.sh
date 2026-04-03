@@ -81,9 +81,31 @@ rollback() {
   log "롤백 완료!"
 }
 
+# Git에서 최신 코드 업데이트
+update_code() {
+  log "Git에서 최신 코드를 가져오는 중..."
+
+  cd "$PROJECT_DIR"
+
+  # git fetch로 최신 정보 가져오기
+  git fetch origin main
+
+  # 로컬 변경사항이 있으면 경고하고 reset
+  if ! git diff --quiet origin/main; then
+    warn "로컬 변경사항이 있습니다. 원격 저장소로 리셋합니다."
+    git reset --hard origin/main
+    log "✅ 코드 업데이트 완료 (로컬 변경사항 제거됨)"
+  else
+    log "✅ 이미 최신 상태입니다."
+  fi
+}
+
 # 빌드
 build() {
   log "빌드 시작..."
+
+  # Git에서 최신 코드 가져오기 (빌드 전에 실행)
+  update_code
 
   # 공유 타입 빌드
   log "공유 타입 빌드 중..."
