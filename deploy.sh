@@ -81,9 +81,31 @@ rollback() {
   log "롤백 완료!"
 }
 
+# Git에서 최신 코드 업데이트
+update_code() {
+  log "Git에서 최신 코드를 가져오는 중..."
+
+  cd "$PROJECT_DIR"
+
+  # git fetch로 최신 정보 가져오기
+  git fetch origin main
+
+  # 로컬 변경사항이 있으면 경고하고 reset
+  if ! git diff --quiet origin/main; then
+    warn "로컬 변경사항이 있습니다. 원격 저장소로 리셋합니다."
+    git reset --hard origin/main
+    log "✅ 코드 업데이트 완료 (로컬 변경사항 제거됨)"
+  else
+    log "✅ 이미 최신 상태입니다."
+  fi
+}
+
 # 빌드
 build() {
   log "빌드 시작..."
+
+  # Git에서 최신 코드 가져오기 (빌드 전에 실행)
+  update_code
 
   # 공유 타입 빌드
   log "공유 타입 빌드 중..."
@@ -201,32 +223,47 @@ deploy() {
 healthcheck() {
   log "헬스체크 실행 중..."
 
+  local max_retries=10
+  local retry_interval=2
+  local retry_count=0
   local failed=0
 
-  # 백엔드 헬스체크
-  log "백엔드 헬스체크 중..."
-  if curl -f -s http://localhost:3000/api/health > /dev/null 2>&1; then
-    log "✅ 백엔드 헬스체크 통과"
-  else
-    err "❌ 백엔드 헬스체크 실패"
-    failed=1
-  fi
+  while [[ $retry_count -lt $max_retries ]]; do
+    failed=0
 
-  # 프론트엔드 헬스체크
-  log "프론트엔드 헬스체크 중..."
-  if curl -f -s http://localhost:80/ > /dev/null 2>&1; then
-    log "✅ 프론트엔드 헬스체크 통과"
-  else
-    err "❌ 프론트엔드 헬스체크 실패"
-    failed=1
-  fi
+    # 백엔드 헬스체크
+    log "백엔드 헬스체크 중... (시도 $((retry_count + 1))/$max_retries)"
+    if curl -f -s --max-time 5 http://localhost:3000/api/health > /dev/null 2>&1; then
+      log "✅ 백엔드 헬스체크 통과"
+    else
+      err "❌ 백엔드 헬스체크 실패"
+      failed=1
+    fi
 
-  if [[ $failed -eq 1 ]]; then
-    err "헬스체크 실패! 롤백을 고려해주세요."
-    return 1
-  fi
+    # 프론트엔드 헬스체크
+    log "프론트엔드 헬스체크 중... (시도 $((retry_count + 1))/$max_retries)"
+    if curl -f -s --max-time 5 http://localhost:80/ > /dev/null 2>&1; then
+      log "✅ 프론트엔드 헬스체크 통과"
+    else
+      err "❌ 프론트엔드 헬스체크 실패"
+      failed=1
+    fi
 
-  log "모든 헬스체크 통과!"
+    if [[ $failed -eq 0 ]]; then
+      log "모든 헬스체크 통과!"
+      return 0
+    fi
+
+    retry_count=$((retry_count + 1))
+    if [[ $retry_count -lt $max_retries ]]; then
+      warn "헬스체크 실패. ${retry_interval}초 후 재시도..."
+      sleep $retry_interval
+    fi
+  done
+
+  err "헬스체크 실패! ${max_retries}회 시도 후에도 통과하지 못했습니다."
+  err "롤백을 고려해주세요."
+  return 1
 }
 
 # 백업 목록
