@@ -1,6 +1,9 @@
 // packages/shared/src/types/feedback.ts
 // AI-253: 사용자 피드백 수집 시스템
 
+// Runtime export for TypeScript module resolution
+export const FEEDBACK_TYPES_VERSION = '1.0.0' as const;
+
 export type Genre =
   | 'fantasy'
   | 'modern'
