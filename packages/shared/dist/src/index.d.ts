@@ -6,4 +6,5 @@ export * from './types/auth.js';
 export * from './types/api.js';
 export * from './types/status.js';
 export * from './types/log.js';
+export * from './types/feedback.js';
 //# sourceMappingURL=index.d.ts.map

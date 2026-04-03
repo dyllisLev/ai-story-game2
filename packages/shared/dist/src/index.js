@@ -8,4 +8,5 @@ export * from './types/api.js';
 // Phase 2-A
 export * from './types/status.js';
 export * from './types/log.js';
+export * from './types/feedback.js';
 //# sourceMappingURL=index.js.map

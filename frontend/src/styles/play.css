@@ -1683,3 +1683,303 @@
     transform: scale(0.95);
   }
 }
+
+/* =============================================================================
+   FEEDBACK MODAL (AI-253)
+   ============================================================================= */
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fadeIn var(--dur-base) var(--ease);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  max-width: 540px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: slideUp var(--dur-base) var(--ease);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-close-button {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 20px;
+  transition: all var(--dur-fast) var(--ease);
+  z-index: 10;
+}
+
+.modal-close-button:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* Feedback Modal */
+.feedback-modal {
+  padding: var(--space-6);
+}
+
+@media (max-width: 640px) {
+  .feedback-modal {
+    padding: var(--space-4);
+  }
+}
+
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.feedback-form-header {
+  text-align: center;
+}
+
+.feedback-form-header h3 {
+  font-size: var(--font-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.feedback-form-subtitle {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Star ratings */
+.feedback-ratings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.feedback-rating-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.feedback-rating-label {
+  font-size: var(--font-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.star-rating {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.star-button {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 20px;
+  transition: all var(--dur-fast) var(--ease);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-button:hover {
+  background: var(--bg-inset);
+  color: var(--prim-amber-400);
+  border-color: var(--prim-amber-400);
+  transform: scale(1.1);
+}
+
+.star-button.filled {
+  color: var(--prim-amber-400);
+  border-color: var(--prim-amber-400);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+/* Feedback tags */
+.feedback-tags-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.feedback-tags-label {
+  font-size: var(--font-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.feedback-tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.feedback-tag-button {
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  white-space: nowrap;
+}
+
+.feedback-tag-button:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-muted);
+}
+
+.feedback-tag-button.selected {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: white;
+}
+
+/* Feedback comments */
+.feedback-comments-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.feedback-comments-label {
+  font-size: var(--font-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.feedback-comments-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.feedback-comments-textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.feedback-comments-textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.feedback-char-count {
+  text-align: right;
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-1);
+}
+
+/* Feedback form actions */
+.feedback-form-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.feedback-button {
+  height: 40px;
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  font-size: var(--font-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  white-space: nowrap;
+}
+
+.feedback-button-cancel {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.feedback-button-cancel:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.feedback-button-submit {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: white;
+}
+
+.feedback-button-submit:hover:not(:disabled) {
+  background: var(--brand-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.feedback-button-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.feedback-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}

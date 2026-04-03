@@ -13,6 +13,7 @@ interface TopBarProps {
   onToggleLeft: () => void;
   onToggleRight: () => void;
   onOpenCharModal: () => void;
+  onOpenFeedbackModal?: () => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   username?: string;
@@ -32,6 +33,7 @@ export const TopBar: FC<TopBarProps> = ({
   onToggleLeft,
   onToggleRight,
   onOpenCharModal,
+  onOpenFeedbackModal,
   theme,
   onToggleTheme,
   username,
@@ -140,6 +142,17 @@ export const TopBar: FC<TopBarProps> = ({
         >
           📒
         </button>
+
+        {onOpenFeedbackModal && (
+          <button
+            className="btn-icon"
+            onClick={onOpenFeedbackModal}
+            title="피드백"
+            aria-label="피드백 남기기"
+          >
+            💬
+          </button>
+        )}
 
         <button
           className={`btn-icon${rightPanelOpen ? ' active' : ''}`}

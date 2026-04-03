@@ -18,6 +18,7 @@ import { InputArea } from '@/components/play/InputArea';
 import { InfoPanel } from '@/components/play/InfoPanel';
 import { CharacterModal } from '@/components/play/CharacterModal';
 import { MobileBottomNav } from '@/components/play/MobileBottomNav';
+import { FeedbackModal } from '@/components/play/FeedbackModal';
 
 import type { SessionMemory } from '@story-game/shared';
 import type { SettingsData, StatusAttribute, InputMode } from '@/types/play';
@@ -92,6 +93,9 @@ const Play: FC = () => {
 
   // --- Char modal ---
   const [charModalOpen, setCharModalOpen] = useState(false);
+
+  // --- Feedback modal ---
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
 
   // --- Status window config ---
   const [statusAttributes, setStatusAttributes] = useState<StatusAttribute[]>([]);
@@ -287,6 +291,13 @@ const Play: FC = () => {
           onToggleLeft={() => setLeftOpen((v) => !v)}
           onToggleRight={() => setRightOpen((v) => !v)}
           onOpenCharModal={() => setCharModalOpen(true)}
+          onOpenFeedbackModal={() => {
+            if (!engine.currentSessionId || !engine.currentStoryId) {
+              toast.show('피드백을 제출하려면 먼저 게임을 시작해주세요.', 'warning');
+              return;
+            }
+            setFeedbackModalOpen(true);
+          }}
           theme={theme}
           onToggleTheme={toggleTheme}
           username={user?.nickname ?? user?.email}
@@ -363,6 +374,18 @@ const Play: FC = () => {
         onClose={() => setCharModalOpen(false)}
         settingsData={engine.settingsData}
         onSave={handleSaveChar}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+        sessionId={engine.currentSessionId ?? ''}
+        storyId={engine.currentStoryId ?? ''}
+        genre={storyGenre ?? 'fantasy'}
+        onSubmitSuccess={() => {
+          toast.show('피드백이 제출되었습니다. 감사합니다!', 'success');
+        }}
       />
 
       {/* Mobile Bottom Navigation */}
