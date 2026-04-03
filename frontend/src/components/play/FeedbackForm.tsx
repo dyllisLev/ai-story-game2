@@ -1,12 +1,57 @@
 // frontend/src/components/play/FeedbackForm.tsx
 // AI-253: 사용자 피드백 수집 시스템
 import { type FC, useState } from 'react';
-import type {
-  FeedbackRatings,
-  FeedbackRatingCategory,
-  FeedbackTag,
-  Genre,
-} from '@story-game/shared';
+
+// TODO: shared 패키지에서 import (CI 빌드 이슈로 임시 로컬 정의)
+// import type {
+//   FeedbackRatings,
+//   FeedbackRatingCategory,
+//   FeedbackTag,
+//   Genre,
+// } from '@story-game/shared';
+
+type Genre =
+  | 'fantasy'
+  | 'modern'
+  | 'romance'
+  | 'mystery'
+  | 'horror'
+  | 'scifi'
+  | 'thriller'
+  | 'historical'
+  | 'comedy';
+
+type FeedbackRatingCategory =
+  | 'story_quality'
+  | 'character_development'
+  | 'pacing'
+  | 'engagement'
+  | 'writing_style'
+  | 'overall';
+
+interface FeedbackRatings {
+  story_quality?: number;
+  character_development?: number;
+  pacing?: number;
+  engagement?: number;
+  writing_style?: number;
+  overall?: number;
+}
+
+type FeedbackTag =
+  | 'good_ending'
+  | 'surprising_twist'
+  | 'engaging_plot'
+  | 'realistic_dialogue'
+  | 'well_developed_characters'
+  | 'immersive_world'
+  | 'emotional_impact'
+  | 'creative_premise'
+  | 'pacing_issues'
+  | 'confusing_plot'
+  | 'weak_characters'
+  | 'poor_dialogue'
+  | 'rushed_ending';
 
 interface FeedbackFormProps {
   genre: Genre;
