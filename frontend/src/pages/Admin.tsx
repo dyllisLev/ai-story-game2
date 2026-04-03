@@ -19,6 +19,7 @@ import { StoryManagement } from '../components/admin/StoryManagement';
 import { StatusPresets } from '../components/admin/StatusPresets';
 import { SystemSection } from '../components/admin/SystemSection';
 import { UserManagement } from '../components/admin/UserManagement';
+import { FeedbackStats } from '../components/admin/FeedbackStats';
 import { useAdminConfig, type AdminConfig, type PromptConfig, type GameplayConfig, type GenreConfig } from '../hooks/useAdminConfig';
 
 /* ── DEV-only Skip Button Component ── */
@@ -122,6 +123,7 @@ const AdminContent: FC = () => {
         <main className="a-main">
           {activeSection === 'dashboard'     && <Dashboard />}
           {activeSection === 'users'         && <UserManagement />}
+          {activeSection === 'feedback'      && <FeedbackStats />}
           {activeSection === 'service-logs'  && (
             <ErrorBoundary>
               <ServiceLogs />

@@ -3,6 +3,7 @@ import { type FC } from 'react';
 export type AdminSection =
   | 'dashboard'
   | 'users'
+  | 'feedback'
   | 'service-logs'
   | 'api-logs'
   | 'prompt'
@@ -28,10 +29,11 @@ interface NavItem {
 }
 
 const MONITORING_ITEMS: NavItem[] = [
-  { id: 'dashboard',     label: '대시보드',  icon: '◈' },
-  { id: 'users',         label: '회원 관리', icon: '👤' },
-  { id: 'service-logs',  label: '서비스 로그', icon: '≡' },
-  { id: 'api-logs',      label: 'API 로그',  icon: '⟁' },
+  { id: 'dashboard',     label: '대시보드',     icon: '◈' },
+  { id: 'users',         label: '회원 관리',    icon: '👤' },
+  { id: 'feedback',      label: '피드백 통계',  icon: '💬' },
+  { id: 'service-logs',  label: '서비스 로그',  icon: '≡' },
+  { id: 'api-logs',      label: 'API 로그',     icon: '⟁' },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [
