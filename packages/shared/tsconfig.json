@@ -5,14 +5,12 @@
     "moduleResolution": "node",
     "rootDir": "src",
     "outDir": "dist",
-    "declarationDir": "dist",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "composite": true
+    "skipLibCheck": true
   },
   "include": [
     "src"
