@@ -29,18 +29,11 @@ function statusClass(code: number): string {
 export const ServiceLogs: FC = () => {
   const { user } = useAuth();
 
-  // Debug logging
-  console.log('[ServiceLogs] Render, user:', user);
-  console.log('[ServiceLogs] user !== null:', user !== null);
-
   const {
     logs, totalPages, isLoading, refetch,
     filters, updateFilters, clearLogs, isClearing,
     error,
   } = useServiceLogs(user);
-
-  // Debug logging for hook state
-  console.log('[ServiceLogs] Hook state:', { isLoading, logsLength: logs.length, error, filters });
 
   // Display error state
   if (error) {
@@ -159,22 +152,35 @@ export const ServiceLogs: FC = () => {
                   emptyMessage="로그 없음"
                 />
               ) : (
-                logs.map(log => (
-                  <tr key={log.id}>
-                    <td className="mono">{formatTime(log.timestamp)}</td>
-                    <td>
-                      <span style={{ color: methodColor(log.method), fontFamily: 'var(--a-font-ui)', fontSize: '10px' }}>
-                        {log.method}
-                      </span>
-                    </td>
-                    <td className="mono">{log.path}</td>
-                    <td>
-                      <span className={statusClass(log.status_code)}>{log.status_code}</span>
-                    </td>
-                    <td className="mono">{log.response_time_ms.toLocaleString('ko-KR')}ms</td>
-                    <td className="mono">{log.ip}</td>
-                  </tr>
-                ))
+                logs.map(log => {
+                  try {
+                    return (
+                      <tr key={log.id}>
+                        <td className="mono">{formatTime(log.timestamp)}</td>
+                        <td>
+                          <span style={{ color: methodColor(log.method ?? 'UNKNOWN'), fontFamily: 'var(--a-font-ui)', fontSize: '10px' }}>
+                            {log.method ?? 'UNKNOWN'}
+                          </span>
+                        </td>
+                        <td className="mono">{log.path ?? ''}</td>
+                        <td>
+                          <span className={statusClass(log.status_code ?? 0)}>{log.status_code ?? '-'}</span>
+                        </td>
+                        <td className="mono">{log.response_time_ms?.toLocaleString('ko-KR') ?? '-'}ms</td>
+                        <td className="mono">{log.ip ?? '-'}</td>
+                      </tr>
+                    );
+                  } catch (err) {
+                    console.error('[ServiceLogs] Error rendering log row:', log, err);
+                    return (
+                      <tr key={log.id}>
+                        <td colSpan={6} style={{ textAlign: 'center', color: 'var(--a-ink-error)' }}>
+                          렌더링 오류: {log.id}
+                        </td>
+                      </tr>
+                    );
+                  }
+                })
               )}
             </tbody>
           </table>

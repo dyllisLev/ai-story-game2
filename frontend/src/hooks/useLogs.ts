@@ -86,16 +86,10 @@ export function useServiceLogs(user: AuthUser | null) {
     enabled: user !== null || import.meta.env.DEV,
   });
 
-  // Debug logging
-  console.log('[useServiceLogs] Query state:', {
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    error: query.error,
-    data: query.data,
-    status: query.status,
-    user,
-    filters,
-  });
+  // Debug logging (limited to prevent circular reference issues)
+  if (query.error) {
+    console.error('[useServiceLogs] Query error:', query.error);
+  }
 
   const deleteMutation = useMutation({
     mutationFn: () => api.delete('/admin/service-logs'),
