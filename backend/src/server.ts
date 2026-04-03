@@ -240,6 +240,10 @@ await app.register(meRoutes, { prefix: API_V1_PREFIX });
 import { registerRoutes as registerPhase2Routes } from './routes/index.js';
 await registerPhase2Routes(app);
 
+// Feedback routes
+import feedbackRoutes from './routes/feedback.js';
+await app.register(feedbackRoutes, { prefix: API_V1_PREFIX });
+
 // Start server
 try {
   await app.listen({ port: config.PORT, host: '0.0.0.0' });
