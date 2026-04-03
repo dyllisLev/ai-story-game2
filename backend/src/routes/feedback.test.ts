@@ -40,6 +40,32 @@ describe('POST /api/feedback', () => {
       error: vi.fn(),
     } as any;
 
+    // Add error handler for validation errors
+    app.setErrorHandler((error: any, request, reply) => {
+      if (error.code === 'FST_ERR_VALIDATION') {
+        return reply.status(400).send({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '입력값이 올바르지 않습니다',
+          },
+        });
+      }
+      return reply.status(error.statusCode || 500).send({
+        error: {
+          code: error.code || 'INTERNAL_ERROR',
+          message: error.message,
+        },
+      });
+    });
+
+    // Mock auth middleware - add user to request if header present
+    app.addHook('onRequest', async (request, reply) => {
+      const hasAuth = request.headers['x-test-auth'];
+      if (hasAuth) {
+        (request as any).user = { id: 'test-user-id', email: 'test@example.com' };
+      }
+    });
+
     await app.register(feedbackRoutes, { prefix: '/api/v1' });
   });
 
@@ -62,12 +88,12 @@ describe('POST /api/feedback', () => {
     expect(response.statusCode).toBe(401);
   });
 
-  it('should return 401 without proper authentication for validation tests', async () => {
+  it('should return 400 for missing required fields', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/feedback',
       headers: {
-        cookie: 'sb-access-token=mock-token',
+        'x-test-auth': 'true',
       },
       payload: {
         session_id: 'test-session-id',
@@ -77,16 +103,18 @@ describe('POST /api/feedback', () => {
       },
     });
 
-    // Auth check happens before validation, so we expect 401
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toBe(400);
+    const json = response.json();
+    expect(json.error).toBeDefined();
+    expect(json.error.message).toContain('필수 필드');
   });
 
-  it('should return 401 without proper authentication for rating validation', async () => {
+  it('should validate rating values are between 1-5', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/feedback',
       headers: {
-        cookie: 'sb-access-token=mock-token',
+        'x-test-auth': 'true',
       },
       payload: {
         session_id: 'test-session-id',
@@ -96,8 +124,10 @@ describe('POST /api/feedback', () => {
       },
     });
 
-    // Auth check happens before validation, so we expect 401
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toBe(400);
+    const json = response.json();
+    expect(json.error).toBeDefined();
+    expect(json.error.message).toContain('1-5 사이');
   });
 
   it('should calculate overall rating if not provided', async () => {
@@ -105,7 +135,7 @@ describe('POST /api/feedback', () => {
       method: 'POST',
       url: '/api/v1/feedback',
       headers: {
-        cookie: 'sb-access-token=mock-token',
+        'x-test-auth': 'true',
       },
       payload: {
         session_id: 'test-session-id',
@@ -163,6 +193,14 @@ describe('GET /api/feedback/admin/stats', () => {
       error: vi.fn(),
     } as any;
 
+    // Mock auth middleware
+    app.addHook('onRequest', async (request, reply) => {
+      const hasAuth = request.headers['x-test-admin-auth'];
+      if (hasAuth) {
+        (request as any).user = { id: 'test-admin-user', email: 'admin@example.com', role: 'admin' };
+      }
+    });
+
     await app.register(feedbackRoutes, { prefix: '/api/v1' });
   });
 
@@ -184,7 +222,7 @@ describe('GET /api/feedback/admin/stats', () => {
       method: 'GET',
       url: '/api/v1/feedback/admin/stats',
       headers: {
-        cookie: 'sb-access-token=mock-admin-token',
+        'x-test-admin-auth': 'true',
       },
     });
 
