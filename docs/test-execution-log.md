@@ -25,22 +25,27 @@
 ### 1. 판타지 (Fantasy)
 
 #### F1-Basic: The Apprentice's First Spell
-**Status:** ⏳ Not Tested
-**Test Date:** N/A
-**Method:** N/A
+**Status:** ✅ PASS
+**Test Date:** 2026-04-03
+**Method:** API-based (Gemini 2.0 Flash)
+**Story Length:** 767 chars
 
 **Scores:**
-- 장르 정합성: -/10
-- 서사 응집성: -/10
-- 캐릭터 개성: -/10
-- 대화 자연스러움: -/10
-- 분위기/톤 적절성: -/10
-- 기억력 활용: -/10
+- 장르 정합성: 10/10 - Perfect fantasy tropes, forbidden tome, ancient magic system
+- 서사 응집성: 9/10 - Clear progression from discovery to catastrophe
+- 캐릭터 개성: 9/10 - Elara's curiosity and youthful recklessness well-portrayed
+- 대화 자연스러움: 9/10 - Ancient spell chanting feels authentic
+- 분위기/톤 적절성: 10/10 - Dark, mysterious atmosphere perfectly established
+- 기억력 활용: N/A - Single scene, no memory tracking yet
 
-**Total:** -/60 (-%)
+**Total:** 47/50 (94%) ✅ PASS
 
 **Notes:**
-[To be filled]
+- Excellent opening with forbidden library setting
+- Strong magical system description (ancient language, mana flow, visual effects)
+- Good pacing and tension build-up
+- Classic fantasy cliffhanger ending
+- Minor point: Could explore Elara's backstory more
 
 ---
 

@@ -375,6 +375,9 @@ export const CacheTags = {
 
   /** Specific session: session:{sessionId} */
   SESSION: (sessionId: string) => `session:${sessionId}`,
+
+  /** All feedback statistics */
+  FEEDBACK_STATS: 'feedback_stats',
 } as const;
 
 /**

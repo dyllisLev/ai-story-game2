@@ -48,3 +48,4 @@ backend/scripts/*.mjs
 backend/update-prompts.mjs
 backend/MANUAL_SETUP.md
 HEARTBEAT.md
+packages/shared/tsconfig.tsbuildinfo

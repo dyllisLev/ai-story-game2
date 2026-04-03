@@ -25,6 +25,9 @@ import adminDangerZoneRoute    from './admin/danger-zone.js';
 import adminUsersRoute         from './admin/users.js';
 import adminVerifyRoute        from './admin/verify.js';
 
+// Feedback
+import feedbackRoutes          from './feedback.js';
+
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // --- Public stories ---
   // Note: stats and mine must register BEFORE detail to avoid /:id matching
@@ -47,4 +50,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(adminDangerZoneRoute, { prefix: API_V1_PREFIX });
   await app.register(adminUsersRoute, { prefix: API_V1_PREFIX });
   await app.register(adminVerifyRoute, { prefix: API_V1_PREFIX });
+
+  // --- Feedback ---
+  await app.register(feedbackRoutes, { prefix: API_V1_PREFIX });
 }

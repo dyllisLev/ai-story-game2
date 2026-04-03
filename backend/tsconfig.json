@@ -9,10 +9,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "declaration": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "paths": {
+      "@story-game/shared": ["../packages/shared/dist/index.d.ts"]
+    }
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../packages/shared" }
-  ]
+  "include": ["src"]
 }

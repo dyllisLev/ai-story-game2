@@ -18,6 +18,7 @@ import { InputArea } from '@/components/play/InputArea';
 import { InfoPanel } from '@/components/play/InfoPanel';
 import { CharacterModal } from '@/components/play/CharacterModal';
 import { MobileBottomNav } from '@/components/play/MobileBottomNav';
+import { FeedbackModal } from '@/components/play/FeedbackModal';
 
 import type { SessionMemory } from '@story-game/shared';
 import type { SettingsData, StatusAttribute, InputMode } from '@/types/play';
@@ -92,6 +93,61 @@ const Play: FC = () => {
 
   // --- Char modal ---
   const [charModalOpen, setCharModalOpen] = useState(false);
+
+  // --- Feedback modal ---
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [feedbackRequested, setFeedbackRequested] = useState<Set<string>>(new Set());
+
+  // Auto-show feedback modal after sufficient gameplay
+  useEffect(() => {
+    const FEEDBACK_MESSAGE_THRESHOLD = 10; // Show feedback prompt after 10 messages
+    const FEEDBACK_STORAGE_KEY = 'story-game:feedback-requested';
+
+    // Load previously requested sessions from localStorage
+    const loadRequestedSessions = (): Set<string> => {
+      try {
+        const stored = localStorage.getItem(FEEDBACK_STORAGE_KEY);
+        return stored ? new Set(JSON.parse(stored)) : new Set();
+      } catch {
+        return new Set();
+      }
+    };
+
+    // Check if we should show feedback modal
+    const checkFeedbackTrigger = () => {
+      if (!engine.currentSessionId) return;
+
+      const requested = loadRequestedSessions();
+      setFeedbackRequested(requested);
+
+      // Don't show if already requested for this session
+      if (requested.has(engine.currentSessionId)) return;
+
+      // Check message count
+      const messageCount = engine.messages.filter(m => m.role === 'model').length;
+
+      // Show feedback modal after threshold
+      if (messageCount >= FEEDBACK_MESSAGE_THRESHOLD) {
+        // Mark as requested
+        const updated = new Set(requested);
+        updated.add(engine.currentSessionId);
+        setFeedbackRequested(updated);
+
+        try {
+          localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify([...updated]));
+        } catch (e) {
+          console.warn('Failed to save feedback request state:', e);
+        }
+
+        // Show modal with a small delay for better UX
+        setTimeout(() => {
+          setFeedbackModalOpen(true);
+        }, 500);
+      }
+    };
+
+    checkFeedbackTrigger();
+  }, [engine.messages, engine.currentSessionId]);
 
   // --- Status window config ---
   const [statusAttributes, setStatusAttributes] = useState<StatusAttribute[]>([]);
@@ -287,6 +343,13 @@ const Play: FC = () => {
           onToggleLeft={() => setLeftOpen((v) => !v)}
           onToggleRight={() => setRightOpen((v) => !v)}
           onOpenCharModal={() => setCharModalOpen(true)}
+          onOpenFeedbackModal={() => {
+            if (!engine.currentSessionId || !engine.currentStoryId) {
+              toast.show('피드백을 제출하려면 먼저 게임을 시작해주세요.', 'warning');
+              return;
+            }
+            setFeedbackModalOpen(true);
+          }}
           theme={theme}
           onToggleTheme={toggleTheme}
           username={user?.nickname ?? user?.email}
@@ -363,6 +426,18 @@ const Play: FC = () => {
         onClose={() => setCharModalOpen(false)}
         settingsData={engine.settingsData}
         onSave={handleSaveChar}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+        sessionId={engine.currentSessionId ?? ''}
+        storyId={engine.currentStoryId ?? ''}
+        genre={storyGenre ?? 'fantasy'}
+        onSubmitSuccess={() => {
+          toast.show('피드백이 제출되었습니다. 감사합니다!', 'success');
+        }}
       />
 
       {/* Mobile Bottom Navigation */}
