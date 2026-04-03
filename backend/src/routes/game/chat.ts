@@ -15,6 +15,9 @@ export default async function (app: FastifyInstance) {
   }, async (request, reply) => {
     const body = request.body as GameChatRequest;
 
+    // DEBUG: Log request body
+    app.log.info({ body, headers: request.headers }, 'game/chat request received');
+
     if (!body.sessionId) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'sessionId를 입력해주세요' } });
     }
