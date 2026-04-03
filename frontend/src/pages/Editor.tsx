@@ -341,9 +341,7 @@ const EditorPage: FC = () => {
               {/* Section: Publish settings */}
               <PublishSettings
                 isPublic={form.isPublic}
-                password={form.password}
                 onPublicChange={v => setField('isPublic', v)}
-                onPasswordChange={v => setField('password', v)}
               />
             </div>
           </div>
