@@ -101,25 +101,51 @@ jobs:
       - name: Verify deployment
         run: |
           echo "Verifying deployment..."
-          sleep 5
 
-          # Backend health check
-          if curl -f ${{ secrets.PRODUCTION_URL }}/api/health > /dev/null 2>&1; then
-            echo "✅ Backend health check passed"
-          else
-            echo "❌ Backend health check failed"
-            exit 1
-          fi
+          # 헬스체크 재시도 설정
+          MAX_RETRIES=10
+          RETRY_INTERVAL=3
+          RETRY_COUNT=0
 
-          # Frontend health check
-          if curl -f ${{ secrets.PRODUCTION_URL }}/ > /dev/null 2>&1; then
-            echo "✅ Frontend health check passed"
-          else
-            echo "❌ Frontend health check failed"
-            exit 1
-          fi
+          while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            echo "헬스체크 시도 $((RETRY_COUNT + 1))/$MAX_RETRIES..."
 
-          echo "Deployment verification complete!"
+            # Backend health check
+            if curl -f --max-time 5 ${{ secrets.PRODUCTION_URL }}/api/health > /dev/null 2>&1; then
+              echo "✅ Backend health check passed"
+              BACKEND_OK=true
+            else
+              echo "❌ Backend health check failed"
+              BACKEND_OK=false
+            fi
+
+            # Frontend health check
+            if curl -f --max-time 5 ${{ secrets.PRODUCTION_URL }}/ > /dev/null 2>&1; then
+              echo "✅ Frontend health check passed"
+              FRONTEND_OK=true
+            else
+              echo "❌ Frontend health check failed"
+              FRONTEND_OK=false
+            fi
+
+            # 둘 다 성공하면 종료
+            if [[ "$BACKEND_OK" == "true" && "$FRONTEND_OK" == "true" ]]; then
+              echo "✅ 모든 헬스체크 통과!"
+              echo "Deployment verification complete!"
+              exit 0
+            fi
+
+            # 재시도
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+              echo "${RETRY_INTERVAL}초 후 재시도..."
+              sleep $RETRY_INTERVAL
+            fi
+          done
+
+          # 모든 재시도 실패
+          echo "❌ 헬스체크 실패! ${MAX_RETRIES}회 시도 후에도 통과하지 못했습니다."
+          exit 1
 
       - name: Notify deployment success
         if: success()
