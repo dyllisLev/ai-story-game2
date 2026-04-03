@@ -9,7 +9,8 @@
     "skipLibCheck": true,
     "types": ["vite/client"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@story-game/shared": ["../packages/shared/dist/index.d.ts"]
     }
   },
   "include": ["src"],
