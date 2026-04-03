@@ -194,11 +194,32 @@ app.get(API_HEALTH_ENDPOINT, async () => {
     supabaseStatus = error ? 'disconnected' : 'connected';
   } catch { /* disconnected */ }
 
+  // Build 정보 로드
+  let buildInfo = {
+    commit: 'unknown',
+    buildTime: 'unknown',
+    version: '1.0.0',
+    branch: 'unknown',
+  };
+  try {
+    const { readFileSync } = await import('fs');
+    const { join } = await import('path');
+    const { dirname } = await import('path');
+    const { fileURLToPath } = await import('url');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const buildInfoPath = join(__dirname, '../dist/build-info.json');
+    const buildInfoContent = readFileSync(buildInfoPath, 'utf-8');
+    buildInfo = JSON.parse(buildInfoContent);
+  } catch (err) {
+    app.log.warn('Build info not found, using defaults');
+  }
+
   return {
     status: supabaseStatus === 'connected' ? 'ok' : 'degraded',
     supabase: supabaseStatus,
     uptime: process.uptime(),
-    version: '1.0.0',
+    build: buildInfo,
   };
 });
 

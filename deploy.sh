@@ -55,6 +55,24 @@ rollback() {
 
   log "백업 $backup_id(으)로 롤백 중..."
 
+  # 현재 배포 정보 수집 (롤백 로그용)
+  local commit_hash="unknown"
+  local branch="unknown"
+  local version="unknown"
+  local deployed_by="${USER:-unknown}"
+
+  # Git 정보 수집 (롤백 전 현재 상태)
+  cd "$PROJECT_DIR"
+  if git rev-parse --git-dir > /dev/null 2>&1; then
+    commit_hash=$(git rev-parse HEAD)
+    branch=$(git rev-parse --abbrev-ref HEAD)
+  fi
+
+  # package.json에서 버전 읽기
+  if [[ -f "$PROJECT_DIR/backend/package.json" ]]; then
+    version=$(grep '"version"' "$PROJECT_DIR/backend/package.json" | head -1 | sed 's/.*: "\(.*\)".*/\1/')
+  fi
+
   # 프론트엔드 롤백
   if [[ -d "$BACKUP_DIR/frontend-$backup_id" ]]; then
     rm -rf "$PROJECT_DIR/frontend/dist"
@@ -77,6 +95,10 @@ rollback() {
   # 서비스 재시작
   pm2 restart aistorygame-backend
   sudo systemctl reload nginx
+
+  # 롤백 배포 로그 기록
+  local build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  log_deployment "$commit_hash" "$branch" "$version" "$build_time" "$deployed_by" "rolled_back" "Rollback to backup: $backup_id"
 
   log "롤백 완료!"
 }
@@ -194,9 +216,43 @@ deploy_nginx_config() {
   log "nginx 설정 배포 완료!"
 }
 
+# 배포 로그 기록
+log_deployment() {
+  local commit_hash="$1"
+  local branch="$2"
+  local version="$3"
+  local build_time="$4"
+  local deployed_by="$5"
+  local status="${6:-success}"
+  local notes="${7:-}"
+
+  log "배포 로그 기록 중..."
+
+  cd "$PROJECT_DIR"
+
+  # 배포 로그 기록 스크립트 실행
+  if npx tsx scripts/log-deployment.ts "$commit_hash" "$branch" "$version" "$build_time" "$deployed_by" "$status" "$notes"; then
+    log "✅ 배포 로그 기록 완료"
+  else
+    warn "⚠️  배포 로그 기록 실패 (무시하고 계속)"
+  fi
+}
+
 # 배포
 deploy() {
   log "프로덕션 배포 중..."
+
+  # Git 정보 수집
+  local commit_hash=$(git rev-parse HEAD)
+  local branch=$(git rev-parse --abbrev-ref HEAD)
+  local build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  local deployed_by="${USER:-unknown}"
+  local version="1.0.0"
+
+  # package.json에서 버전 읽기
+  if [[ -f "$PROJECT_DIR/backend/package.json" ]]; then
+    version=$(grep '"version"' "$PROJECT_DIR/backend/package.json" | head -1 | sed 's/.*: "\(.*\)".*/\1/')
+  fi
 
   # 프론트엔드 정적 파일 배포
   deploy_frontend_static
@@ -215,6 +271,9 @@ deploy() {
   # nginx 재로드
   log "nginx 재로드 중..."
   sudo systemctl reload nginx
+
+  # 배포 로그 기록
+  log_deployment "$commit_hash" "$branch" "$version" "$build_time" "$deployed_by" "success" "Production deployment"
 
   log "배포 완료!"
 }
