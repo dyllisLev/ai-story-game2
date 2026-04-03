@@ -141,7 +141,7 @@ async function main() {
   const scenarios: Scenario[] = [
     {
       id: '1',
-      title: \"The Apprentice's First Spell\",
+      title: 'The Apprentice\'s First Spell',
       genre: 'fantasy',
       difficulty: 'basic'
     },
