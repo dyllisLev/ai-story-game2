@@ -83,13 +83,53 @@ const Play: FC = () => {
     .join(' ');
 
   // --- API key + model ---
-  const [apiKey, setApiKey] = useState(() => sessionStorage.getItem('gemini-api-key') ?? '');
+  const STORAGE_KEY = 'gemini-api-key';
+  const [apiKey, setApiKey] = useState(() => {
+    // Try localStorage first, fallback to sessionStorage
+    const localKey = localStorage.getItem(STORAGE_KEY);
+    const sessionKey = sessionStorage.getItem(STORAGE_KEY);
+    const key = localKey || sessionKey || '';
+    console.log('[Play.tsx] Initial apiKey - localStorage:', localKey ? 'FOUND' : 'NOT FOUND', 'sessionStorage:', sessionKey ? 'FOUND' : 'NOT FOUND');
+    return key;
+  });
   const [model, setModel] = useState('');
 
   const handleApiKeyChange = (key: string) => {
     setApiKey(key);
-    if (key) sessionStorage.setItem('gemini-api-key', key);
+    if (key) {
+      localStorage.setItem(STORAGE_KEY, key);
+      sessionStorage.setItem(STORAGE_KEY, key);
+    }
   };
+
+  // Sync apiKey with storage (fix for AI-276)
+  useEffect(() => {
+    const checkStorage = () => {
+      const localKey = localStorage.getItem(STORAGE_KEY);
+      const sessionKey = sessionStorage.getItem(STORAGE_KEY);
+      const storedKey = localKey || sessionKey;
+      console.log('[Play.tsx] Polling storage - localStorage:', localKey ? 'FOUND' : 'NOT FOUND', 'sessionStorage:', sessionKey ? 'FOUND' : 'NOT FOUND');
+      if (storedKey && storedKey !== apiKey) {
+        console.log('[Play.tsx] Updating apiKey from storage');
+        setApiKey(storedKey);
+      }
+    };
+
+    // Check immediately
+    checkStorage();
+
+    // Check when window gains focus (user returns from settings page)
+    const handleFocus = () => checkStorage();
+    window.addEventListener('focus', handleFocus);
+
+    // Poll every 2 seconds as fallback
+    const interval = setInterval(checkStorage, 2000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [apiKey]);
 
   // --- Char modal ---
   const [charModalOpen, setCharModalOpen] = useState(false);
