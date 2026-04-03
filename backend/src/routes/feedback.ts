@@ -1,7 +1,5 @@
 // backend/src/routes/feedback.ts
 // AI-253: 사용자 피드백 수집 시스템 기술 구현
-// POST /feedback — 피드백 저장 (prefix /api/v1로 /api/v1/feedback 됨)
-// GET  /feedback/admin/stats — 관리자 통계
 import type { FastifyInstance } from 'fastify';
 import type {
   FeedbackCreateInput,
@@ -79,8 +77,8 @@ export default async function feedbackRoutes(app: FastifyInstance) {
         });
       }
 
-      // 캐시 무효화
-      await app.cache.invalidateByTag(CacheTags.FEEDBACK_STATS);
+      // 캐시 무효화 (비동기, 응답 차단 방지)
+      app.cache.invalidateByTag(CacheTags.FEEDBACK_STATS).catch((e) => app.log.warn(e, 'cache invalidate failed'));
 
       return reply.status(201).send({
         id: data.id,
@@ -107,130 +105,101 @@ export default async function feedbackRoutes(app: FastifyInstance) {
         app.cache,
         'feedback:admin:stats',
         async () => {
-          // 전체 피드백 수
-          const { count: total_feedbacks, error: countError } = await app.supabaseAdmin
-            .from('story_feedback')
-            .select('*', { count: 'exact', head: true });
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-          if (countError) throw countError;
+          // 병렬 쿼리: 전체 데이터 + 최근 7일/30일 카운트
+          const [allDataResult, last7DaysResult, last30DaysResult] = await Promise.all([
+            app.supabaseAdmin
+              .from('story_feedback')
+              .select('user_id, session_id, genre, ratings, feedback_tags'),
+            app.supabaseAdmin
+              .from('story_feedback')
+              .select('*', { count: 'exact', head: true })
+              .gte('created_at', sevenDaysAgo),
+            app.supabaseAdmin
+              .from('story_feedback')
+              .select('*', { count: 'exact', head: true })
+              .gte('created_at', thirtyDaysAgo),
+          ]);
 
-          // 고유 사용자 수
-          const { data: usersData, error: usersError } = await app.supabaseAdmin
-            .from('story_feedback')
-            .select('user_id');
+          if (allDataResult.error) throw allDataResult.error;
+          const allData = allDataResult.data ?? [];
 
-          if (usersError) throw usersError;
-          const unique_users = new Set(usersData.map((d) => d.user_id).filter((id) => id != null))
-            .size;
+          // 단일 패스로 모든 통계 계산
+          const uniqueUsers = new Set<string>();
+          const uniqueSessions = new Set<string>();
+          const genreMap = new Map<string, { count: number; sum_rating: number }>();
+          const categorySums: Record<string, { sum: number; count: number }> = {};
+          const tagCounts: Record<string, number> = {};
 
-          // 고유 세션 수
-          const { data: sessionsData, error: sessionsError } = await app.supabaseAdmin
-            .from('story_feedback')
-            .select('session_id');
+          for (const item of allData) {
+            // 고유 사용자/세션 수집
+            if (item.user_id) uniqueUsers.add(item.user_id);
+            uniqueSessions.add(item.session_id);
 
-          if (sessionsError) throw sessionsError;
-          const unique_sessions = new Set(sessionsData.map((d) => d.session_id)).size;
-
-          // 장르별 통계
-          const { data: genreData, error: genreError } = await app.supabaseAdmin
-            .from('story_feedback')
-            .select('genre, ratings');
-
-          if (genreError) throw genreError;
-
-          const genreBreakdown = genreData.reduce((acc, item) => {
-            const existing = acc.find((g) => g.genre === item.genre);
-            const overallRating = (item.ratings as any)?.overall || 3;
-
+            // 장르별 통계 (Map 사용 - O(n))
+            const overallRating = (item.ratings?.overall as number) || 3;
+            const existing = genreMap.get(item.genre);
             if (existing) {
               existing.count += 1;
               existing.sum_rating += overallRating;
             } else {
-              acc.push({
-                genre: item.genre as any,
-                count: 1,
-                sum_rating: overallRating,
-              });
+              genreMap.set(item.genre, { count: 1, sum_rating: overallRating });
             }
-            return acc;
-          }, [] as Array<{ genre: string; count: number; sum_rating: number }>);
 
-          const genre_breakdown = genreBreakdown.map((g) => ({
-            genre: g.genre as any,
+            // 카테고리별 평점 합계
+            if (item.ratings) {
+              for (const [category, value] of Object.entries(item.ratings)) {
+                if (typeof value === 'number') {
+                  if (!categorySums[category]) {
+                    categorySums[category] = { sum: 0, count: 0 };
+                  }
+                  categorySums[category].sum += value;
+                  categorySums[category].count += 1;
+                }
+              }
+            }
+
+            // 태그 카운트
+            if (item.feedback_tags) {
+              for (const tag of item.feedback_tags) {
+                tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+              }
+            }
+          }
+
+          // 결과 조립
+          const genre_breakdown = Array.from(genreMap.entries()).map(([genre, g]) => ({
+            genre,
             count: g.count,
             avg_overall_rating: Math.round((g.sum_rating / g.count) * 10) / 10,
           }));
 
-          // 평균 평점 계산
           const rating_averages: Partial<Record<FeedbackRatingCategory, number>> = {};
-          const categorySums: Record<string, { sum: number; count: number }> = {};
-
-          genreData.forEach((item) => {
-            const ratings = item.ratings as Record<string, number>;
-            Object.entries(ratings).forEach(([category, value]) => {
-              if (!categorySums[category]) {
-                categorySums[category] = { sum: 0, count: 0 };
-              }
-              categorySums[category].sum += value;
-              categorySums[category].count += 1;
-            });
-          });
-
-          Object.entries(categorySums).forEach(([category, data]) => {
+          for (const [category, data] of Object.entries(categorySums)) {
             rating_averages[category as FeedbackRatingCategory] =
               Math.round((data.sum / data.count) * 10) / 10;
-          });
-
-          // 가장 흔한 태그
-          const { data: tagsData, error: tagsError } = await app.supabaseAdmin
-            .from('story_feedback')
-            .select('feedback_tags');
-
-          if (tagsError) throw tagsError;
-
-          const tagCounts: Record<string, number> = {};
-          tagsData.forEach((item) => {
-            const tags = item.feedback_tags as string[];
-            tags.forEach((tag) => {
-              tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-            });
-          });
+          }
 
           const most_common_tags = Object.entries(tagCounts)
             .map(([tag, count]) => ({ tag, count }))
             .sort((a, b) => b.count - a.count)
             .slice(0, 10);
 
-          // 최근 7일/30일 피드백 수
-          const sevenDaysAgo = new Date();
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-          const { count: feedbacks_last_7_days } = await app.supabaseAdmin
-            .from('story_feedback')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', sevenDaysAgo.toISOString());
-
-          const { count: feedbacks_last_30_days } = await app.supabaseAdmin
-            .from('story_feedback')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', thirtyDaysAgo.toISOString());
-
           return {
-            total_feedbacks: total_feedbacks || 0,
-            unique_users,
-            unique_sessions,
+            total_feedbacks: allData.length,
+            unique_users: uniqueUsers.size,
+            unique_sessions: uniqueSessions.size,
             genre_breakdown,
             rating_averages,
             most_common_tags,
-            feedbacks_last_7_days: feedbacks_last_7_days || 0,
-            feedbacks_last_30_days: feedbacks_last_30_days || 0,
+            feedbacks_last_7_days: last7DaysResult.count ?? 0,
+            feedbacks_last_30_days: last30DaysResult.count ?? 0,
           } as FeedbackAdminStats;
         },
         {
-          ttl: CacheTTL.MEDIUM, // 1 hour
+          ttl: CacheTTL.MEDIUM,
           tags: [CacheTags.FEEDBACK_STATS],
         }
       );
