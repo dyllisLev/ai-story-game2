@@ -61,6 +61,7 @@ jobs:
         run: |
           pnpm --filter @story-game/shared build
           rm -f packages/shared/tsconfig.tsbuildinfo
+          ls -la packages/shared/dist/
 
       - name: Build frontend
         run: cd frontend && pnpm run build
