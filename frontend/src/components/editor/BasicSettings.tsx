@@ -4,6 +4,8 @@
 import { type FC } from 'react';
 import type { Preset } from '@story-game/shared';
 import { useConfig } from '@/hooks/useConfig';
+import { useAuth } from '@/lib/auth';
+import { useModels } from '@/hooks/useModels';
 
 interface BasicSettingsProps {
   title: string;
@@ -33,9 +35,18 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
   onAiModelChange,
 }) => {
   const { data: config, isLoading: configLoading } = useConfig();
+  const { user } = useAuth();
+
+  // Fetch models dynamically from Gemini API if user has API key
+  const { data: dynamicModels, isLoading: modelsLoading } = useModels(!!user);
+
+  // Use dynamic models if available, otherwise fall back to config models
+  const aiModels = dynamicModels && dynamicModels.length > 0
+    ? dynamicModels.map(m => ({ id: m.id, label: m.label, description: m.description, version: m.version }))
+    : config?.gameplayConfig.available_models ?? [];
+
   const genres = config?.genreConfig.genres.map(g => g.name) ?? [];
   const icons = config?.gameplayConfig.story_icons ?? [];
-  const aiModels = config?.gameplayConfig.available_models ?? [];
 
   return (
     <section id="section-basic" aria-labelledby="basic-heading" data-config-loading={configLoading}>
@@ -112,7 +123,7 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
       )}
 
       {/* AI model */}
-      {!configLoading && (
+      {!configLoading && !modelsLoading && (
         <div className="form-group">
           <label className="form-label" htmlFor="aiModelSelect">
             AI 모델
@@ -128,7 +139,11 @@ export const BasicSettings: FC<BasicSettingsProps> = ({
               <option key={m.id} value={m.id}>{m.label}</option>
             ))}
           </select>
-          <p className="form-hint">Flash는 빠른 응답, Pro는 더 정교한 서술에 적합합니다.</p>
+          <p className="form-hint">
+            {dynamicModels && dynamicModels.length > 0
+              ? 'API 키로부터 사용 가능한 모델을 불러왔습니다.'
+              : 'Flash는 빠른 응답, Pro는 더 정교한 서술에 적합합니다.'}
+          </p>
         </div>
       )}
 

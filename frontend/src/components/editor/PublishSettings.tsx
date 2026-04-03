@@ -1,26 +1,22 @@
 // components/editor/PublishSettings.tsx
-// Public/private card select, password
+// Public/private card select
 
 import { type FC } from 'react';
 
 interface PublishSettingsProps {
   isPublic: boolean;
-  password: string;
   onPublicChange: (v: boolean) => void;
-  onPasswordChange: (v: string) => void;
 }
 
 export const PublishSettings: FC<PublishSettingsProps> = ({
   isPublic,
-  password,
   onPublicChange,
-  onPasswordChange,
 }) => {
   return (
     <section id="section-visibility" aria-labelledby="visibility-heading">
       <div className="section-header">
         <h2 id="visibility-heading" className="section-title">공개 설정</h2>
-        <p className="section-desc">스토리 공개 여부와 접근 방식을 설정하세요.</p>
+        <p className="section-desc">스토리 공개 여부를 선택하세요.</p>
       </div>
 
       {/* Visibility option cards */}
@@ -67,26 +63,6 @@ export const PublishSettings: FC<PublishSettingsProps> = ({
           <p className="vis-option-desc">누구나 목록에서 찾아 플레이할 수 있습니다</p>
         </div>
       </div>
-
-      {/* Password (only shown when public) */}
-      {isPublic && (
-        <div className="form-group">
-          <label className="form-label" htmlFor="storyPassword">
-            비밀번호
-            <span className="label-badge optional">선택</span>
-          </label>
-          <input
-            id="storyPassword"
-            type="password"
-            className="form-input"
-            value={password}
-            onChange={e => onPasswordChange(e.target.value)}
-            placeholder="설정 시 비밀번호가 있는 사람만 플레이 가능"
-            autoComplete="new-password"
-          />
-          <p className="form-hint">비워두면 비밀번호 없이 누구나 접근 가능합니다.</p>
-        </div>
-      )}
     </section>
   );
 };
