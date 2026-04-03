@@ -173,6 +173,8 @@ const Play: FC = () => {
     if (sessionId) {
       handleLoadSession(sessionId);
     } else if (storyId) {
+      // 새 스토리로 진입 시 기존 세션 정리 (AI-274: 장르 변경 시 스토리가 새로 생성되지 않음 버그 수정)
+      engine.startNewGame();
       loadStoryData(storyId);
     }
 
