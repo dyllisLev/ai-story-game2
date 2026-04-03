@@ -19,10 +19,10 @@ export default async function storiesStatsRoute(app: FastifyInstance) {
         });
       }
 
-      // Count distinct authors (ai_story_game schema uses 'author' column, not 'owner_uid')
+      // Count distinct authors (ai_story_game schema uses 'owner_uid' column)
       const { data: stories, error: storiesErr } = await app.supabaseAdmin
         .from('stories')
-        .select('author');
+        .select('owner_uid');
 
       if (storiesErr) {
         app.log.error(storiesErr, 'storiesStatsRoute: stories query failed');
@@ -31,7 +31,7 @@ export default async function storiesStatsRoute(app: FastifyInstance) {
         });
       }
 
-      const uniqueAuthors = new Set((stories ?? []).map(s => s.author).filter(Boolean));
+      const uniqueAuthors = new Set((stories ?? []).map(s => s.owner_uid).filter(Boolean));
 
       const response: StoryStats = {
         total_stories: total_stories ?? 0,
