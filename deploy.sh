@@ -223,32 +223,47 @@ deploy() {
 healthcheck() {
   log "헬스체크 실행 중..."
 
+  local max_retries=10
+  local retry_interval=2
+  local retry_count=0
   local failed=0
 
-  # 백엔드 헬스체크
-  log "백엔드 헬스체크 중..."
-  if curl -f -s http://localhost:3000/api/health > /dev/null 2>&1; then
-    log "✅ 백엔드 헬스체크 통과"
-  else
-    err "❌ 백엔드 헬스체크 실패"
-    failed=1
-  fi
+  while [[ $retry_count -lt $max_retries ]]; do
+    failed=0
 
-  # 프론트엔드 헬스체크
-  log "프론트엔드 헬스체크 중..."
-  if curl -f -s http://localhost:80/ > /dev/null 2>&1; then
-    log "✅ 프론트엔드 헬스체크 통과"
-  else
-    err "❌ 프론트엔드 헬스체크 실패"
-    failed=1
-  fi
+    # 백엔드 헬스체크
+    log "백엔드 헬스체크 중... (시도 $((retry_count + 1))/$max_retries)"
+    if curl -f -s --max-time 5 http://localhost:3000/api/health > /dev/null 2>&1; then
+      log "✅ 백엔드 헬스체크 통과"
+    else
+      err "❌ 백엔드 헬스체크 실패"
+      failed=1
+    fi
 
-  if [[ $failed -eq 1 ]]; then
-    err "헬스체크 실패! 롤백을 고려해주세요."
-    return 1
-  fi
+    # 프론트엔드 헬스체크
+    log "프론트엔드 헬스체크 중... (시도 $((retry_count + 1))/$max_retries)"
+    if curl -f -s --max-time 5 http://localhost:80/ > /dev/null 2>&1; then
+      log "✅ 프론트엔드 헬스체크 통과"
+    else
+      err "❌ 프론트엔드 헬스체크 실패"
+      failed=1
+    fi
 
-  log "모든 헬스체크 통과!"
+    if [[ $failed -eq 0 ]]; then
+      log "모든 헬스체크 통과!"
+      return 0
+    fi
+
+    retry_count=$((retry_count + 1))
+    if [[ $retry_count -lt $max_retries ]]; then
+      warn "헬스체크 실패. ${retry_interval}초 후 재시도..."
+      sleep $retry_interval
+    fi
+  done
+
+  err "헬스체크 실패! ${max_retries}회 시도 후에도 통과하지 못했습니다."
+  err "롤백을 고려해주세요."
+  return 1
 }
 
 # 백업 목록
