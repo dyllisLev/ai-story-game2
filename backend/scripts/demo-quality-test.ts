@@ -5,7 +5,7 @@
  * This script tests 3 scenarios to verify Gemini API integration and story generation quality.
  *
  * Usage:
- *   GEMINI_MODEL=gemini-2.5-flash pnpm exec tsx scripts/demo-quality-test.ts
+ *   GEMINI_MODEL=gemini-2.0-flash pnpm exec tsx scripts/demo-quality-test.ts
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -29,7 +29,7 @@ interface Scenario {
  */
 async function callGeminiAPI(contents: string[]): Promise<any> {
   const apiKey = process.env.GEMINI_API || process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY not found in environment');
