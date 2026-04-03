@@ -4,11 +4,19 @@
 // GET    /me/apikey    — get masked API key
 // PUT    /me/apikey    — save encrypted API key
 // DELETE /me/apikey    — remove API key
+// GET    /me/models    — fetch available models from Gemini API
 import type { FastifyInstance } from 'fastify';
 import type { UserProfile } from '@story-game/shared';
 import { requireLogin } from '../plugins/auth.js';
 import { encrypt, decrypt } from '../services/crypto.js';
 import { cachedQuery, CacheTags, CacheTTL } from '../services/cache.js';
+
+interface GeminiModel {
+  name: string;
+  displayName: string;
+  description: string;
+  version: string;
+}
 
 export default async function meRoutes(app: FastifyInstance) {
   // GET /me (cached)
@@ -194,5 +202,90 @@ export default async function meRoutes(app: FastifyInstance) {
     }
 
     return reply.status(204).send();
+  });
+
+  // GET /me/models — fetch available models from Gemini API
+  app.get('/me/models', async (request, reply) => {
+    const user = requireLogin(request);
+    const encryptionKey = app.config.API_KEY_ENCRYPTION_SECRET;
+
+    // Get user's encrypted API key
+    const { data: profile, error } = await app.supabaseAdmin
+      .from('user_profiles')
+      .select('api_key_enc')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !profile?.api_key_enc) {
+      return reply.status(400).send({
+        error: { code: 'NO_API_KEY', message: 'API 키가 등록되어 있지 않습니다' },
+      });
+    }
+
+    let apiKey: string;
+    try {
+      apiKey = decrypt(profile.api_key_enc, encryptionKey);
+    } catch (decryptErr) {
+      app.log.error(decryptErr, 'meRoutes GET /api/me/models: decrypt failed');
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: 'API 키 복호화에 실패했습니다' },
+      });
+    }
+
+    try {
+      // Fetch models from Gemini API
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(10_000), // 10초 타임아웃
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.text();
+        app.log.error({ err, status: res.status }, 'meRoutes GET /api/me/models: Gemini API error');
+        return reply.status(res.status).send({
+          error: { code: 'GEMINI_API_ERROR', message: `Gemini API 오류: ${res.status}` },
+        });
+      }
+
+      const data = await res.json();
+
+      // Filter and transform models
+      const models = (data.models || [])
+        .filter((m: GeminiModel) => m.name.includes('generateContent'))
+        .map((m: GeminiModel) => {
+          const modelId = m.name.replace('models/', '');
+          return {
+            id: modelId,
+            label: m.displayName || modelId,
+            description: m.description,
+            version: m.version,
+          };
+        })
+        .sort((a: any, b: any) => {
+          // Sort: models with 'flash' first, then 'pro', then others
+          const aLower = a.id.toLowerCase();
+          const bLower = b.id.toLowerCase();
+          if (aLower.includes('flash') && !bLower.includes('flash')) return -1;
+          if (!aLower.includes('flash') && bLower.includes('flash')) return 1;
+          if (aLower.includes('pro') && !bLower.includes('pro')) return -1;
+          if (!aLower.includes('pro') && bLower.includes('pro')) return 1;
+          return a.id.localeCompare(b.id);
+        });
+
+      return reply.send({ models });
+    } catch (fetchErr: any) {
+      const message = fetchErr?.name === 'TimeoutError'
+        ? 'Gemini API 응답 타임아웃 (10초)'
+        : fetchErr?.message || '모델 목록을 가져오지 못했습니다';
+
+      app.log.error({ err: fetchErr }, 'meRoutes GET /api/me/models: fetch failed');
+      return reply.status(500).send({
+        error: { code: 'FETCH_ERROR', message },
+      });
+    }
   });
 }
