@@ -211,7 +211,11 @@ const EditorPage: FC = () => {
   // Test play
   const [testPlayOpen, setTestPlayOpen] = useState(false);
   const [testPlayKey, setTestPlayKey] = useState(0);
-  const openTestPlay = useCallback(() => setTestPlayOpen(true), []);
+  const openTestPlay = useCallback(async () => {
+    // Auto-save before opening test play modal
+    await save();
+    setTestPlayOpen(true);
+  }, [save]);
   const closeTestPlay = useCallback(() => setTestPlayOpen(false), []);
   const resetTestPlay = useCallback(() => setTestPlayKey(k => k + 1), []);
 

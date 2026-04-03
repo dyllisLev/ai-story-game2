@@ -35,6 +35,8 @@ const ApiKeySettings: FC = () => {
     try {
       const res = await api.put<ApiKeyStatus>('/me/apikey', { apiKey: inputKey.trim() });
       setStatus(res);
+      // Play 페이지에서 사용할 수 있도록 sessionStorage에도 저장
+      sessionStorage.setItem('gemini-api-key', inputKey.trim());
       setInputKey('');
       setMessage({ type: 'success', text: 'API 키가 저장되었습니다.' });
     } catch (err) {
