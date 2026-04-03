@@ -160,3 +160,79 @@ GET http://localhost:5173/api/v1/sessions?limit=5&sort=last_played → 500
 
 **보고자:** QA Engineer
 **승인자:** CTO (대기 중)
+
+---
+
+## 업데이트 #1: 프로덕션 세션 만료 문제 (2026-04-03 15:01)
+
+### 블로커 #2: 프로덕션 세션 만료 (현재 차단 요소)
+
+**심각도:** P0 (테스트 진행 불가)
+**환경:** 프로덕션 환경 (https://aistorygame.nuc.hmini.me)
+**상태:** 🔴 해제 필요
+
+### 에러 정보:
+
+**에러 코드:** HTTP 401 Unauthorized
+**엔드포인트:** `POST /api/v1/game/test-prompt`
+
+### 발생 현상:
+
+1. **로그인 성공:**
+   - 자격증명: `story-writer@story-game.ai` / `TempPassword123!`
+   - `POST /api/v1/auth/login` → 200 OK
+   - 에디터 접근 성공
+
+2. **시나리오 설정 성공:**
+   - 판타지 F1-Basic 시나리오 설정
+   - 완성도: 60%
+   - 스토리 생성: `POST /api/v1/stories` → 201 Created
+   - 스토리 업데이트: `PUT /api/v1/stories/{id}` → 200 OK
+
+3. **게임 시작 실패:**
+   - API 키 입력 성공
+   - "▶ 게임 시작" 버튼 클릭
+   - `POST /api/v1/game/test-prompt` → **401 Unauthorized**
+
+### 원인 분석:
+
+**가능한 원인:**
+1. 쿠키 설정 문제 (httpOnly, SameSite, Secure 속성)
+2. 세션 만료 시간이 너무 짧음
+3. JWT 토큰 리프레시 로직 실패
+4. 프론트엔드에서 인증 토큰 저장/전송 문제
+
+### 네트워크 요청 기록:
+
+```
+POST /api/v1/stories → 201 (성공)
+PUT /api/v1/stories/0654fae1-dfea-482c-a602-bff08bf6337e → 200 (성공)
+GET https://generativelanguage.googleapis.com/v1beta/models → 200 (성공)
+POST /api/v1/game/test-prompt → 401 (인증 실패)
+```
+
+### 해결 방안:
+
+**@CTO 조치 필요:**
+
+1. **프로덕션 쿠키 설정 확인:**
+   - `httpOnly` 속성
+   - `SameSite` 속성
+   - `Secure` 속성 (HTTPS)
+   - 도메인/경로 설정
+
+2. **세션 만료 시간 확인:**
+   - 현재 만료 시간 설정
+   - 적절한 만료 시간으로 조정 (최소 1시간 권장)
+
+3. **JWT 토큰 리프레시 확인:**
+   - 액세스 토큰 만료 전 리프레시
+   - 리프레시 토큰 로직 확인
+
+### 테스트 준비 상태:
+
+- ✅ 로그인 가능
+- ✅ 에디터 접근 가능
+- ✅ 시나리오 설정 가능 (판타지 F1-Basic, 완성도 60%)
+- ✅ API 키 입력 가능
+- ❌ 게임 시작 불가 (401 에러)

@@ -47,6 +47,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     method: options.method,
     body: options.body,
     headers,
+    credentials: 'include', // Required for cookie-based auth
   });
 
   if (!res.ok) {
