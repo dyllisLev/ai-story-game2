@@ -169,20 +169,46 @@ const fields = useDevBypass ? STORY_LIST_ITEM_FIELDS_STR : STORIES_SAFE_VIEW_FIE
 
 ## 결론
 
-현대 장르 품질 평가를 위한 기술적 문제들을 해결하느라 실제 게임플레이를 완료하지 못했습니다. 하지만 과정에서 발견한 8개의 버그들을 모두 문서화하고, 그 중 4개를 수정했습니다.
+### P1 버그 수정 완료 (2026-04-04 01:08 UTC 업데이트)
 
-**주요 성과**:
-- Dev 모드 테스트 환경 개선
-- API 키 지속성 문제 해결
-- 3개 P0 버그 수정 완료
+**P1 세션 조회 버그 수정 성공**:
+- Git commit: `3365fe1`
+- 수정 파일: `backend/src/routes/game/start.ts`, `backend/src/routes/game/chat.ts`, `backend/src/routes/game/utils.ts`, `backend/src/plugins/auth.ts`
+- 근본 원인: Service role 쿼리 체인이 잘못됨 (`sessionResult.single()` 호출 오류)
+- 해결책: 올바른 쿼리 체인으로 수정, owner_uid는 NULL으로 설정 (service role이 RLS 우회)
 
-**남은 과제**:
-- 세션 생성/조회 RLS 문제 해결 (P1)
-- UI 네비게이션 개선 (P1, P2)
-- 실제 게임플레이 및 품질 평가 완수
+**검증 완료**:
+```bash
+# 세션 생성 성공
+POST /api/v1/game/start → sessionId: "5c04541c-d0d9-4810-9277-c8415f8a3bd1" ✓
+
+# 채팅 요청 성공
+POST /api/v1/game/chat → {model: "gemini-2.0-flash-exp", hasMemory: false} ✓
+```
+
+### 최종 상태
+
+**완료된 작업**:
+1. ✅ P0 버그 3개 수정 (Dev bypass API 키, stories_safe 뷰, 세션 토큰)
+2. ✅ P1 버그 1개 수정 (API 키 지속성)
+3. ✅ **P1 버그 1개 수정 (세션 조회 실패)**
+4. ✅ Dev 모드 테스트 환경 개선
+5. ✅ 8개 버그 문서화 완료
+
+**남은 작업**:
+1. ⏳ 실제 게임플레이 (0/15 turns) - 기술적 차단 해결됨, API 키 필요
+2. ⏳ 6차원 품질 평가 (0/60 points)
+3. ⏳ P1 버그 1개 (Play 페이지 자동 로드) - UX 개선 but not blocking
+
+**다음 단계**:
+1. Gemini API 키 설정 필요 (http://localhost:5173/settings/apikey)
+2. 브라우저에서 http://localhost:5173/play/9868c0de-7860-4236-9f12-a0de412ba8bf 접속
+3. 10-15턴 플레이 및 스크린샷 캡처
+4. 6차원 품질 평가 수행
+5. 최종 품질 보고서 작성
 
 **평가**:
-기술적 장애물로 인해 AI-273 현대 장르 테스트는 기술적으로는 부분적으로 완료되었으나, 품질 평가 목표(10-15턴 플레이 및 6차원 평가)는 달성하지 못했습니다.
+P1 세션 조회 버그를 수정하여 기술적 차단 요소를 모두 해결했습니다. Dev 모드에서 세션 생성과 채팅이 정상 작동함을 검증했습니다. 실제 게임플레이와 품질 평가는 Gemini API 키만 있으면 즉시 시작 가능합니다.
 
 ---
 **작성일**: 2026-04-03 23:58
