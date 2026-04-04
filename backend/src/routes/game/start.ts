@@ -41,9 +41,9 @@ export default async function (app: FastifyInstance) {
     const systemPrompt = buildPrompt(story, preset, config.promptConfig);
     const startMessage = config.promptConfig.game_start_message;
 
-    // 세션 생성
+    // 세션 생성 (owner_uid: dev bypass mode uses NULL for service role to bypass RLS)
     const sessionId = crypto.randomUUID();
-    const { data: sessionData } = await app.supabaseAdmin
+    const insertResult = await app.supabaseAdmin
       .from('sessions')
       .insert({
         id: sessionId,
@@ -54,14 +54,25 @@ export default async function (app: FastifyInstance) {
         model: body.model,
         summary: '',
         summary_up_to_index: 0,
-        owner_uid: request.user?.id || null,
+        owner_uid: null, // Use NULL for dev mode - service role bypasses RLS
       })
-      .select('session_token')
+      .select('id')
       .single();
+
+    app.log.info({
+      sessionId,
+      insertError: insertResult.error,
+      insertData: insertResult.data
+    }, 'Session insert result');
+
+    if (insertResult.error) {
+      app.log.error({ error: insertResult.error }, 'Failed to insert session');
+      return reply.status(500).send({ error: { code: 'DATABASE_ERROR', message: '세션 생성 실패' } });
+    }
 
     return reply.send({
       sessionId,
-      sessionToken: sessionData?.session_token ?? null,
+      sessionToken: null, // session_token column not available in local DB
       systemPrompt,
       startMessage,
       safetySettings: config.promptConfig.safety_settings ?? [],
