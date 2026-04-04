@@ -5,6 +5,14 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
  * API 키 해석: 헤더 직접 전달 또는 로그인 사용자의 DB 저장 키 복호화
  */
 export async function resolveApiKey(app: FastifyInstance, request: FastifyRequest): Promise<string | null> {
+  // DEV mode: bypass API key requirement for testing
+  const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
+  if (isDev && request.headers['x-dev-admin-skip'] === 'skip') {
+    // Return a dummy API key for dev bypass mode
+    // The frontend will still use a real API key when calling Gemini
+    return 'dev-bypass-dummy-key';
+  }
+
   // 1. 헤더에서 직접 가져오기 (익명 + 로그인 모두)
   const headerKey = request.headers['x-gemini-key'] as string;
   if (headerKey) return headerKey;

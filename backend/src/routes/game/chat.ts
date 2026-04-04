@@ -25,14 +25,28 @@ export default async function (app: FastifyInstance) {
       return reply.status(400).send({ error: { code: 'VALIDATION_ERROR', message: 'userMessage를 입력해주세요' } });
     }
 
-    await verifySessionAccess(app, request, body.sessionId);
+    app.log.info({ sessionId: body.sessionId }, 'Before verifySessionAccess');
+    try {
+      await verifySessionAccess(app, request, body.sessionId);
+      app.log.info({ sessionId: body.sessionId }, 'verifySessionAccess passed');
+    } catch (error) {
+      app.log.error({ sessionId: body.sessionId, error }, 'verifySessionAccess failed');
+      throw error;
+    }
 
     // 세션 + 설정 + 스토리 + 메모리 조회
-    const { data: session } = await app.supabaseAdmin
+    app.log.info({ sessionId: body.sessionId }, 'Fetching session from database');
+    const { data: session, error: sessionError } = await app.supabaseAdmin
       .from('sessions')
       .select('*')
       .eq('id', body.sessionId)
       .single();
+
+    app.log.info({
+      sessionId: body.sessionId,
+      found: !!session,
+      error: sessionError
+    }, 'Session query result');
 
     if (!session) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: '세션을 찾을 수 없습니다' } });
